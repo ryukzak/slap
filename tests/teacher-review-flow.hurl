@@ -83,3 +83,20 @@ HTTP 200
 [Asserts]
 body contains "Good work! A few things to improve."
 body contains "Feedback"
+
+# Step 8: Teacher submits a second review
+POST {{base_url}}/user/{{student_id}}/task/{{task_id}}/journal
+Cookie: user_data={{teacher_token}}
+[FormParams]
+content: One more thing to address.
+
+HTTP 303
+
+# Step 9: Both reviews are visible on the task page
+GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
+Cookie: user_data={{student_token}}
+
+HTTP 200
+[Asserts]
+body contains "Good work! A few things to improve."
+body contains "One more thing to address."

@@ -131,3 +131,25 @@ HTTP 200
 [Asserts]
 body contains "Student A"
 body contains "Student B"
+
+# Rule 11: Student cannot extend lesson registration deadline (teacher-only)
+POST {{base_url}}/api/lessons
+Cookie: user_data={{teacher_token}}
+[Options]
+location: true
+[FormParams]
+date: 2099-12-31
+time: 14:00
+description: Access control test lesson
+
+HTTP 200
+[Captures]
+ac_lesson_id: url regex "/lesson/([^/?#]+)"
+
+POST {{base_url}}/api/lesson/{{ac_lesson_id}}/extend
+Cookie: user_data={{student_a_token}}
+[FormParams]
+date: 2099-12-31
+time: 16:00
+
+HTTP 403

@@ -107,6 +107,35 @@ func TestResubmitAfterCheckVisible(t *testing.T) {
 	assert.Equal(t, "first attempt", prev[0].Content)
 }
 
+func TestIsRegistrationOpen(t *testing.T) {
+	future := time.Now().Add(24 * time.Hour)
+	past := time.Now().Add(-24 * time.Hour)
+	deadlineFuture := time.Now().Add(1 * time.Hour)
+	deadlinePast := time.Now().Add(-1 * time.Hour)
+
+	// No deadline: open iff DateTime is in the future
+	assert.True(t, Lesson{DateTime: future}.IsRegistrationOpen())
+	assert.False(t, Lesson{DateTime: past}.IsRegistrationOpen())
+
+	// Deadline set: DateTime is ignored
+	assert.True(t, Lesson{DateTime: past, RegistrationDeadline: &deadlineFuture}.IsRegistrationOpen())
+	assert.False(t, Lesson{DateTime: future, RegistrationDeadline: &deadlinePast}.IsRegistrationOpen())
+}
+
+func TestSetLessonDeadline(t *testing.T) {
+	db, tempDir, _, _, _, lessonID := setupLessonFlowDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	deadline := time.Now().Add(2 * time.Hour).Truncate(time.Second)
+	assert.NoError(t, db.SetLessonDeadline(lessonID, deadline))
+
+	lesson, err := db.GetLesson(lessonID)
+	assert.NoError(t, err)
+	assert.NotNil(t, lesson.RegistrationDeadline)
+	assert.WithinDuration(t, deadline, *lesson.RegistrationDeadline, time.Second)
+	assert.True(t, lesson.IsRegistrationOpen())
+}
+
 func TestLessonFlow(t *testing.T) {
 	db, tempDir := setupTestDB(t)
 	defer cleanupTestDB(db, tempDir)
