@@ -16,6 +16,10 @@
 <a class="text-red-400 hover:text-red-300" href="/user/{{.ID}}/reset">[reset password]</a>
 <span class="text-gray-500">·</span>
 {{ end }}
+{{ if .SessionIsTeacher }}
+<a class="text-blue-400 hover:text-blue-300" href="/users">[students]</a>
+<span class="text-gray-500">·</span>
+{{ end }}
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}
 {{define "content"}}

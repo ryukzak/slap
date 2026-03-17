@@ -55,6 +55,21 @@
         Submitted: {{ formatDateTime $record.CreatedAt }}
       </div>
     </div>
+    {{ if $record.ReviewRecords }}
+    <div class="mt-2 p-3 bg-gray-900 rounded border border-gray-700">
+      {{ range $i, $rev := $record.ReviewRecords }}
+      {{ if gt $i 0 }}
+      <hr class="border-gray-700 my-2" />
+      {{ end }}
+      <div class="text-xs text-gray-500 mb-1">
+        // review by @{{$rev.EntryAuthorName}}
+      </div>
+      <div class="text-xs markdown">
+        {{ markdown $rev.Content }}
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
     {{ if $.SessionIsTeacher }}
     <form class="lesson-review-form"
           hx-post="/user/{{$record.StudentID}}/task/{{$record.TaskID}}/journal"

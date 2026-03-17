@@ -60,6 +60,7 @@ type TaskRecordWithInfo struct {
 	TaskTitle       string
 	TaskDescription string
 	PreviousRecords []storage.TaskRecord
+	ReviewRecords   []storage.TaskRecord
 }
 
 // lessonRecordsData is the data passed to the lesson_task_records partial.
@@ -101,11 +102,35 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool) ([]TaskRecordW
 			taskDescription = task.Description
 		}
 		key := taskRecord.StudentID + ":" + taskRecord.TaskID
+
+		var reviewRecords []storage.TaskRecord
+		if taskRecord.Status == storage.ReviewedTaskRecord {
+			allForTask, err := DB.ListTaskRecords(taskRecord.StudentID, taskRecord.TaskID)
+			if err == nil {
+				// allForTask is newest-first. Find this taskRecord's index, then
+				// collect consecutive review records immediately before it (newer
+				// records) — those are the reviews belonging to this enrollment.
+				for i, r := range allForTask {
+					if r.ID == taskRecord.ID {
+						for j := i - 1; j >= 0; j-- {
+							if allForTask[j].Status == storage.ReviewTaskRecord {
+								reviewRecords = append(reviewRecords, allForTask[j])
+							} else {
+								break
+							}
+						}
+						break
+					}
+				}
+			}
+		}
+
 		allRecords = append(allRecords, TaskRecordWithInfo{
 			TaskRecord:      *taskRecord,
 			TaskTitle:       taskTitle,
 			TaskDescription: taskDescription,
 			PreviousRecords: reviewedByKey[key],
+			ReviewRecords:   reviewRecords,
 		})
 	}
 	for _, pr := range previousTaskRecords {

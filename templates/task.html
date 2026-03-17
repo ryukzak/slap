@@ -79,14 +79,19 @@
     <div class="markdown">
       {{ markdown $record.Content }}
     </div>
-    {{ if $record.Review }}
+    {{ if $record.Reviews }}
     <div class="mt-2 pt-2 border-t border-gray-700">
+      {{ range $i, $rev := $record.Reviews }}
+      {{ if gt $i 0 }}
+      <hr class="border-gray-700 my-2" />
+      {{ end }}
       <div class="text-xs text-gray-500 mb-1">
-        // review by @{{$record.Review.EntryAuthorName}}
+        // review by @{{$rev.EntryAuthorName}}
       </div>
       <div class="markdown text-xs">
-        {{ markdown $record.Review.Content }}
+        {{ markdown $rev.Content }}
       </div>
+      {{ end }}
     </div>
     {{ end }}
   </div>

@@ -109,7 +109,7 @@
   </div>
   <div id="lesson-task-records"
        hx-get="/lesson/{{.Lesson.ID}}/records?showRevoked={{.ShowRevoked}}"
-       hx-trigger="lessonRecordsRefresh from:body"
+       hx-trigger="lessonRecordsRefresh"
        hx-swap="innerHTML">
     {{template "lesson_task_records.html" .}}
   </div>

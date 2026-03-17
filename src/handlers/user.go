@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/ryukzak/slap/src/config"
 	"github.com/ryukzak/slap/src/storage"
 	"github.com/ryukzak/slap/src/util"
 )
@@ -93,10 +94,21 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, "templates/user.html", user)
 }
 
-// UserListHandler shows all registered users. Teacher-only.
+type UserTaskSummary struct {
+	Count  int
+	Score  string
+	Status storage.TaskRecordStatus
+}
+
+type UserTableRow struct {
+	storage.UserData
+	TaskData map[storage.TaskID]UserTaskSummary
+}
+
+// UserListHandler shows all registered users with task summaries. Teacher-only.
 func UserListHandler(w http.ResponseWriter, r *http.Request) {
-	user := teacherSession(w, r)
-	if user == nil {
+	sessionUser := teacherSession(w, r)
+	if sessionUser == nil {
 		return
 	}
 
@@ -107,12 +119,54 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rows := make([]UserTableRow, 0, len(users))
+	for _, u := range users {
+		row := UserTableRow{
+			UserData: *u,
+			TaskData: make(map[storage.TaskID]UserTaskSummary),
+		}
+		if u.IsStudent {
+			for _, task := range AppConfig.Tasks {
+				records, err := DB.ListTaskRecords(u.ID, task.ID)
+				if err != nil {
+					log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
+					continue
+				}
+				if len(records) == 0 {
+					continue
+				}
+				// Prefer "reviewed" status so the table shows "Checked" when the
+				// task has been reviewed, not just "Feedback".
+				bestStatus := records[0].Status
+				for _, rec := range records {
+					if rec.Status == storage.ReviewedTaskRecord {
+						bestStatus = storage.ReviewedTaskRecord
+						break
+					}
+				}
+				summary := UserTaskSummary{Count: len(records), Status: bestStatus}
+				for _, rec := range records {
+					if rec.EntryAuthorID != rec.StudentID {
+						if score := util.ExtractScore(rec.Content); score != "" {
+							summary.Score = score
+							break
+						}
+					}
+				}
+				row.TaskData[task.ID] = summary
+			}
+		}
+		rows = append(rows, row)
+	}
+
 	renderPage(w, "templates/users.html", struct {
 		SessionUserID string
-		Users         []*storage.UserData
+		Users         []UserTableRow
+		Tasks         []config.Task
 	}{
-		SessionUserID: user.ID,
-		Users:         users,
+		SessionUserID: sessionUser.ID,
+		Users:         rows,
+		Tasks:         AppConfig.Tasks,
 	})
 }
 

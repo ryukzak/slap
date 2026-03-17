@@ -32,18 +32,17 @@ document.addEventListener("DOMContentLoaded", function () {
   document.addEventListener("htmx:afterRequest", function (event) {
     if (!event.detail.successful) return;
 
-    const form = event.target.closest
-      ? event.target.closest(".lesson-review-form")
-      : null;
-    if (form) {
-      const details = form.closest("details");
+    // Close the <details> accordion after a lesson review is submitted.
+    // The list refresh is handled by the HX-Trigger response header.
+    var elt = event.detail.elt || event.target;
+    if (elt && elt.classList && elt.classList.contains("lesson-review-form")) {
+      var details = elt.closest("details");
       if (details) details.open = false;
-      form.reset();
-      document.body.dispatchEvent(new CustomEvent("lessonRecordsRefresh"));
+      elt.reset();
       return;
     }
 
-    if (event.target.closest("form")) {
+    if (event.target.closest && event.target.closest("form")) {
       document.body.dispatchEvent(new CustomEvent("refreshLessons"));
     }
   });

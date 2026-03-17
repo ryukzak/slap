@@ -43,7 +43,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	type TaskRecordView struct {
 		storage.TaskRecord
-		Review *storage.TaskRecord
+		Reviews []storage.TaskRecord
 	}
 
 	type TaskViewModel struct {
@@ -74,19 +74,29 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error retrieving task records: %v", err)
 	}
 
-	// Pair each review record with the reviewed record it follows (newest first).
-	for i := 0; i < len(rawRecords); i++ {
+	// Pair all consecutive review records with the reviewed record they follow (newest first).
+	for i := 0; i < len(rawRecords); {
 		r := rawRecords[i]
-		if r.Status == storage.ReviewTaskRecord && i+1 < len(rawRecords) &&
-			rawRecords[i+1].Status == storage.ReviewedTaskRecord {
-			reviewCopy := r
-			model.TaskRecords = append(model.TaskRecords, TaskRecordView{
-				TaskRecord: rawRecords[i+1],
-				Review:     &reviewCopy,
-			})
-			i++
+		if r.Status == storage.ReviewTaskRecord {
+			var reviews []storage.TaskRecord
+			for i < len(rawRecords) && rawRecords[i].Status == storage.ReviewTaskRecord {
+				reviews = append(reviews, rawRecords[i])
+				i++
+			}
+			if i < len(rawRecords) && rawRecords[i].Status == storage.ReviewedTaskRecord {
+				model.TaskRecords = append(model.TaskRecords, TaskRecordView{
+					TaskRecord: rawRecords[i],
+					Reviews:    reviews,
+				})
+				i++
+			} else {
+				for _, rev := range reviews {
+					model.TaskRecords = append(model.TaskRecords, TaskRecordView{TaskRecord: rev})
+				}
+			}
 		} else {
 			model.TaskRecords = append(model.TaskRecords, TaskRecordView{TaskRecord: r})
+			i++
 		}
 	}
 
@@ -158,6 +168,7 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		"role":       record.Status,
 	})
 	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Trigger", "lessonRecordsRefresh")
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
