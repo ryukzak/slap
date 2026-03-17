@@ -1,0 +1,122 @@
+{{ if .TaskRecords }}
+<ul class="space-y-1">
+  {{ range $index, $record := .TaskRecords }}
+  <li class="border border-gray-800 rounded">
+    <details class="group">
+      <summary class="cursor-pointer list-none flex items-center justify-between px-4 py-2 rounded hover:bg-gray-800">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center space-x-3">
+            {{ if eq $record.Status "register" }}
+            <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 flex-shrink-0">
+              Queued
+            </span>
+          {{ else }}
+          <span class="px-2 py-0.5 rounded-full text-xs flex-shrink-0 {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+          {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
+          </span>
+          {{ end }}
+          <span class="text-sm flex-shrink-0">@{{$record.EntryAuthorName}}</span>
+          <span class="text-xs text-gray-400 truncate">{{$record.TaskTitle}}</span>
+        </div>
+      </div>
+      <div class="text-xs text-gray-400 flex-shrink-0 ml-4">
+        {{ formatDateTime $record.LessonAt }}
+      </div>
+    </summary>
+    <div class="px-4 pb-4 pt-2">
+      {{ if and $.ShowRevoked $record.PreviousRecords }}
+      <div class="mb-2">
+        <div class="text-xs text-gray-500 mb-1">
+          // previous submissions
+        </div>
+        {{ range $record.PreviousRecords }}
+        <div class="p-3 bg-gray-900 rounded mb-1 border border-gray-700">
+          <div class="flex items-center space-x-2 mb-1">
+          <span class="px-2 py-0.5 rounded-full text-xs {{ if eq .Status "reviewed" }}bg-green-800 text-green-200{{ else if eq .Status "revoked" }}bg-red-800 text-red-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+          {{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "revoked" }}Dropped{{ else }}{{ .Status }}{{ end }}
+          </span>
+          <span class="text-xs text-gray-500">{{ formatDateTime .CreatedAt }}</span>
+        </div>
+        <div class="text-xs markdown">
+          {{ markdown .Content }}
+        </div>
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
+    <div class="p-3 bg-gray-800 rounded">
+      <div class="text-xs text-gray-400 mb-2">
+        Submitted Record:
+      </div>
+      <div class="text-xs markdown">
+        {{ markdown $record.Content }}
+      </div>
+      <div class="text-xs text-gray-500 mt-2">
+        Submitted: {{ formatDateTime $record.CreatedAt }}
+      </div>
+    </div>
+    {{ if $record.ReviewRecords }}
+    <div class="mt-2 p-3 bg-gray-900 rounded border border-gray-700">
+      {{ range $i, $rev := $record.ReviewRecords }}
+      {{ if gt $i 0 }}
+      <hr class="border-gray-700 my-2" />
+      {{ end }}
+      <div class="text-xs text-gray-500 mb-1">
+        // review by @{{$rev.EntryAuthorName}}
+      </div>
+      <div class="text-xs markdown">
+        {{ markdown $rev.Content }}
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
+    {{ if $.SessionIsTeacher }}
+    <form class="lesson-review-form"
+          hx-post="/user/{{$record.StudentID}}/task/{{$record.TaskID}}/journal"
+          hx-swap="none">
+      <div class="mt-2">
+        <textarea class="w-full px-2 py-1 bg-gray-800 text-gray-300 rounded text-sm focus:outline-none focus:border-blue-400 border border-gray-700"
+                  name="content"
+                  rows="4"
+                  required
+                  placeholder="Enter your task record content (markdown supported)"></textarea>
+      </div>
+      <div class="flex justify-between mt-2">
+        <div class="space-x-4">
+          <button class="text-blue-400 hover:text-blue-300 text-xs" type="submit">
+            [submit review]
+          </button>
+          <a class="text-blue-400 hover:text-blue-300 text-xs"
+             href="/user/{{$record.StudentID}}">[view student]</a>
+          <a class="text-blue-400 hover:text-blue-300 text-xs"
+             href="/user/{{$record.StudentID}}/task/{{$record.TaskID}}">[view task]</a>
+        </div>
+      </div>
+    </form>
+  {{ else }}
+    <div class="flex justify-between mt-2">
+      <div class="space-x-4">
+        <a class="text-blue-400 hover:text-blue-300 text-xs"
+           href="/user/{{$record.StudentID}}">[view student]</a>
+        <a class="text-blue-400 hover:text-blue-300 text-xs"
+           href="/user/{{$record.StudentID}}/task/{{$record.TaskID}}">[view task]</a>
+      </div>
+    </div>
+    {{ end }}
+  </div>
+</details>
+</li>
+{{ end }}
+</ul>
+{{ else }}
+<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded">
+  {{ if and (not .ShowRevoked) (gt .TotalRecords 0) }}
+  No visible task records. {{ .TotalRecords }} revoked
+{{ if eq .TotalRecords 1 }}record{{ else }}records{{ end }} hidden.
+  <a class="text-blue-400 hover:text-blue-300 ml-1"
+     href="?showRevoked=true">[show history]</a>
+{{ else }}
+  No registered task records for this lesson yet.
+  {{ end }}
+</p>
+{{ end }}

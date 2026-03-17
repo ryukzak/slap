@@ -1,0 +1,183 @@
+package handlers
+
+import (
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/ryukzak/slap/src/config"
+	"github.com/ryukzak/slap/src/storage"
+	"github.com/ryukzak/slap/src/util"
+)
+
+// UserInfoHandler displays the user information and available tasks
+func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
+	sessionUser := userSession(w, r)
+	if sessionUser == nil {
+		return
+	}
+
+	profileUserID := mux.Vars(r)["userID"]
+	if profileUserID == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Students can only view their own profile
+	if profileUserID != sessionUser.ID && !sessionUser.IsTeacher {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	var user User
+	dbUser, err := DB.GetUser(profileUserID)
+	if err != nil || dbUser == nil {
+		log.Printf("User %s not found in database: %v", profileUserID, err)
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	taskStatuses := make(map[storage.TaskID]storage.TaskRecordStatus)
+	taskScores := make(map[storage.TaskID]string)
+	journals := make(map[storage.TaskID][]storage.TaskRecord)
+	for _, task := range AppConfig.Tasks {
+		status, err := DB.LatestTaskStatus(profileUserID, task.ID)
+		if err != nil {
+			log.Printf("Error fetching task status for user %s task %s: %v", profileUserID, task.ID, err)
+			continue
+		}
+		if status != "" {
+			taskStatuses[task.ID] = status
+		}
+		records, err := DB.ListTaskRecords(profileUserID, task.ID)
+		if err != nil {
+			log.Printf("Error fetching task records for user %s task %s: %v", profileUserID, task.ID, err)
+			continue
+		}
+		journals[task.ID] = records
+		for _, r := range records {
+			if r.EntryAuthorID != r.StudentID {
+				if score := util.ExtractScore(r.Content); score != "" {
+					taskScores[task.ID] = score
+					break
+				}
+			}
+		}
+	}
+
+	user = User{
+		Username:         dbUser.Username,
+		ID:               dbUser.ID,
+		SessionUserID:    sessionUser.ID,
+		SessionIsTeacher: sessionUser.IsTeacher,
+		IsStudent:        dbUser.IsStudent,
+		IsTeacher:        dbUser.IsTeacher,
+		Tasks:            AppConfig.Tasks,
+		TaskStatuses:     taskStatuses,
+		TaskScores:       taskScores,
+		Journals:         journals,
+		Lessons:          []*storage.Lesson{},
+		Now:              time.Now(),
+		DefaultDateTime:  getTomorrowNoon(),
+		TZName:           PrimaryTZName,
+	}
+
+	// Load lessons for all users
+	lessons, err := DB.ListLessons()
+	if err != nil {
+		log.Printf("Error loading lessons: %v", err)
+	} else {
+		user.Lessons = lessons
+	}
+
+	renderPage(w, "templates/user.html", user)
+}
+
+type UserTaskSummary struct {
+	Count  int
+	Score  string
+	Status storage.TaskRecordStatus
+}
+
+type UserTableRow struct {
+	storage.UserData
+	TaskData map[storage.TaskID]UserTaskSummary
+}
+
+// UserListHandler shows all registered users with task summaries. Teacher-only.
+func UserListHandler(w http.ResponseWriter, r *http.Request) {
+	sessionUser := teacherSession(w, r)
+	if sessionUser == nil {
+		return
+	}
+
+	users, err := DB.ListUsers()
+	if err != nil {
+		log.Printf("Error listing users: %v", err)
+		http.Error(w, "Failed to list users", http.StatusInternalServerError)
+		return
+	}
+
+	rows := make([]UserTableRow, 0, len(users))
+	for _, u := range users {
+		row := UserTableRow{
+			UserData: *u,
+			TaskData: make(map[storage.TaskID]UserTaskSummary),
+		}
+		if u.IsStudent {
+			for _, task := range AppConfig.Tasks {
+				records, err := DB.ListTaskRecords(u.ID, task.ID)
+				if err != nil {
+					log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
+					continue
+				}
+				if len(records) == 0 {
+					continue
+				}
+				// Prefer "reviewed" status so the table shows "Checked" when the
+				// task has been reviewed, not just "Feedback".
+				bestStatus := records[0].Status
+				for _, rec := range records {
+					if rec.Status == storage.ReviewedTaskRecord {
+						bestStatus = storage.ReviewedTaskRecord
+						break
+					}
+				}
+				summary := UserTaskSummary{Count: len(records), Status: bestStatus}
+				for _, rec := range records {
+					if rec.EntryAuthorID != rec.StudentID {
+						if score := util.ExtractScore(rec.Content); score != "" {
+							summary.Score = score
+							break
+						}
+					}
+				}
+				row.TaskData[task.ID] = summary
+			}
+		}
+		rows = append(rows, row)
+	}
+
+	renderPage(w, "templates/users.html", struct {
+		SessionUserID string
+		Users         []UserTableRow
+		Tasks         []config.Task
+	}{
+		SessionUserID: sessionUser.ID,
+		Users:         rows,
+		Tasks:         AppConfig.Tasks,
+	})
+}
+
+// getTomorrowNoon returns tomorrow's date at 12:00 PM in PrimaryLoc
+func getTomorrowNoon() time.Time {
+	tomorrow := time.Now().In(PrimaryLoc).AddDate(0, 0, 1)
+	return time.Date(
+		tomorrow.Year(),
+		tomorrow.Month(),
+		tomorrow.Day(),
+		12, 0, 0, 0,
+		PrimaryLoc,
+	)
+}

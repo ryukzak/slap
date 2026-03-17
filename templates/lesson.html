@@ -1,0 +1,117 @@
+{{define "title"}}Lesson - {{ formatDateTime .Lesson.DateTime }}{{end}}
+{{define "head_extra"}}
+<script src="/static/js/override.js"></script>
+<link href="/static/styles.css" rel="stylesheet" />
+{{end}}
+{{define "header"}}
+<span class="text-gray-500">·</span>
+<a class="text-gray-300 hover:text-white" href="/user/{{.TeacherID}}">// {{.Lesson.TeacherName}}</a>
+<span class="text-gray-500">·</span>
+<span>// lesson: {{ formatDateTime .Lesson.DateTime }}</span>
+{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/user/{{.TeacherID}}">[back]</a>
+{{ if eq .Lesson.TeacherID .SessionUserID }}
+<span class="text-gray-500">·</span>
+<button class="text-red-400 hover:text-red-300 text-xs"
+        type="button"
+        onclick="if(confirm('Delete this lesson?')){fetch('/api/lessons/{{.Lesson.ID}}',{method:'DELETE'}).then(response=>{if(response.ok){window.location.href='/user/{{.TeacherID}}';}else{alert('Failed to delete');}});}">
+  [delete]
+</button>
+{{ end }}
+{{end}}
+{{define "content"}}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // lesson
+  </div>
+  <div class="text-xs p-4 border border-gray-800 rounded">
+    <div class="grid grid-cols-2 gap-2">
+      <div class="text-gray-400">
+        Teacher:
+      </div>
+      <div>
+        @{{.Lesson.TeacherName}}
+      </div>
+      <div class="text-gray-400">
+        Date:
+      </div>
+      <div>
+        {{ formatDateTime .Lesson.DateTime }}
+      </div>
+      <div class="text-gray-400">
+        Enrolled:
+      </div>
+      <div>
+        {{ len .TaskRecords }}
+      </div>
+      <div class="text-gray-400">
+        Registration:
+      </div>
+      <div>
+        {{ if .Lesson.IsRegistrationOpen }}
+        <span class="text-green-400">open</span>
+        {{ with .Lesson.RegistrationDeadline }}
+        <span class="text-gray-500">until {{ .Format "2006-01-02 15:04" }}</span>
+        {{ end }}
+      {{ else }}
+        <span class="text-red-400">closed</span>
+        {{ with .Lesson.RegistrationDeadline }}
+        <span class="text-gray-500">deadline {{ .Format "2006-01-02 15:04" }}</span>
+        {{ end }}
+        {{ end }}
+      </div>
+    </div>
+    <div class="text-xs markdown pt-4">
+      {{.Lesson.Description | markdown}}
+    </div>
+  </div>
+</section>
+{{ if .SessionIsTeacher }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // extend registration
+  </div>
+  <form class="space-y-2"
+        action="/api/lesson/{{.Lesson.ID}}/extend"
+        method="post">
+    <div class="flex items-center space-x-2">
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
+             type="date"
+             name="date"
+             value="{{.DefaultDateTime.Format "2006-01-02"}}" />
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
+             type="time"
+             name="time"
+             lang="en-GB"
+             value="{{.DefaultDateTime.Format "15:04"}}"
+             step="60" />
+      <span class="text-xs text-gray-400">{{.TZName}}</span>
+      <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-2 rounded h-8"
+              type="submit">
+        [set deadline]
+      </button>
+    </div>
+  </form>
+</section>
+{{ end }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
+    <span>// registered tasks ({{ len .TaskRecords }})</span>
+    <span>
+      {{ if .ShowRevoked }}
+      <a class="text-blue-400 hover:text-blue-300" href="?">[hide history]</a>
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300" href="?showRevoked=true">[show history]</a>
+      {{ end }}
+    </span>
+  </div>
+  <div id="lesson-task-records"
+       hx-get="/lesson/{{.Lesson.ID}}/records?showRevoked={{.ShowRevoked}}"
+       hx-trigger="lessonRecordsRefresh"
+       hx-swap="innerHTML">
+    {{template "lesson_task_records.html" .}}
+  </div>
+</section>
+{{end}}

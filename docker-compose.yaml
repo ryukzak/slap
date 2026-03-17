@@ -1,0 +1,11 @@
+services:
+  slap:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - slap-data:/app/tmp
+      - ./conf:/app/conf:ro
+
+volumes:
+  slap-data:

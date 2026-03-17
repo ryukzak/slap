@@ -1,0 +1,4 @@
+[
+  { "label": "test", "command": "richgo test ./src/..." },
+  { "label": "run", "command": "go run main.go" }
+]

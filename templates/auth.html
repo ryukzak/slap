@@ -1,0 +1,102 @@
+{{define "title"}}User Information{{end}}
+{{define "header"}}{{end}}
+{{define "content"}}
+{{if .Error}}
+<div class="container mx-auto p-4 max-w-lg">
+  <div class="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded mb-6">
+    <p class="font-bold">
+      Error
+    </p>
+    <p>
+      {{.Error}}
+    </p>
+    {{if .ResetUserID}}
+    <p class="mt-2 text-sm">
+      Forgot your password? Ask your teacher to reset it.
+    </p>
+    {{end}}
+  </div>
+</div>
+{{end}}
+<div class="container mx-auto p-4 max-w-lg">
+  <h1 class="text-xl mb-6 border-b border-gray-700 pb-2">
+    Sign In
+  </h1>
+  <form hx-post="/signin"
+        hx-target="body"
+        hx-swap="outerHTML"
+        class="space-y-4">
+    <div class="mb-4">
+      <label for="signin-id" class="block text-sm mb-1">
+        ID:
+      </label>
+      <input type="text"
+             id="signin-id"
+             name="id"
+             required
+             class="bg-gray-800 border border-gray-700 text-gray-300 text-sm w-full p-2 rounded" />
+    </div>
+    <div class="mb-4">
+      <label for="signin-password" class="block text-sm mb-1">
+        Password:
+      </label>
+      <input type="password"
+             id="signin-password"
+             name="password"
+             required
+             class="bg-gray-800 border border-gray-700 text-gray-300 text-sm w-full p-2 rounded" />
+    </div>
+    <button type="submit"
+            class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded">
+      [sign in]
+      <span class="htmx-indicator hidden">Processing...</span>
+    </button>
+  </form>
+</div>
+<hr />
+<div class="container mx-auto p-4 max-w-lg">
+  <h1 class="text-xl mb-6 border-b border-gray-700 pb-2">
+    Sign Up
+  </h1>
+  <form hx-post="/signup"
+        hx-target="body"
+        hx-swap="outerHTML"
+        class="space-y-4">
+    <div class="mb-4">
+      <label for="signup-id" class="block text-sm mb-1">
+        ID:
+      </label>
+      <input type="text"
+             id="signup-id"
+             name="id"
+             required
+             class="bg-gray-800 border border-gray-700 text-gray-300 text-sm w-full p-2 rounded" />
+    </div>
+    <div class="mb-4">
+      <label for="signup-password" class="block text-sm mb-1">
+        Password:
+      </label>
+      <input type="password"
+             id="signup-password"
+             name="password"
+             required
+             class="bg-gray-800 border border-gray-700 text-gray-300 text-sm w-full p-2 rounded" />
+    </div>
+    <div class="mb-4">
+      <label for="signup-username" class="block text-sm mb-1">
+        Name & Family Name:
+      </label>
+      <input type="text"
+             id="signup-username"
+             name="username"
+             required
+             class="bg-gray-800 border border-gray-700 text-gray-300 text-sm w-full p-2 rounded" />
+    </div>
+    <button type="submit"
+            class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded">
+      [sign up]
+      <span class="htmx-indicator hidden">Processing...</span>
+    </button>
+  </form>
+</div>
+{{end}}
