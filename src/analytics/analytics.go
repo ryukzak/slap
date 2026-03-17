@@ -46,7 +46,7 @@ func Track(userID, event string, props map[string]any) {
 	}
 	if err := client.Enqueue(posthog.Capture{
 		DistinctId: userID,
-		Event:      event,
+		Event:      "slap:" + event,
 		Properties: p,
 	}); err != nil {
 		log.Printf("analytics: track %s: %v", event, err)

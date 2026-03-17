@@ -136,3 +136,20 @@ Cookie: user_data={{student_token}}
 HTTP 200
 [Asserts]
 body contains "Pending"
+
+# Rule 6: Teacher extends deadline on past lesson — registration then succeeds
+POST {{base_url}}/api/lesson/{{past_lesson_id}}/extend
+Cookie: user_data={{teacher_token}}
+[FormParams]
+date: 2099-12-31
+time: 14:00
+
+HTTP 303
+
+POST {{base_url}}/api/lesson/{{past_lesson_id}}/register
+Cookie: user_data={{student_token}}
+[FormParams]
+taskRecordID: {{task_id}}
+studentID: {{student_id}}
+
+HTTP 200

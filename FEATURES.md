@@ -34,7 +34,7 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - This creates a task record with status `submit`.
    - A student can add multiple records over time; each is appended to the task history.
 4. Student can view the full history of their records on the task page.
-   - Records with status `review` are teacher feedback entries.
+   - Records with status `review` are teacher feedback entries, shown inline below the submission they belong to.
 
 # Use Case: teacher checks a student task (outside of a lesson)
 
@@ -43,7 +43,8 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 3. Teacher writes feedback in the review field and submits.
    - This creates a new record with status `review` authored by the teacher.
    - If the student's latest record had status `register`, it is automatically transitioned to `reviewed`.
-4. Student sees the teacher feedback on their task page.
+4. Student sees the teacher feedback on their task page, shown inline below their submission.
+5. Teacher can submit multiple feedback entries; all are shown concatenated with a separator.
 
 # Use Case: teacher prepares queue for the lesson
 
@@ -53,15 +54,21 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - The student must have an existing `submit` record for the task they want to register.
    - Only one registration per task per lesson at a time.
    - If the student updates their task after registering, the registration is automatically revoked.
-4. At lesson start, the teacher opens the lesson queue and reviews submitted tasks one by one:
+4. Teacher can extend the registration deadline beyond the lesson start time using the
+   "extend registration" form on the lesson page. This allows late registrations after the
+   lesson has already started.
+5. At lesson start, the teacher opens the lesson queue and reviews submitted tasks one by one:
    - Open the first submitted task.
    - Read the full history of the task (student and teacher entries).
    - Submit feedback via the review form — the student will see it on their task page.
    - Move to the next task from another student.
-5. Teacher can see which tasks have been reviewed and which are still pending.
+6. Teacher can see which tasks have been reviewed and which are still pending.
 
 # General requirements
 
 1. Teacher can see all profiles, tasks, and their statuses.
 2. Student can see only their own task submissions, and the lesson list and schedules.
 3. All multiline text fields should support markdown formatting with rendered output.
+4. Teacher has access to a users table (`/users`) showing all registered students with
+   per-task columns. Each cell shows the score (if the teacher started the review with a
+   number) and the entry count (e.g. `8-3`), or a status badge if no score is present.

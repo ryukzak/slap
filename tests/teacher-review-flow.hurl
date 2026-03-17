@@ -73,7 +73,7 @@ HTTP 200
 [Asserts]
 body contains "Good work! A few things to improve."
 body contains "Student solution ready for review"
-body contains "Review"
+body contains "Feedback"
 
 # Step 7: Student also sees teacher feedback
 GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
@@ -82,4 +82,4 @@ Cookie: user_data={{student_token}}
 HTTP 200
 [Asserts]
 body contains "Good work! A few things to improve."
-body contains "Review"
+body contains "Feedback"

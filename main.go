@@ -66,7 +66,11 @@ func init() {
 	if posthogKey == "" {
 		posthogKey = "phc_4MVBHknwF8Qok57n2J5S9OVP3z6BpRJM4fiDtH7rGg7"
 	}
-	analytics.Init(posthogKey, os.Getenv("SLAP_POSTHOG_HOST"), version)
+	posthogHost := os.Getenv("SLAP_POSTHOG_HOST")
+	if posthogHost == "" {
+		posthogHost = "https://eu.i.posthog.com"
+	}
+	analytics.Init(posthogKey, posthogHost, version)
 
 	primaryTZ := os.Getenv("SLAP_TZ")
 	if primaryTZ == "" {
