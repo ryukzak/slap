@@ -190,8 +190,8 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID)
 			return err
 		}
 
-		if !lesson.DateTime.After(time.Now()) {
-			return fmt.Errorf("registration is closed: lesson has already started")
+		if !lesson.IsRegistrationOpen() {
+			return fmt.Errorf("registration is closed")
 		}
 
 		// Check for existing enrollment for same task+author

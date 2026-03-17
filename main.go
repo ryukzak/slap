@@ -199,6 +199,7 @@ func main() {
 	r.HandleFunc("/api/lessons", handlers.RenderLessonListHandler).Methods("GET")
 	r.HandleFunc("/api/lesson/{lessonID}/register", handlers.RegisterTaskRecordToLessonHandler).Methods("POST")
 	r.HandleFunc("/api/lesson/{lessonID}/unregister", handlers.UnregisterFromLessonHandler).Methods("POST")
+	r.HandleFunc("/api/lesson/{lessonID}/extend", handlers.ExtendLessonDeadlineHandler).Methods("POST")
 	r.HandleFunc("/api/lessons/{lessonID}", handlers.DeleteLessonHandler).Methods("DELETE")
 
 	// Start server

@@ -11,12 +11,16 @@
       </div>
       <div class="flex items-center space-x-2">
         <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+        {{ if .IsRegistrationOpen }}
         <button class="text-blue-400 hover:text-blue-300 text-xs"
                 type="button"
                 hx-post="/api/lesson/{{.ID}}/register"
                 hx-include="closest form">
           [register]
         </button>
+      {{ else }}
+        <span class="text-gray-500 text-xs">[closed]</span>
+        {{ end }}
       </div>
     </div>
   {{else}}
@@ -27,7 +31,12 @@
         <span class="text-gray-500">@{{.TeacherName}}</span>
         <span class="text-gray-400">{{getTitle .Description}}</span>
       </div>
-      <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+      <div class="flex items-center space-x-2">
+        {{ if not .IsRegistrationOpen }}
+        <span class="text-gray-600 text-xs">[closed]</span>
+        {{ end }}
+        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+      </div>
     </a>
     {{end}}
   </li>

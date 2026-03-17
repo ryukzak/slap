@@ -19,8 +19,19 @@ type Lesson struct {
 	EnrolledTasks         []EnrolledTask `json:"submissions"`
 	PreviousEnrolledTasks []EnrolledTask `json:"previous_submissions"`
 
-	TeacherName string `json:"teacher_name"`
-	Description string `json:"description"`
+	TeacherName          string     `json:"teacher_name"`
+	Description          string     `json:"description"`
+	RegistrationDeadline *time.Time `json:"registration_deadline,omitempty"`
+}
+
+// IsRegistrationOpen returns true if students can still register.
+// If RegistrationDeadline is set, it uses that; otherwise registration is
+// open until the lesson starts.
+func (l Lesson) IsRegistrationOpen() bool {
+	if l.RegistrationDeadline != nil {
+		return time.Now().Before(*l.RegistrationDeadline)
+	}
+	return l.DateTime.After(time.Now())
 }
 
 type EnrolledTask struct {
@@ -179,6 +190,18 @@ func (d *DB) DeleteLesson(lessonID LessonID, teacherID UserID) error {
 			return err
 		}
 		return b.Delete([]byte(lessonID))
+	})
+}
+
+func (d *DB) SetLessonDeadline(lessonID LessonID, deadline time.Time) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		lesson, err := getValue[Lesson](b, lessonID)
+		if err != nil {
+			return err
+		}
+		lesson.RegistrationDeadline = &deadline
+		return setValue(b, lessonID, *lesson)
 	})
 }
 
