@@ -66,7 +66,7 @@
           </a>
         {{ else }}
         <span class="mr-2 px-2 py-0.5 rounded-full text-xs {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
-        {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Accepted{{ else }}{{$record.Status}}{{ end }}
+        {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
         </span>
         {{ end }}
         {{ end }}
@@ -74,9 +74,21 @@
         <span class="accordion-icon">{{ if eq $index 0 }}-{{ else }}+{{ end }}</span>
       </div>
     </div>
-  <div class="accordion-content markdown"
+  <div class="accordion-content"
        style="display: {{ if eq $index 0 }}block{{ else }}none{{ end }}">
-    {{ markdown $record.Content }}
+    <div class="markdown">
+      {{ markdown $record.Content }}
+    </div>
+    {{ if $record.Review }}
+    <div class="mt-2 pt-2 border-t border-gray-700">
+      <div class="text-xs text-gray-500 mb-1">
+        // review by @{{$record.Review.EntryAuthorName}}
+      </div>
+      <div class="markdown text-xs">
+        {{ markdown $record.Review.Content }}
+      </div>
+    </div>
+    {{ end }}
   </div>
 </li>
 {{ end }}

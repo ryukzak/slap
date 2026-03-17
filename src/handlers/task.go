@@ -41,13 +41,18 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error retrieving user data: %v", err)
 	}
 
+	type TaskRecordView struct {
+		storage.TaskRecord
+		Review *storage.TaskRecord
+	}
+
 	type TaskViewModel struct {
 		config.Task
 		UserID        storage.UserID
 		StudentID     storage.UserID
 		SessionUserID storage.UserID
 		StudentName   string
-		TaskRecords   []storage.TaskRecord
+		TaskRecords   []TaskRecordView
 		TaskID        storage.TaskID
 		Score         string
 	}
@@ -64,12 +69,28 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		model.StudentName = userData.Username
 	}
 
-	model.TaskRecords, err = DB.ListTaskRecords(userIDFromURL, storage.TaskID(taskID))
+	rawRecords, err := DB.ListTaskRecords(userIDFromURL, storage.TaskID(taskID))
 	if err != nil {
 		log.Printf("Error retrieving task records: %v", err)
 	}
 
-	for _, r := range model.TaskRecords {
+	// Pair each review record with the reviewed record it follows (newest first).
+	for i := 0; i < len(rawRecords); i++ {
+		r := rawRecords[i]
+		if r.Status == storage.ReviewTaskRecord && i+1 < len(rawRecords) &&
+			rawRecords[i+1].Status == storage.ReviewedTaskRecord {
+			reviewCopy := r
+			model.TaskRecords = append(model.TaskRecords, TaskRecordView{
+				TaskRecord: rawRecords[i+1],
+				Review:     &reviewCopy,
+			})
+			i++
+		} else {
+			model.TaskRecords = append(model.TaskRecords, TaskRecordView{TaskRecord: r})
+		}
+	}
+
+	for _, r := range rawRecords {
 		if r.EntryAuthorID != r.StudentID {
 			if score := util.ExtractScore(r.Content); score != "" {
 				model.Score = score
