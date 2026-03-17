@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/ryukzak/slap/src/analytics"
 	bcrypto "golang.org/x/crypto/bcrypt"
 
 	passwordvalidator "github.com/wagslane/go-password-validator"
@@ -203,5 +204,6 @@ func SettingsUsernameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("action=change_username user=%s new_name=%s", userID, username)
+	analytics.Identify(userID, username)
 	renderPage(w, "templates/settings.html", settingsPageData{UserID: userID, Username: username, Success: "Name updated"})
 }

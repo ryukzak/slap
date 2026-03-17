@@ -97,6 +97,9 @@ func init() {
 		"sub": func(a, b int) int {
 			return a - b
 		},
+		"add": func(a, b int) int {
+			return a + b
+		},
 		"getTitle":    util.GetTitle,
 		"getRestText": util.GetRestText,
 		"boldScore": func(s string) template.HTML {
