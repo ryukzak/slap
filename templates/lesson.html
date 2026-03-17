@@ -120,6 +120,7 @@
           Submitted: {{ formatDateTime $record.CreatedAt }}
         </div>
       </div>
+      {{ if $.SessionIsTeacher }}
       <form id="submit_form_{{$index}}"
             method="post"
             action="/user/{{$record.StudentID}}/task/{{$record.TaskID}}/journal">
@@ -132,13 +133,16 @@
                     placeholder="Enter your task record content (markdown supported)"></textarea>
         </div>
       </form>
+      {{ end }}
       <div class="flex justify-between mt-2">
         <div class="space-x-4">
+          {{ if $.SessionIsTeacher }}
           <button class="text-blue-400 hover:text-blue-300 text-xs"
                   type="submit"
                   form="submit_form_{{$index}}">
             [submit review]
           </button>
+          {{ end }}
           <a class="text-blue-400 hover:text-blue-300 text-xs"
              href="/user/{{$record.StudentID}}">[view student]</a>
           <a class="text-blue-400 hover:text-blue-300 text-xs"

@@ -149,19 +149,21 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderPage(w, "templates/lesson.html", struct {
-		Lesson        *storage.Lesson
-		TeacherID     string
-		SessionUserID string
-		TaskRecords   []TaskRecordWithInfo
-		ShowRevoked   bool
-		TotalRecords  int
+		Lesson           *storage.Lesson
+		TeacherID        string
+		SessionUserID    string
+		SessionIsTeacher bool
+		TaskRecords      []TaskRecordWithInfo
+		ShowRevoked      bool
+		TotalRecords     int
 	}{
-		Lesson:        lesson,
-		TeacherID:     lesson.TeacherID,
-		SessionUserID: user.ID,
-		TaskRecords:   visibleTaskRecords,
-		ShowRevoked:   showRevoked,
-		TotalRecords:  totalRecords,
+		Lesson:           lesson,
+		TeacherID:        lesson.TeacherID,
+		SessionUserID:    user.ID,
+		SessionIsTeacher: user.IsTeacher,
+		TaskRecords:      visibleTaskRecords,
+		ShowRevoked:      showRevoked,
+		TotalRecords:     totalRecords,
 	})
 }
 
