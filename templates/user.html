@@ -1,0 +1,102 @@
+{{define "title"}}User Profile{{end}}
+{{define "head_extra"}}
+<script src="/static/js/override.js"></script>
+{{end}}
+{{define "header"}}
+<span class="text-gray-500">·</span>
+<span>// {{.Username}}</span>
+{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500">·</span>
+{{ if eq .ID .SessionUserID }}
+<a class="text-blue-400 hover:text-blue-300"
+   href="/user/{{.ID}}/settings">[settings]</a>
+<span class="text-gray-500">·</span>
+{{ else if .SessionIsTeacher }}
+<a class="text-red-400 hover:text-red-300" href="/user/{{.ID}}/reset">[reset password]</a>
+<span class="text-gray-500">·</span>
+{{ end }}
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}
+{{define "content"}}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
+    <span>// lessons</span>
+    <span class="text-gray-600">[reviewed/registered]</span>
+  </div>
+  {{template "lesson_list.html" .}}
+</section>
+{{ if .IsTeacher }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // add lesson
+  </div>
+  <form class="space-y-2" action="/api/lessons" method="post">
+    <div>
+      <textarea class="bg-gray-800 border border-gray-700 text-gray-300 text-xs w-full p-2 rounded"
+                id="lesson-description"
+                name="description"
+                rows="3"
+                placeholder="Enter lesson description using Markdown"></textarea>
+    </div>
+    <div class="flex items-center space-x-2">
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
+             type="date"
+             id="lesson-date"
+             name="date"
+             value="{{.DefaultDateTime.Format "2006-01-02"}}" />
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
+             type="time"
+             id="lesson-time"
+             name="time"
+             lang="en-GB"
+             value="{{.DefaultDateTime.Format "15:04"}}"
+             step="60" />
+      <span class="text-xs text-gray-400">{{.TZName}}</span>
+      <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-2 rounded h-8"
+              type="submit">
+        [add]
+      </button>
+    </div>
+  </form>
+</section>
+{{ end }}
+{{ if .IsStudent }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
+    <span>// your tasks</span>
+    <span class="text-gray-600">[score] status</span>
+  </div>
+  {{ if .Tasks }}
+  <ul class="space-y-1">
+    {{ range .Tasks }}
+    {{ $status := index $.TaskStatuses .ID }}
+    {{ $journal := index $.Journals .ID }}
+    <li class="border-b border-gray-800 pb-1">
+      <a class="block text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
+         href="/user/{{$.ID}}/task/{{.ID}}">
+        <span class="flex items-center space-x-2 min-w-0">
+          <span class="flex-shrink-0">{{.Title}}</span>
+          {{ if $journal }}
+          {{ with index $journal 0 }}
+          <span class="text-gray-500 truncate">{{.EntryAuthorName}}: {{ if ne .EntryAuthorID .StudentID }}{{boldScore (getTitle .Content)}}{{ else }}{{getTitle .Content}}{{ end }}</span>
+          {{ end }}
+          {{ end }}
+        </span>
+        {{ if $status }}
+      <span class="flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-xs {{ if eq $status "submit" }}bg-blue-800 text-blue-200{{ else if eq $status "register" }}bg-yellow-700 text-yellow-200{{ else if eq $status "revoked" }}bg-red-800 text-red-200{{ else if eq $status "review" }}bg-orange-800 text-orange-200{{ else if eq $status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+      {{ if eq $status "submit" }}Pending{{ else if eq $status "register" }}Queued{{ else if eq $status "revoked" }}Dropped{{ else if eq $status "review" }}Feedback{{ else if eq $status "reviewed" }}Accepted{{ else }}{{$status}}{{ end }}
+      </span>
+      {{ end }}
+    </a>
+  </li>
+  {{ end }}
+</ul>
+{{ else }}
+<p class="text-gray-400 text-xs">
+  No assigned tasks.
+</p>
+{{ end }}
+</section>
+{{ end }}
+{{end}}

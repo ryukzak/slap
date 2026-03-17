@@ -1,0 +1,40 @@
+{{if .Lessons}}
+<ul class="space-y-1">
+  {{range .Lessons}}
+  <li class="border-b border-gray-800 pb-1">
+    {{if $.RegisterMode}}
+    <div class="text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded">
+      <div class="flex items-center space-x-2">
+        <span>{{formatDateTime .DateTime}}</span>
+        <span class="text-gray-500">@{{.TeacherName}}</span>
+        <span class="text-gray-400">{{getTitle .Description}}</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+        <button class="text-blue-400 hover:text-blue-300 text-xs"
+                type="button"
+                hx-post="/api/lesson/{{.ID}}/register"
+                hx-include="closest form">
+          [register]
+        </button>
+      </div>
+    </div>
+  {{else}}
+    <a class="block text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
+       href="/lesson/{{.ID}}">
+      <div class="flex items-center space-x-2">
+        <span>{{formatDateTime .DateTime}}</span>
+        <span class="text-gray-500">@{{.TeacherName}}</span>
+        <span class="text-gray-400">{{getTitle .Description}}</span>
+      </div>
+      <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+    </a>
+    {{end}}
+  </li>
+  {{end}}
+</ul>
+{{else}}
+<p class="text-gray-400 text-xs">
+  No available lessons found.
+</p>
+{{end}}

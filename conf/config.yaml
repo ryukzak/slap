@@ -1,0 +1,164 @@
+# SLAP Application Configuration
+
+# Teacher IDs - users with these GUIDs get teacher role
+teacher_ids:
+  - "123"
+  - "12345"
+
+# Tasks that all users will have access to
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+    description: |
+      # Basic Data Structures
+
+      Implement the following data structures with comprehensive tests:
+
+      ## Requirements
+
+      1. **Stack**
+         - Push and pop operations
+         - Peek functionality
+         - Size tracking
+
+      2. **Queue**
+         - Enqueue and dequeue operations
+         - Peek functionality
+         - Size tracking
+
+      3. **Linked List**
+         - Insert and delete operations
+         - Search functionality
+         - Traversal methods
+
+      ## Code Example
+
+      ```go
+      type Stack struct {
+          items []interface{}
+      }
+
+      func (s *Stack) Push(item interface{}) {
+          s.items = append(s.items, item)
+      }
+
+      func (s *Stack) Pop() interface{} {
+          if len(s.items) == 0 {
+              return nil
+          }
+          item := s.items[len(s.items)-1]
+          s.items = s.items[:len(s.items)-1]
+          return item
+      }
+      ```
+
+      ## Submission Guidelines
+
+      - Include thorough documentation
+      - Write comprehensive unit tests
+      - Follow best practices for error handling
+
+  - id: "task2"
+    title: "Lab 2"
+    description: |
+      # Advanced Algorithms
+
+      Implement and analyze the following algorithms:
+
+      ## Sorting Algorithms
+
+      * **Quick Sort**
+      * **Merge Sort**
+      * **Heap Sort**
+
+      > Each implementation should handle edge cases gracefully
+
+      ## Searching Algorithms
+
+      * Binary Search
+      * Depth-First Search
+      * Breadth-First Search
+
+      ## Complexity Analysis
+
+      | Algorithm | Time Complexity (Average) | Time Complexity (Worst) | Space Complexity |
+      |-----------|---------------------------|-------------------------|-----------------|
+      | Quick Sort | O(n log n) | O(n²) | O(log n) |
+      | Merge Sort | O(n log n) | O(n log n) | O(n) |
+      | Heap Sort | O(n log n) | O(n log n) | O(1) |
+
+      For each algorithm, provide your own analysis and comparison.
+
+  - id: "task3"
+    title: "Lab 3"
+    description: |
+      # Final Project: Custom Data Structure
+
+      Design and implement a custom data structure to solve a real-world problem.
+
+      ## Project Requirements
+
+      1. Define a practical use case for your data structure
+      2. Design the API for your data structure
+      3. Implement the data structure with all necessary operations
+      4. Analyze the time and space complexity
+      5. Create a demo application showcasing your data structure
+
+      ## Suggested Topics
+
+      - **Specialized Tree**: (Trie, B-Tree, Red-Black Tree)
+      - **Graph Implementation**: (Adjacency List, Adjacency Matrix)
+      - **Concurrent Data Structure**: (Thread-safe collections)
+      - **Probabilistic Data Structure**: (Bloom filter, Count-Min Sketch)
+
+      ![Data Structure Comparison](https://example.com/data-structure-comparison.png)
+
+      ## Deliverables
+
+      - Full source code with documentation
+      - Unit tests with at least 80% coverage
+      - Performance benchmarks
+      - Written report (3-5 pages)
+
+  - id: "task4"
+    title: "Lab 4"
+    description: |
+      # Graph Algorithms
+
+      Implement and analyze common graph algorithms including:
+
+      ## Required Implementations
+
+      * **Depth-First Search (DFS)**
+        ```go
+        func DFS(graph Graph, start Vertex) {
+            visited := make(map[Vertex]bool)
+            dfsUtil(graph, start, visited)
+        }
+
+        func dfsUtil(graph Graph, vertex Vertex, visited map[Vertex]bool) {
+            // Mark the current node as visited and print it
+            visited[vertex] = true
+            fmt.Println(vertex)
+
+            // Recur for all the vertices adjacent to this vertex
+            for _, adjacent := range graph.GetAdjacent(vertex) {
+                if !visited[adjacent] {
+                    dfsUtil(graph, adjacent, visited)
+                }
+            }
+        }
+        ```
+
+      * **Breadth-First Search (BFS)**
+      * **Shortest Path Algorithms**
+        - Dijkstra's Algorithm
+        - Bellman-Ford Algorithm
+
+      ## Analysis Requirements
+
+      For each algorithm:
+
+      1. Describe the time and space complexity
+      2. Identify optimal use cases
+      3. Discuss limitations and potential optimizations

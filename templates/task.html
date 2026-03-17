@@ -1,0 +1,141 @@
+{{define "title"}}{{.Title}} - Task Details{{end}}
+{{define "head_extra"}}
+<script src="/static/js/override.js"></script>
+<script src="/static/js/accordion.js"></script>
+<link href="/static/styles.css" rel="stylesheet" />
+{{end}}
+{{define "header"}}
+<span class="text-gray-500">·</span>
+<a class="text-gray-300 hover:text-white" href="/user/{{.StudentID}}">// {{.StudentName}}</a>
+<span class="text-gray-500">·</span>
+<span>// task: {{.Title}}</span>
+{{ if .Score }}
+<span class="text-gray-500">·</span>
+<span class="text-gray-300">score: {{.Score}}</span>
+{{ end }}
+{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/user/{{.UserID}}">[back]</a>
+{{end}}
+{{define "content"}}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // submit
+  </div>
+  <form class="space-y-2"
+        action="/user/{{.StudentID}}/task/{{.ID}}/journal"
+        method="post">
+    <div class="flex space-x-2">
+      <div class="flex-grow">
+        <textarea class="bg-gray-800 border border-gray-700 text-gray-300 text-xs w-full p-2 rounded"
+                  id="journal-content"
+                  name="content"
+                  rows="3"
+                  required
+                  placeholder="Enter your task record using Markdown"></textarea>
+      </div>
+      <div>
+        <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded"
+                type="submit">
+          [add]
+        </button>
+      </div>
+    </div>
+  </form>
+</section>
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // journal
+  </div>
+  <ul class="space-y-1">
+    {{$totalRecords := len .TaskRecords}}
+    {{ range $index, $record := .TaskRecords }}
+    <li class="border-b border-gray-800 pb-1">
+      <div class="text-xs flex items-center justify-between cursor-pointer accordion-header hover:bg-gray-800 py-1 px-1 rounded">
+        <div class="flex items-center">
+          <span class="text-blue-400">@{{$record.EntryAuthorName}}</span>
+          <span class="text-gray-400 ml-2">({{ formatDateTime $record.CreatedAt }})</span>
+        </div>
+        <div class="flex items-center">
+          {{ if ne $record.Status "submit" }}
+          {{ if eq $record.Status "register" }}
+          <a class="mr-2 px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 hover:bg-yellow-600"
+             href="/lesson/{{$record.LessonID}}">
+            Queued
+          </a>
+        {{ else }}
+        <span class="mr-2 px-2 py-0.5 rounded-full text-xs {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+        {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Accepted{{ else }}{{$record.Status}}{{ end }}
+        </span>
+        {{ end }}
+        {{ end }}
+        <span class="mr-3 text-gray-500">({{ printf "%02d" (sub $totalRecords $index) }})</span>
+        <span class="accordion-icon">{{ if eq $index 0 }}-{{ else }}+{{ end }}</span>
+      </div>
+    </div>
+  <div class="accordion-content markdown"
+       style="display: {{ if eq $index 0 }}block{{ else }}none{{ end }}">
+    {{ markdown $record.Content }}
+  </div>
+</li>
+{{ end }}
+{{ if eq $totalRecords 0 }}
+<li class="text-xs text-gray-400">
+  No records for this task yet.
+</li>
+{{ end }}
+</ul>
+</section>
+{{ if gt (len .TaskRecords) 0 }}
+{{ with index .TaskRecords 0 }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // register
+  </div>
+  {{ if and (eq .Status "submit") (eq .EntryAuthorID $.SessionUserID) }}
+  <form>
+    <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />
+    <input type="hidden" name="studentID" value="{{.StudentID}}" />
+    <div class="max-h-60 overflow-y-auto"
+         hx-get="/api/lessons?register=1"
+         hx-trigger="load"
+         hx-swap="outerHTML"
+         hx-on:htmx:error="this.innerHTML='<p class=\'text-red-400 text-xs\'>Error loading lessons. Please try again.</p>'">
+      <p class="text-gray-400 text-xs">
+        Loading available lessons...
+      </p>
+    </div>
+  </form>
+  {{ else if eq .Status "register" }}
+  <ul class="space-y-1">
+    <li class="border-b border-gray-800 pb-1">
+      <div class="text-xs flex items-center justify-between py-1 px-1">
+        <a class="text-yellow-400 hover:text-yellow-300"
+           href="/lesson/{{.LessonID}}">{{.LessonAt.Format "2006-01-02 15:04"}}</a>
+        <form action="/api/lesson/{{.LessonID}}/unregister" method="post">
+          <input type="hidden" name="taskID" value="{{.TaskID}}" />
+          <button class="text-red-400 hover:text-red-300 text-xs" type="submit">
+            [revoke]
+          </button>
+        </form>
+      </div>
+    </li>
+  </ul>
+{{ else }}
+  <p class="text-gray-500 text-xs">
+    Only student can register own submitted task to the lesson.
+  </p>
+  {{ end }}
+</section>
+{{ end }}
+{{ end }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // description
+  </div>
+  <div class="text-xs markdown">
+    {{ markdown .Description }}
+  </div>
+</section>
+{{end}}

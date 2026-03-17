@@ -1,0 +1,8 @@
+tmp/
+.git/
+tests/
+*.md
+.claude/
+.vscode/
+.idea/
+.claude/
