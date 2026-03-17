@@ -33,6 +33,18 @@ func Close() {
 	}
 }
 
+func Identify(userID, username string) {
+	if client == nil {
+		return
+	}
+	if err := client.Enqueue(posthog.Identify{
+		DistinctId: userID,
+		Properties: posthog.NewProperties().Set("name", username),
+	}); err != nil {
+		log.Printf("analytics: identify %s: %v", userID, err)
+	}
+}
+
 func Track(userID, event string, props map[string]any) {
 	if client == nil {
 		return

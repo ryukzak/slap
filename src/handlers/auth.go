@@ -137,6 +137,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("action=signup user=%s", id)
+	analytics.Identify(id, username)
 	analytics.Track(id, "sign_up", map[string]any{"is_teacher": isTeacher})
 	setAuthCookie(w, tokenString)
 	redirectTo(w, r, "/user/"+id)
@@ -185,6 +186,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("action=signin user=%s", user.ID)
+	analytics.Identify(user.ID, user.Username)
 	analytics.Track(user.ID, "sign_in", map[string]any{"is_teacher": isTeacher})
 	setAuthCookie(w, tokenString)
 	redirectTo(w, r, "/user/"+user.ID)
