@@ -54,44 +54,31 @@ func CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/lesson/"+string(lesson.ID), http.StatusSeeOther)
 }
 
-func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
-	user := userSession(w, r)
-	if user == nil {
-		return
-	}
+// TaskRecordWithInfo wraps a TaskRecord with additional task metadata.
+type TaskRecordWithInfo struct {
+	storage.TaskRecord
+	TaskTitle       string
+	TaskDescription string
+	PreviousRecords []storage.TaskRecord
+}
 
-	vars := mux.Vars(r)
-	lessonID := vars["lessonID"]
+// lessonRecordsData is the data passed to the lesson_task_records partial.
+type lessonRecordsData struct {
+	TaskRecords      []TaskRecordWithInfo
+	ShowRevoked      bool
+	TotalRecords     int
+	SessionIsTeacher bool
+}
 
-	showRevoked := r.URL.Query().Get("showRevoked") == "true"
-
-	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
-	if err != nil {
-		log.Printf("Error fetching lesson: %v", err)
-		http.Error(w, "Lesson not found", http.StatusNotFound)
-		return
-	}
-
-	// Collect all task records for this lesson
-	type TaskRecordWithInfo struct {
-		storage.TaskRecord
-		TaskTitle       string
-		TaskDescription string
-		PreviousRecords []storage.TaskRecord
-	}
-
+func buildLessonRecords(lesson *storage.Lesson, showRevoked bool) ([]TaskRecordWithInfo, int, error) {
 	taskRecords, err := DB.ListLessonTaskRecords(lesson)
 	if err != nil {
-		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
-		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
-		return
+		return nil, 0, err
 	}
 
 	previousTaskRecords, err := DB.ListLessonPreviousTaskRecords(lesson)
 	if err != nil {
-		log.Printf("Error fetching previous task records for lesson %s: %v", lesson.ID, err)
-		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
-		return
+		return nil, 0, err
 	}
 
 	// Reviewed previous records go inside the current enrollment's accordion.
@@ -141,11 +128,37 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	totalRecords := len(allRecords)
-	var visibleTaskRecords []TaskRecordWithInfo
+	var visible []TaskRecordWithInfo
 	for _, r := range allRecords {
 		if showRevoked || r.Status != storage.RevokedTaskRecord {
-			visibleTaskRecords = append(visibleTaskRecords, r)
+			visible = append(visible, r)
 		}
+	}
+	return visible, totalRecords, nil
+}
+
+func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
+	user := userSession(w, r)
+	if user == nil {
+		return
+	}
+
+	vars := mux.Vars(r)
+	lessonID := vars["lessonID"]
+	showRevoked := r.URL.Query().Get("showRevoked") == "true"
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		log.Printf("Error fetching lesson: %v", err)
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+
+	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked)
+	if err != nil {
+		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
+		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
+		return
 	}
 
 	renderPage(w, "templates/lesson.html", struct {
@@ -165,6 +178,49 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		ShowRevoked:      showRevoked,
 		TotalRecords:     totalRecords,
 	})
+}
+
+func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
+	user := userSession(w, r)
+	if user == nil {
+		return
+	}
+
+	lessonID := mux.Vars(r)["lessonID"]
+	showRevoked := r.URL.Query().Get("showRevoked") == "true"
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		log.Printf("Error fetching lesson: %v", err)
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+
+	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked)
+	if err != nil {
+		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
+		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
+		return
+	}
+
+	data := lessonRecordsData{
+		TaskRecords:      visibleTaskRecords,
+		ShowRevoked:      showRevoked,
+		TotalRecords:     totalRecords,
+		SessionIsTeacher: user.IsTeacher,
+	}
+
+	t, err := BaseTemplates.Clone()
+	if err != nil {
+		http.Error(w, "Failed to clone template", http.StatusInternalServerError)
+		log.Printf("Template clone error: %v", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	if err := t.ExecuteTemplate(w, "lesson_task_records.html", data); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		log.Printf("Template execution error: %v", err)
+	}
 }
 
 func RenderLessonListHandler(w http.ResponseWriter, r *http.Request) {

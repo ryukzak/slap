@@ -136,5 +136,9 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		"student_id": userIDFromURL,
 		"role":       record.Status,
 	})
+	if r.Header.Get("HX-Request") == "true" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	http.Redirect(w, r, "/user/"+userIDFromURL+"/task/"+taskID, http.StatusSeeOther)
 }

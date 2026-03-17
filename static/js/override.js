@@ -30,7 +30,20 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   document.addEventListener("htmx:afterRequest", function (event) {
-    if (event.detail.successful && event.target.closest("form")) {
+    if (!event.detail.successful) return;
+
+    const form = event.target.closest
+      ? event.target.closest(".lesson-review-form")
+      : null;
+    if (form) {
+      const details = form.closest("details");
+      if (details) details.open = false;
+      form.reset();
+      document.body.dispatchEvent(new CustomEvent("lessonRecordsRefresh"));
+      return;
+    }
+
+    if (event.target.closest("form")) {
       document.body.dispatchEvent(new CustomEvent("refreshLessons"));
     }
   });
