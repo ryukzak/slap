@@ -138,6 +138,9 @@ HTTP 200
 body contains "Pending"
 
 # Rule 6: Teacher extends deadline on past lesson — registration then succeeds
+GET {{base_url}}/logout
+HTTP 303
+
 POST {{base_url}}/api/lesson/{{past_lesson_id}}/extend
 Cookie: user_data={{teacher_token}}
 [FormParams]
