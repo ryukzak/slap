@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/csv"
 	"log"
 	"net/http"
 	"time"
@@ -168,6 +169,67 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		Users:         rows,
 		Tasks:         AppConfig.Tasks,
 	})
+}
+
+// UserListCSVHandler returns a CSV of students with their scores per task. Teacher-only.
+func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
+	sessionUser := teacherSession(w, r)
+	if sessionUser == nil {
+		return
+	}
+
+	users, err := DB.ListUsers()
+	if err != nil {
+		log.Printf("Error listing users: %v", err)
+		http.Error(w, "Failed to list users", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"students.csv\"")
+
+	cw := csv.NewWriter(w)
+	cw.Comma = '|'
+
+	header := []string{"ID", "Name"}
+	for _, task := range AppConfig.Tasks {
+		header = append(header, "Score "+task.Title)
+	}
+	if err := cw.Write(header); err != nil {
+		log.Printf("Error writing CSV header: %v", err)
+		return
+	}
+
+	for _, u := range users {
+		if !u.IsStudent {
+			continue
+		}
+		row := []string{string(u.ID), u.Username}
+		for _, task := range AppConfig.Tasks {
+			records, err := DB.ListTaskRecords(u.ID, task.ID)
+			if err != nil {
+				log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
+				row = append(row, "")
+				continue
+			}
+			score := ""
+			for _, rec := range records {
+				if rec.EntryAuthorID != rec.StudentID {
+					if s := util.ExtractScore(rec.Content); s != "" {
+						score = s
+						break
+					}
+				}
+			}
+			row = append(row, score)
+		}
+		if err := cw.Write(row); err != nil {
+			log.Printf("Error writing CSV row: %v", err)
+			return
+		}
+	}
+
+	cw.Flush()
 }
 
 // getTomorrowNoon returns tomorrow's date at 12:00 PM in PrimaryLoc

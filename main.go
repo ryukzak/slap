@@ -189,6 +189,7 @@ func main() {
 
 	// User and task routes with specific path prefixes
 	r.HandleFunc("/users", handlers.UserListHandler).Methods("GET")
+	r.HandleFunc("/users/csv", handlers.UserListCSVHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}", handlers.UserInfoHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/task/{taskID}", handlers.TaskDetailHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/task/{taskID}/journal", handlers.AddTaskRecordHandler).Methods("POST")
