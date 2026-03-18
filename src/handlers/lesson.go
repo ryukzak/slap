@@ -410,7 +410,7 @@ func DeleteLessonHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("action=delete_lesson user=%s lesson=%s", user.ID, lessonID)
 	analytics.Track(user.ID, "lesson_deleted", map[string]any{"lesson_id": lessonID})
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("HX-Redirect", "/user/"+lesson.TeacherID)
 }
 
 func RegisterTaskRecordToLessonHandler(w http.ResponseWriter, r *http.Request) {

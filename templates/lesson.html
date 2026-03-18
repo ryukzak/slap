@@ -16,7 +16,8 @@
 <span class="text-gray-500">·</span>
 <button class="text-red-400 hover:text-red-300 text-xs"
         type="button"
-        onclick="if(confirm('Delete this lesson?')){fetch('/api/lessons/{{.Lesson.ID}}',{method:'DELETE'}).then(response=>{if(response.ok){window.location.href='/user/{{.TeacherID}}';}else{alert('Failed to delete');}});}">
+        hx-delete="/api/lessons/{{.Lesson.ID}}"
+        hx-confirm="Delete this lesson?">
   [delete]
 </button>
 {{ end }}
