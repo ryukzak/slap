@@ -21,7 +21,7 @@
 {{define "content"}}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-    // submit
+  {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
   </div>
   <form class="space-y-2"
         action="/user/{{.StudentID}}/task/{{.ID}}/journal"

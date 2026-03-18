@@ -55,6 +55,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		TaskRecords   []TaskRecordView
 		TaskID        storage.TaskID
 		Score         string
+		IsTeacher     bool
 	}
 
 	model := TaskViewModel{
@@ -63,6 +64,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		StudentID:     userIDFromURL,
 		SessionUserID: user.ID,
 		TaskID:        storage.TaskID(taskID),
+		IsTeacher:     user.IsTeacher,
 	}
 
 	if userData != nil {
