@@ -68,6 +68,27 @@
     </div>
   </div>
 </section>
+{{ if eq .Lesson.TeacherID .SessionUserID }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // edit description
+  </div>
+  <form class="space-y-2"
+        action="/api/lesson/{{.Lesson.ID}}/description"
+        method="post">
+    <textarea class="w-full bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded"
+              name="description"
+              rows="4"
+              required>{{.Lesson.Description}}</textarea>
+    <div>
+      <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded"
+              type="submit">
+        [save description]
+      </button>
+    </div>
+  </form>
+</section>
+{{ end }}
 {{ if .SessionIsTeacher }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">

@@ -193,6 +193,18 @@ func (d *DB) DeleteLesson(lessonID LessonID, teacherID UserID) error {
 	})
 }
 
+func (d *DB) UpdateLessonDescription(lessonID LessonID, description string) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		lesson, err := getValue[Lesson](b, lessonID)
+		if err != nil {
+			return err
+		}
+		lesson.Description = description
+		return setValue(b, lessonID, *lesson)
+	})
+}
+
 func (d *DB) SetLessonDeadline(lessonID LessonID, deadline time.Time) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)

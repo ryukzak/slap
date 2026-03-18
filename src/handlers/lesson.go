@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -342,6 +343,44 @@ func ExtendLessonDeadlineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("action=extend_deadline user=%s lesson=%s deadline=%s", user.ID, lessonID, deadline.Format("2006-01-02T15:04"))
+	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
+}
+
+func UpdateLessonDescriptionHandler(w http.ResponseWriter, r *http.Request) {
+	user := teacherSession(w, r)
+	if user == nil {
+		return
+	}
+
+	lessonID := mux.Vars(r)["lessonID"]
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	description := strings.TrimSpace(r.FormValue("description"))
+	if description == "" {
+		http.Error(w, "Description cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+	if lesson.TeacherID != user.ID {
+		http.Error(w, "Only the lesson's teacher can update the description", http.StatusForbidden)
+		return
+	}
+
+	if err := DB.UpdateLessonDescription(lessonID, description); err != nil {
+		log.Printf("action=update_lesson_description user=%s lesson=%s error=%v", user.ID, lessonID, err)
+		http.Error(w, "Failed to update description", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("action=update_lesson_description user=%s lesson=%s", user.ID, lessonID)
 	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
 }
 
