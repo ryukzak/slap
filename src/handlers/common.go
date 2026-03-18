@@ -14,22 +14,23 @@ import (
 
 // User represents the user data structure
 type User struct {
-	Username         string
-	ID               storage.UserID // profile user's ID
-	SessionUserID    storage.UserID // logged-in user's ID
-	SessionIsTeacher bool
-	IsStudent        bool
-	IsTeacher        bool
-	RegisterMode     bool
-	Tasks            []config.Task
-	TaskStatuses     map[storage.TaskID]storage.TaskRecordStatus
-	TaskScores       map[storage.TaskID]string
-	Journals         map[storage.TaskID][]storage.TaskRecord
-	Lessons          []*storage.Lesson
-	ShowPastLessons  bool
-	Now              time.Time
-	DefaultDateTime  time.Time
-	TZName           string
+	Username                 string
+	ID                       storage.UserID // profile user's ID
+	SessionUserID            storage.UserID // logged-in user's ID
+	SessionIsTeacher         bool
+	IsStudent                bool
+	IsTeacher                bool
+	RegisterMode             bool
+	Tasks                    []config.Task
+	TaskStatuses             map[storage.TaskID]storage.TaskRecordStatus
+	TaskScores               map[storage.TaskID]string
+	Journals                 map[storage.TaskID][]storage.TaskRecord
+	Lessons                  []*storage.Lesson
+	ShowPastLessons          bool
+	Now                      time.Time
+	DefaultDateTime          time.Time
+	TZName                   string
+	DefaultLessonDescription string
 }
 
 var JwtAuth *auth.JWTConfig

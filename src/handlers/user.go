@@ -73,21 +73,22 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 
 	user = User{
-		Username:         dbUser.Username,
-		ID:               dbUser.ID,
-		SessionUserID:    sessionUser.ID,
-		SessionIsTeacher: sessionUser.IsTeacher,
-		IsStudent:        dbUser.IsStudent,
-		IsTeacher:        dbUser.IsTeacher,
-		Tasks:            AppConfig.Tasks,
-		TaskStatuses:     taskStatuses,
-		TaskScores:       taskScores,
-		Journals:         journals,
-		Lessons:          []*storage.Lesson{},
-		ShowPastLessons:  showPast,
-		Now:              now,
-		DefaultDateTime:  getTomorrowNoon(),
-		TZName:           PrimaryTZName,
+		Username:                 dbUser.Username,
+		ID:                       dbUser.ID,
+		SessionUserID:            sessionUser.ID,
+		SessionIsTeacher:         sessionUser.IsTeacher,
+		IsStudent:                dbUser.IsStudent,
+		IsTeacher:                dbUser.IsTeacher,
+		Tasks:                    AppConfig.Tasks,
+		TaskStatuses:             taskStatuses,
+		TaskScores:               taskScores,
+		Journals:                 journals,
+		Lessons:                  []*storage.Lesson{},
+		ShowPastLessons:          showPast,
+		Now:                      now,
+		DefaultDateTime:          getTomorrowNoon(),
+		TZName:                   PrimaryTZName,
+		DefaultLessonDescription: AppConfig.DefaultLessonDescription,
 	}
 
 	// Load lessons for all users
