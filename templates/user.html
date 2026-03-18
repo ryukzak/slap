@@ -95,8 +95,8 @@
           {{ end }}
         </span>
         {{ if $status }}
-      <span class="flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-xs {{ if eq $status "submit" }}bg-blue-800 text-blue-200{{ else if eq $status "register" }}bg-yellow-700 text-yellow-200{{ else if eq $status "revoked" }}bg-red-800 text-red-200{{ else if eq $status "review" }}bg-orange-800 text-orange-200{{ else if eq $status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
-      {{ if eq $status "submit" }}Pending{{ else if eq $status "register" }}Queued{{ else if eq $status "revoked" }}Dropped{{ else if eq $status "review" }}Feedback{{ else if eq $status "reviewed" }}Checked{{ else }}{{$status}}{{ end }}
+      <span class="flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-xs {{ if eq $status "submit" }}bg-blue-800 text-blue-200{{ else if eq $status "register" }}bg-yellow-700 text-yellow-200{{ else if eq $status "revoked" }}bg-red-800 text-red-200{{ else if eq $status "cancelled" }}bg-gray-600 text-gray-200{{ else if eq $status "review" }}bg-orange-800 text-orange-200{{ else if eq $status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+      {{ if eq $status "submit" }}Pending{{ else if eq $status "register" }}Queued{{ else if eq $status "revoked" }}Dropped{{ else if eq $status "cancelled" }}Cancelled{{ else if eq $status "review" }}Feedback{{ else if eq $status "reviewed" }}Checked{{ else }}{{$status}}{{ end }}
       </span>
       {{ end }}
     </a>

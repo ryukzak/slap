@@ -16,11 +16,12 @@ type TaskRecordID = string
 type TaskRecordStatus string
 
 const (
-	SubmitTaskRecord   TaskRecordStatus = "submit"
-	RegisterTaskRecord TaskRecordStatus = "register"
-	RevokedTaskRecord  TaskRecordStatus = "revoked"
-	ReviewTaskRecord   TaskRecordStatus = "review"
-	ReviewedTaskRecord TaskRecordStatus = "reviewed"
+	SubmitTaskRecord    TaskRecordStatus = "submit"
+	RegisterTaskRecord  TaskRecordStatus = "register"
+	RevokedTaskRecord   TaskRecordStatus = "revoked"
+	ReviewTaskRecord    TaskRecordStatus = "review"
+	ReviewedTaskRecord  TaskRecordStatus = "reviewed"
+	CancelledTaskRecord TaskRecordStatus = "cancelled" // lesson was deleted by teacher
 )
 
 type TaskRecord struct {

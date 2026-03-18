@@ -71,6 +71,8 @@
            href="/lesson/{{$record.LessonID}}">Queued</a>
         {{ else if eq $record.Status "revoked" }}
         <span class="text-red-400">Dropped</span>
+        {{ else if eq $record.Status "cancelled" }}
+        <span class="text-gray-400">Cancelled</span>
         {{ else if eq $record.Status "review" }}
         <span class="text-orange-400">Feedback</span>
         {{ else if eq $record.Status "reviewed" }}

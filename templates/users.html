@@ -57,7 +57,7 @@
               {{ if $td.Score }}
               <span class="text-green-300">{{$td.Score}}</span>
               {{ end }}
-              <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+              <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else if eq $td.Status "cancelled" }}text-gray-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else if eq $td.Status "cancelled" }}Cancelled{{ else }}Pending{{ end }}</span>
               {{ if $td.Summary }}
               <span class="text-gray-500">({{$td.Summary}})</span>
               {{ end }}

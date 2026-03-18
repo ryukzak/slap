@@ -1,6 +1,7 @@
 # Lesson Cascade Delete Test
 # Tests: teacher creates lesson → student registers → teacher deletes lesson →
-#        task record reverts to submit state; lesson returns 404
+#        task record is marked Cancelled (not Dropped); lesson returns 404;
+#        student must re-submit before registering to a new lesson
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -91,15 +92,24 @@ Cookie: user_data={{student_token}}
 
 HTTP 404
 
-# Step 9: Task record reverted to submit — no longer shows Queued
+# Step 9: Task record is now Cancelled (not Dropped, not Queued)
 GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
+body contains "Cancelled"
 body not contains "Queued"
+body not contains "Dropped"
 
-# Step 10: Student can register to a different lesson (task is back to submit)
+# Step 10: Student submits again, then can register to a different lesson
+POST {{base_url}}/user/{{student_id}}/task/{{task_id}}/journal
+Cookie: user_data={{student_token}}
+[FormParams]
+content: Re-submitting after lesson was cancelled
+
+HTTP 303
+
 POST {{base_url}}/api/lessons
 Cookie: user_data={{teacher_token}}
 [Options]

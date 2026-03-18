@@ -167,14 +167,15 @@ func (d *DB) DeleteLesson(lessonID LessonID, teacherID UserID) error {
 			return err
 		}
 
-		// Reset registered task records back to submit state
+		// Mark registered task records as cancelled (lesson deleted by teacher,
+		// not a voluntary drop by the student).
 		for _, enrolled := range lesson.EnrolledTasks {
 			if enrolled.Status == RegisterTaskRecord {
 				taskRecord, err := getValue[TaskRecord](b, enrolled.TaskRecordID)
 				if err != nil {
 					return err
 				}
-				taskRecord.Status = SubmitTaskRecord
+				taskRecord.Status = CancelledTaskRecord
 				taskRecord.LessonAt = time.Time{}
 				taskRecord.LessonID = ""
 				if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
