@@ -26,6 +26,7 @@ type User struct {
 	TaskScores       map[storage.TaskID]string
 	Journals         map[storage.TaskID][]storage.TaskRecord
 	Lessons          []*storage.Lesson
+	ShowPastLessons  bool
 	Now              time.Time
 	DefaultDateTime  time.Time
 	TZName           string

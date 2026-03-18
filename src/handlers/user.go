@@ -67,6 +67,9 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	showPast := r.URL.Query().Get("showPast") == "true"
+	now := time.Now()
+
 	user = User{
 		Username:         dbUser.Username,
 		ID:               dbUser.ID,
@@ -79,7 +82,8 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		TaskScores:       taskScores,
 		Journals:         journals,
 		Lessons:          []*storage.Lesson{},
-		Now:              time.Now(),
+		ShowPastLessons:  showPast,
+		Now:              now,
 		DefaultDateTime:  getTomorrowNoon(),
 		TZName:           PrimaryTZName,
 	}
@@ -89,7 +93,15 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Error loading lessons: %v", err)
 	} else {
-		user.Lessons = lessons
+		if showPast {
+			user.Lessons = lessons
+		} else {
+			for _, l := range lessons {
+				if !l.DateTime.Before(now) {
+					user.Lessons = append(user.Lessons, l)
+				}
+			}
+		}
 	}
 
 	renderPage(w, "templates/user.html", user)
