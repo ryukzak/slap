@@ -169,6 +169,18 @@ func (d *DB) UpdatePassword(userID string, passwordHash []byte) error {
 	})
 }
 
+func (d *DB) UpdateIsTeacher(userID UserID, isTeacher bool) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		user, err := getValue[UserData](b, userID)
+		if err != nil {
+			return err
+		}
+		user.IsTeacher = isTeacher
+		return setValue(b, userID, *user)
+	})
+}
+
 func (d *DB) UpdateUsername(userID, username string) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)

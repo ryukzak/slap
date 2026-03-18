@@ -179,6 +179,11 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Teacher status is determined by config, not stored value
 	isTeacher := AppConfig.IsTeacher(user.ID)
+	if user.IsTeacher != isTeacher {
+		if err := DB.UpdateIsTeacher(user.ID, isTeacher); err != nil {
+			log.Printf("action=signin user=%s error syncing teacher status: %v", user.ID, err)
+		}
+	}
 	tokenString, err := JwtAuth.GenerateToken(user.Username, user.ID, true, isTeacher)
 	if err != nil {
 		renderAuthPageWithError(w, "Error generating token")
