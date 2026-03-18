@@ -22,7 +22,10 @@
             #
           </th>
           <th class="text-left text-gray-400 py-1 pr-4 font-normal">
-            user
+            id
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            name
           </th>
           {{ range .Tasks }}
           <th class="text-left text-gray-400 py-1 px-2 font-normal">
@@ -37,8 +40,11 @@
           <td class="py-1 pr-2 text-gray-500">
             {{add $i 1}}
           </td>
+          <td class="py-1 pr-4 text-gray-500">
+            <a class="hover:text-white" href="/user/{{$user.ID}}">{{$user.ID}}</a>
+          </td>
           <td class="py-1 pr-4">
-            <a class="hover:text-white" href="/user/{{$user.ID}}"><span class="text-gray-500">@{{$user.ID}}</span> {{$user.Username}}</a>
+            <a class="hover:text-white" href="/user/{{$user.ID}}">@{{$user.Username}}</a>
             {{ if $user.IsTeacher }}
             <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-purple-800 text-purple-200">Teacher</span>
             {{ end }}
