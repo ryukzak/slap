@@ -3,7 +3,7 @@
 #
 # Prerequisites: server running against a fresh DB with default config.
 # Run: hurl --test \
-#   --variable student_id=student_$(date +%s) \
+#   --variable student_id=$(date +%s) \
 #   tests/settings-flow.hurl
 
 # Step 1: Sign up student
@@ -94,7 +94,7 @@ header "Location" == "/user/{{student_id}}"
 # Step 9: Another user cannot access settings
 POST {{base_url}}/signup
 [FormParams]
-id: other_{{student_id}}
+id: {{other_student_id}}
 password: OtherPass123!
 username: Other Student
 

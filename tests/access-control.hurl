@@ -5,8 +5,8 @@
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
 # Run: hurl --test \
-#   --variable student_a_id=student_a_$(date +%s) \
-#   --variable student_b_id=student_b_$(date +%s) \
+#   --variable student_a_id=$(date +%s)4 \
+#   --variable student_b_id=$(date +%s)5 \
 #   --variable teacher_id=123 \
 #   tests/access-control.hurl
 
