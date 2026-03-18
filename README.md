@@ -1,6 +1,8 @@
 # slap
 
 [![CI](https://github.com/ryukzak/slap/actions/workflows/ci.yml/badge.svg)](https://github.com/ryukzak/slap/actions/workflows/ci.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ryukzak/slap)](https://hub.docker.com/r/ryukzak/slap)
+[![Docker Image Version](https://img.shields.io/docker/v/ryukzak/slap?label=docker)](https://hub.docker.com/r/ryukzak/slap)
 
 Student Lesson & Attempts Platform. A lightweight queue and task management system for university courses with multiple teachers.
 
