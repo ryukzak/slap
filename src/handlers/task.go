@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -41,21 +43,18 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error retrieving user data: %v", err)
 	}
 
-	type TaskRecordView struct {
-		storage.TaskRecord
-		Reviews []storage.TaskRecord
-	}
-
 	type TaskViewModel struct {
 		config.Task
-		UserID        storage.UserID
-		StudentID     storage.UserID
-		SessionUserID storage.UserID
-		StudentName   string
-		TaskRecords   []TaskRecordView
-		TaskID        storage.TaskID
-		Score         string
-		IsTeacher     bool
+		UserID         storage.UserID
+		StudentID      storage.UserID
+		SessionUserID  storage.UserID
+		StudentName    string
+		TaskRecords    []storage.TaskRecord
+		LatestRecord   *storage.TaskRecord
+		TaskID         storage.TaskID
+		Score          string
+		JournalSummary string
+		IsTeacher      bool
 	}
 
 	model := TaskViewModel{
@@ -76,40 +75,48 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error retrieving task records: %v", err)
 	}
 
-	// Pair all consecutive review records with the reviewed record they follow (newest first).
-	for i := 0; i < len(rawRecords); {
-		r := rawRecords[i]
-		if r.Status == storage.ReviewTaskRecord {
-			var reviews []storage.TaskRecord
-			for i < len(rawRecords) && rawRecords[i].Status == storage.ReviewTaskRecord {
-				reviews = append(reviews, rawRecords[i])
-				i++
-			}
-			if i < len(rawRecords) && rawRecords[i].Status == storage.ReviewedTaskRecord {
-				model.TaskRecords = append(model.TaskRecords, TaskRecordView{
-					TaskRecord: rawRecords[i],
-					Reviews:    reviews,
-				})
-				i++
-			} else {
-				for _, rev := range reviews {
-					model.TaskRecords = append(model.TaskRecords, TaskRecordView{TaskRecord: rev})
-				}
-			}
-		} else {
-			model.TaskRecords = append(model.TaskRecords, TaskRecordView{TaskRecord: r})
-			i++
-		}
+	if len(rawRecords) > 0 {
+		model.LatestRecord = &rawRecords[0]
 	}
+	model.TaskRecords = rawRecords
 
+	var pending, queued, dropped, feedback, checked int
 	for _, r := range rawRecords {
 		if r.EntryAuthorID != r.StudentID {
-			if score := util.ExtractScore(r.Content); score != "" {
+			if score := util.ExtractScore(r.Content); score != "" && model.Score == "" {
 				model.Score = score
-				break
 			}
 		}
+		switch r.Status {
+		case storage.SubmitTaskRecord:
+			pending++
+		case storage.RegisterTaskRecord:
+			queued++
+		case storage.RevokedTaskRecord:
+			dropped++
+		case storage.ReviewTaskRecord:
+			feedback++
+		case storage.ReviewedTaskRecord:
+			checked++
+		}
 	}
+	var parts []string
+	if pending > 0 {
+		parts = append(parts, fmt.Sprintf("p:%d", pending))
+	}
+	if queued > 0 {
+		parts = append(parts, fmt.Sprintf("r:%d", queued))
+	}
+	if feedback > 0 {
+		parts = append(parts, fmt.Sprintf("f:%d", feedback))
+	}
+	if checked > 0 {
+		parts = append(parts, fmt.Sprintf("c:%d", checked))
+	}
+	if dropped > 0 {
+		parts = append(parts, fmt.Sprintf("d:%d", dropped))
+	}
+	model.JournalSummary = strings.Join(parts, " ")
 
 	renderPage(w, "templates/task.html", model)
 }
