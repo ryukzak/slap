@@ -5,6 +5,12 @@ teacher_ids:
   - "123"
   - "12345"
 
+# Default description pre-filled when creating a new lesson
+default_lesson_description: |
+  ## Agenda
+
+  ## Notes
+
 # Tasks that all users will have access to
 tasks:
   - id: "task1"

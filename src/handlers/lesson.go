@@ -205,7 +205,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		TaskRecords:      visibleTaskRecords,
 		ShowRevoked:      showRevoked,
 		TotalRecords:     totalRecords,
-		DefaultDateTime:  time.Now().In(PrimaryLoc),
+		DefaultDateTime:  time.Now().In(PrimaryLoc).Add(15 * time.Minute),
 		TZName:           PrimaryTZName,
 	})
 }
