@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -96,9 +98,10 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type UserTaskSummary struct {
-	Count  int
-	Score  string
-	Status storage.TaskRecordStatus
+	Count   int
+	Score   string
+	Status  storage.TaskRecordStatus
+	Summary string // compact status counts e.g. "p:2 r:1 c:1"
 }
 
 type UserTableRow struct {
@@ -146,14 +149,43 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				summary := UserTaskSummary{Count: len(records), Status: bestStatus}
+				var pending, queued, dropped, feedback, checked int
 				for _, rec := range records {
 					if rec.EntryAuthorID != rec.StudentID {
-						if score := util.ExtractScore(rec.Content); score != "" {
+						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
 							summary.Score = score
-							break
 						}
 					}
+					switch rec.Status {
+					case storage.SubmitTaskRecord:
+						pending++
+					case storage.RegisterTaskRecord:
+						queued++
+					case storage.RevokedTaskRecord:
+						dropped++
+					case storage.ReviewTaskRecord:
+						feedback++
+					case storage.ReviewedTaskRecord:
+						checked++
+					}
 				}
+				var parts []string
+				if pending > 0 {
+					parts = append(parts, fmt.Sprintf("p:%d", pending))
+				}
+				if queued > 0 {
+					parts = append(parts, fmt.Sprintf("r:%d", queued))
+				}
+				if feedback > 0 {
+					parts = append(parts, fmt.Sprintf("f:%d", feedback))
+				}
+				if checked > 0 {
+					parts = append(parts, fmt.Sprintf("c:%d", checked))
+				}
+				if dropped > 0 {
+					parts = append(parts, fmt.Sprintf("d:%d", dropped))
+				}
+				summary.Summary = strings.Join(parts, " ")
 				row.TaskData[task.ID] = summary
 			}
 		}

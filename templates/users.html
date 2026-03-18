@@ -49,19 +49,11 @@
             {{ if $td.Count }}
             <a class="hover:text-white" href="/user/{{$user.ID}}/task/{{.ID}}">
               {{ if $td.Score }}
-              <span class="text-green-300">{{$td.Score}}</span><span class="text-gray-500">-{{$td.Count}}</span>
-              {{ else if eq $td.Status "reviewed" }}
-              <span class="px-1 rounded bg-green-800 text-green-200">Checked</span>
-              {{ else if eq $td.Status "review" }}
-              <span class="px-1 rounded bg-orange-800 text-orange-200">Feedback</span>
-              {{ else if eq $td.Status "register" }}
-              <span class="px-1 rounded bg-yellow-700 text-yellow-200">Queued</span>
-              {{ else if eq $td.Status "revoked" }}
-              <span class="px-1 rounded bg-red-800 text-red-200">Dropped</span>
-              {{ else if eq $td.Status "submit" }}
-              <span class="px-1 rounded bg-blue-800 text-blue-200">Pending</span>
-            {{ else }}
-              <span class="text-gray-500">{{$td.Count}}</span>
+              <span class="text-green-300">{{$td.Score}}</span>
+              {{ end }}
+              <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+              {{ if $td.Summary }}
+              <span class="text-gray-500">({{$td.Summary}})</span>
               {{ end }}
             </a>
             {{ end }}
