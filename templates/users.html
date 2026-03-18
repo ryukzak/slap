@@ -10,9 +10,9 @@
 {{end}}
 {{define "content"}}
 <section class="mb-8">
-  <div class="mb-2">
-    <a class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded"
-       href="/users/csv">[download csv]</a>
+  <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
+    <span>// users</span>
+    <a class="text-blue-400 hover:text-blue-300" href="/users/csv">[download csv]</a>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full text-xs border-collapse">
@@ -22,7 +22,10 @@
             #
           </th>
           <th class="text-left text-gray-400 py-1 pr-4 font-normal">
-            user
+            id
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            name
           </th>
           {{ range .Tasks }}
           <th class="text-left text-gray-400 py-1 px-2 font-normal">
@@ -37,8 +40,11 @@
           <td class="py-1 pr-2 text-gray-500">
             {{add $i 1}}
           </td>
+          <td class="py-1 pr-4 text-gray-500">
+            <a class="hover:text-white" href="/user/{{$user.ID}}">{{$user.ID}}</a>
+          </td>
           <td class="py-1 pr-4">
-            <a class="hover:text-white" href="/user/{{$user.ID}}"><span class="text-gray-500">@{{$user.ID}}</span> {{$user.Username}}</a>
+            <a class="hover:text-white" href="/user/{{$user.ID}}">@{{$user.Username}}</a>
             {{ if $user.IsTeacher }}
             <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-purple-800 text-purple-200">Teacher</span>
             {{ end }}
@@ -49,19 +55,11 @@
             {{ if $td.Count }}
             <a class="hover:text-white" href="/user/{{$user.ID}}/task/{{.ID}}">
               {{ if $td.Score }}
-              <span class="text-green-300">{{$td.Score}}</span><span class="text-gray-500">-{{$td.Count}}</span>
-              {{ else if eq $td.Status "reviewed" }}
-              <span class="px-1 rounded bg-green-800 text-green-200">Checked</span>
-              {{ else if eq $td.Status "review" }}
-              <span class="px-1 rounded bg-orange-800 text-orange-200">Feedback</span>
-              {{ else if eq $td.Status "register" }}
-              <span class="px-1 rounded bg-yellow-700 text-yellow-200">Queued</span>
-              {{ else if eq $td.Status "revoked" }}
-              <span class="px-1 rounded bg-red-800 text-red-200">Dropped</span>
-              {{ else if eq $td.Status "submit" }}
-              <span class="px-1 rounded bg-blue-800 text-blue-200">Pending</span>
-            {{ else }}
-              <span class="text-gray-500">{{$td.Count}}</span>
+              <span class="text-green-300">{{$td.Score}}</span>
+              {{ end }}
+              <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+              {{ if $td.Summary }}
+              <span class="text-gray-500">({{$td.Summary}})</span>
               {{ end }}
             </a>
             {{ end }}

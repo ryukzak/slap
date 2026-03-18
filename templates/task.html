@@ -1,7 +1,6 @@
 {{define "title"}}{{.Title}} - Task Details{{end}}
 {{define "head_extra"}}
 <script src="/static/js/override.js"></script>
-<script src="/static/js/accordion.js"></script>
 <link href="/static/styles.css" rel="stylesheet" />
 {{end}}
 {{define "header"}}
@@ -21,7 +20,7 @@
 {{define "content"}}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-    // submit
+  {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
   </div>
   <form class="space-y-2"
         action="/user/{{.StudentID}}/task/{{.ID}}/journal"
@@ -45,67 +44,51 @@
   </form>
 </section>
 <section class="mb-8">
-  <div class="text-xs text-gray-500 mb-2">
-    // journal
+  <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
+    <span>// journal</span>
+    <span class="flex items-center space-x-1">
+      {{ if .Score }}<span class="text-green-300">{{.Score}}</span>{{ end }}
+      {{ with .LatestRecord }}
+      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+      {{ end }}
+      {{ if $.JournalSummary }}<span class="text-gray-600">({{$.JournalSummary}})</span>{{ end }}
+    </span>
   </div>
   <ul class="space-y-1">
-    {{$totalRecords := len .TaskRecords}}
-    {{ range $index, $record := .TaskRecords }}
-    <li class="border-b border-gray-800 pb-1">
-      <div class="text-xs flex items-center justify-between cursor-pointer accordion-header hover:bg-gray-800 py-1 px-1 rounded">
-        <div class="flex items-center">
+    {{$total := len .TaskRecords}}
+    {{ range $i, $record := .TaskRecords }}
+    <li class="border-b border-gray-800 py-1">
+      <div class="text-xs flex items-center justify-between mb-1">
+        <div class="flex items-center space-x-2">
+          <span class="text-gray-600">#{{ sub $total $i }}</span>
           <span class="text-blue-400">@{{$record.EntryAuthorName}}</span>
-          <span class="text-gray-400 ml-2">({{ formatDateTime $record.CreatedAt }})</span>
+          <span class="text-gray-500">{{ formatDateTime $record.CreatedAt }}</span>
         </div>
-        <div class="flex items-center">
-          {{ if ne $record.Status "submit" }}
-          {{ if eq $record.Status "register" }}
-          <a class="mr-2 px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 hover:bg-yellow-600"
-             href="/lesson/{{$record.LessonID}}">
-            Queued
-          </a>
-        {{ else }}
-        <span class="mr-2 px-2 py-0.5 rounded-full text-xs {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
-        {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
-        </span>
+        {{ if eq $record.Status "submit" }}
+        <span class="text-blue-400">Pending</span>
+        {{ else if eq $record.Status "register" }}
+        <a class="text-yellow-400 hover:text-yellow-300"
+           href="/lesson/{{$record.LessonID}}">Queued</a>
+        {{ else if eq $record.Status "revoked" }}
+        <span class="text-red-400">Dropped</span>
+        {{ else if eq $record.Status "review" }}
+        <span class="text-orange-400">Feedback</span>
+        {{ else if eq $record.Status "reviewed" }}
+        <span class="text-green-400">Checked</span>
         {{ end }}
-        {{ end }}
-        <span class="mr-3 text-gray-500">({{ printf "%02d" (sub $totalRecords $index) }})</span>
-        <span class="accordion-icon">{{ if eq $index 0 }}-{{ else }}+{{ end }}</span>
-      </div>
-    </div>
-  <div class="accordion-content"
-       style="display: {{ if eq $index 0 }}block{{ else }}none{{ end }}">
-    <div class="markdown">
-      {{ markdown $record.Content }}
-    </div>
-    {{ if $record.Reviews }}
-    <div class="mt-2 pt-2 border-t border-gray-700">
-      {{ range $i, $rev := $record.Reviews }}
-      {{ if gt $i 0 }}
-      <hr class="border-gray-700 my-2" />
-      {{ end }}
-      <div class="text-xs text-gray-500 mb-1">
-        // review by @{{$rev.EntryAuthorName}}
       </div>
       <div class="markdown text-xs">
-        {{ markdown $rev.Content }}
+        {{ markdown $record.Content }}
       </div>
-      {{ end }}
-    </div>
+    </li>
+  {{ else }}
+    <li class="text-xs text-gray-400">
+      No records for this task yet.
+    </li>
     {{ end }}
-  </div>
-</li>
-{{ end }}
-{{ if eq $totalRecords 0 }}
-<li class="text-xs text-gray-400">
-  No records for this task yet.
-</li>
-{{ end }}
-</ul>
+  </ul>
 </section>
-{{ if gt (len .TaskRecords) 0 }}
-{{ with index .TaskRecords 0 }}
+{{ with .LatestRecord }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
     // register
@@ -145,7 +128,6 @@
   </p>
   {{ end }}
 </section>
-{{ end }}
 {{ end }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
