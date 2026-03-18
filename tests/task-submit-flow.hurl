@@ -3,7 +3,7 @@
 #
 # Prerequisites: server running against a fresh DB with default config.
 # Run: hurl --test \
-#   --variable student_id=student_$(date +%s) \
+#   --variable student_id=$(date +%s) \
 #   tests/task-submit-flow.hurl
 
 # Step 1: Sign up as student

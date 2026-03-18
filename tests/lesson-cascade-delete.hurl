@@ -5,7 +5,7 @@
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
 # Run: hurl --test \
-#   --variable student_id=student_$(date +%s) \
+#   --variable student_id=$(date +%s) \
 #   --variable teacher_id=123 \
 #   tests/lesson-cascade-delete.hurl
 

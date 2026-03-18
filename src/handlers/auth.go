@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/ryukzak/slap/src/analytics"
@@ -15,6 +16,8 @@ import (
 
 const minEntropyBits = 70
 const bcryptCost = 12
+
+var numericIDRegexp = regexp.MustCompile(`^\d+$`)
 
 // SecureCookies controls whether the auth cookie is set with Secure flag.
 // Set to true in production (HTTPS). Configurable via SLAP_SECURE_COOKIES env var.
@@ -93,6 +96,11 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 
 	if id == "" || password == "" || username == "" {
 		renderAuthPageWithError(w, "All fields are required")
+		return
+	}
+
+	if !numericIDRegexp.MatchString(id) {
+		renderAuthPageWithError(w, "ID must contain digits only")
 		return
 	}
 

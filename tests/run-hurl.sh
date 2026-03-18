@@ -55,30 +55,31 @@ run_test() {
 }
 
 run_test tests/task-submit-flow.hurl \
-    --variable "student_id=student_${TIMESTAMP}0"
+    --variable "student_id=${TIMESTAMP}0"
 
 run_test tests/teacher-review-flow.hurl \
-    --variable "student_id=student_${TIMESTAMP}1"
+    --variable "student_id=${TIMESTAMP}1"
 
 run_test tests/lesson-queue-flow.hurl \
-    --variable "student_id=student_${TIMESTAMP}2"
+    --variable "student_id=${TIMESTAMP}2"
 
 run_test tests/lesson-registration-rules.hurl \
-    --variable "student_id=student_${TIMESTAMP}3"
+    --variable "student_id=${TIMESTAMP}3"
 
 run_test tests/access-control.hurl \
-    --variable "student_a_id=student_a_${TIMESTAMP}4" \
-    --variable "student_b_id=student_b_${TIMESTAMP}5"
+    --variable "student_a_id=${TIMESTAMP}4" \
+    --variable "student_b_id=${TIMESTAMP}5"
 
 run_test tests/settings-flow.hurl \
-    --variable "student_id=student_${TIMESTAMP}6"
+    --variable "student_id=${TIMESTAMP}6" \
+    --variable "other_student_id=${TIMESTAMP}9"
 
 run_test tests/password-reset-flow.hurl \
-    --variable "student_id=student_${TIMESTAMP}7" \
+    --variable "student_id=${TIMESTAMP}7" \
     --variable "teacher_id=$TEACHER_ID"
 
 run_test tests/lesson-cascade-delete.hurl \
-    --variable "student_id=student_${TIMESTAMP}8"
+    --variable "student_id=${TIMESTAMP}8"
 
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
