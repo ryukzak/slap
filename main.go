@@ -100,8 +100,20 @@ func init() {
 		"add": func(a, b int) int {
 			return a + b
 		},
-		"getTitle":    util.GetTitle,
-		"getRestText": util.GetRestText,
+		"getTitle": func(s string) string {
+			maxLen := 120
+			if appConfig != nil && appConfig.TitleMaxLen > 0 {
+				maxLen = appConfig.TitleMaxLen
+			}
+			return util.GetTitle(s, maxLen)
+		},
+		"getRestText": func(s string) string {
+			maxLen := 120
+			if appConfig != nil && appConfig.TitleMaxLen > 0 {
+				maxLen = appConfig.TitleMaxLen
+			}
+			return util.GetRestText(s, maxLen)
+		},
 		"boldScore": func(s string) template.HTML {
 			return template.HTML(util.BoldScore(s)) //nolint:gosec
 		},

@@ -10,8 +10,9 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Tasks      []Task   `yaml:"tasks"`
-	TeacherIDs []string `yaml:"teacher_ids"`
+	Tasks       []Task   `yaml:"tasks"`
+	TeacherIDs  []string `yaml:"teacher_ids"`
+	TitleMaxLen int      `yaml:"title_max_len"`
 }
 
 // IsTeacher checks if the given user ID is in the teacher list

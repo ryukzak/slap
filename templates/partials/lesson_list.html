@@ -7,7 +7,7 @@
       <div class="flex items-center space-x-2">
         <span>{{formatDateTime .DateTime}}</span>
         <span class="text-gray-500">@{{.TeacherName}}</span>
-        <span class="text-gray-400">{{getTitle .Description}}</span>
+        <span class="text-gray-400 truncate min-w-0">{{getTitle .Description}}</span>
       </div>
       <div class="flex items-center space-x-2">
         <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
@@ -29,7 +29,7 @@
       <div class="flex items-center space-x-2">
         <span>{{formatDateTime .DateTime}}</span>
         <span class="text-gray-500">@{{.TeacherName}}</span>
-        <span class="text-gray-400">{{getTitle .Description}}</span>
+        <span class="text-gray-400 truncate min-w-0">{{getTitle .Description}}</span>
       </div>
       <div class="flex items-center space-x-2">
         {{ if not .IsRegistrationOpen }}

@@ -25,36 +25,36 @@ func BoldScore(s string) string {
 	return "<strong>" + s[:loc[1]] + "</strong>" + html.EscapeString(s[loc[1]:])
 }
 
-func GetTitle(s string) string {
+const newlineSeparator = " ↵ "
+
+// GetTitle returns a preview of s suitable for display in a table cell.
+// Newlines are replaced with a visible separator, and the result is capped at
+// maxLen runes (unicode-safe). No trailing "…" is added — use CSS truncation
+// (e.g. Tailwind "truncate") to clip the text visually.
+func GetTitle(s string, maxLen int) string {
 	if s == "" {
 		return ""
 	}
-	lines := strings.Split(s, "\n")
-	firstLine := lines[0]
-	if len(firstLine) <= 80 {
-		return firstLine
+	s = strings.ReplaceAll(s, "\n", newlineSeparator)
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
 	}
-	return firstLine[:77] + "..."
+	return string(runes[:maxLen])
 }
 
-func GetRestText(s string) string {
+// GetRestText returns the portion of s that follows the first maxLen runes
+// (after newline replacement), i.e. the overflow not shown by GetTitle.
+func GetRestText(s string, maxLen int) string {
 	if s == "" {
 		return ""
 	}
-	lines := strings.Split(s, "\n")
-	firstLine := lines[0]
-	if len(firstLine) <= 80 {
-		if len(lines) <= 1 {
-			return ""
-		}
-		rest := strings.Join(lines[1:], "\n")
-		return strings.TrimLeft(rest, "\n")
+	s = strings.ReplaceAll(s, "\n", newlineSeparator)
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return ""
 	}
-	rest := "..." + firstLine[77:]
-	if len(lines) > 1 {
-		rest += "\n" + strings.Join(lines[1:], "\n")
-	}
-	return rest
+	return string(runes[maxLen:])
 }
 
 func FormatDateTime(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location) func(time.Time) string {
