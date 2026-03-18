@@ -61,7 +61,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		Task:          *task,
 		UserID:        user.ID,
 		StudentID:     userIDFromURL,
-		SessionUserID: userIDFromURL,
+		SessionUserID: user.ID,
 		TaskID:        storage.TaskID(taskID),
 	}
 
