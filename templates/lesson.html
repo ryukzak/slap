@@ -52,13 +52,17 @@
       <div>
         {{ if .Lesson.IsRegistrationOpen }}
         <span class="text-green-400">open</span>
-        {{ with .Lesson.RegistrationDeadline }}
-        <span class="text-gray-500">until {{ .Format "2006-01-02 15:04" }}</span>
+        {{ if .Lesson.RegistrationDeadline }}
+        <span class="text-gray-500">until {{ .Lesson.RegistrationDeadline.Format "2006-01-02 15:04" }}</span>
+      {{ else }}
+        <span class="text-gray-500">until {{ .Lesson.DateTime.Format "2006-01-02 15:04" }}</span>
         {{ end }}
       {{ else }}
         <span class="text-red-400">closed</span>
-        {{ with .Lesson.RegistrationDeadline }}
-        <span class="text-gray-500">deadline {{ .Format "2006-01-02 15:04" }}</span>
+        {{ if .Lesson.RegistrationDeadline }}
+        <span class="text-gray-500">deadline {{ .Lesson.RegistrationDeadline.Format "2006-01-02 15:04" }}</span>
+      {{ else }}
+        <span class="text-gray-500">since {{ .Lesson.DateTime.Format "2006-01-02 15:04" }}</span>
         {{ end }}
         {{ end }}
       </div>
