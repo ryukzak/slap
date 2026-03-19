@@ -45,16 +45,17 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	type TaskViewModel struct {
 		config.Task
-		UserID         storage.UserID
-		StudentID      storage.UserID
-		SessionUserID  storage.UserID
-		StudentName    string
-		TaskRecords    []storage.TaskRecord
-		LatestRecord   *storage.TaskRecord
-		TaskID         storage.TaskID
-		Score          string
-		JournalSummary string
-		IsTeacher      bool
+		UserID           storage.UserID
+		StudentID        storage.UserID
+		SessionUserID    storage.UserID
+		StudentName      string
+		TaskRecords      []storage.TaskRecord
+		LatestRecord     *storage.TaskRecord
+		TaskID           storage.TaskID
+		Score            string
+		JournalSummary   string
+		IsTeacher        bool
+		RegisteredLesson *storage.Lesson
 	}
 
 	model := TaskViewModel{
@@ -77,6 +78,14 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(rawRecords) > 0 {
 		model.LatestRecord = &rawRecords[0]
+		if rawRecords[0].Status == storage.RegisterTaskRecord && rawRecords[0].LessonID != "" {
+			lesson, err := DB.GetLesson(rawRecords[0].LessonID)
+			if err != nil {
+				log.Printf("Error fetching registered lesson %s: %v", rawRecords[0].LessonID, err)
+			} else {
+				model.RegisteredLesson = lesson
+			}
+		}
 	}
 	model.TaskRecords = rawRecords
 

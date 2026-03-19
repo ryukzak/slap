@@ -12,7 +12,16 @@
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>// users</span>
-    <a class="text-blue-400 hover:text-blue-300" href="/users/csv">[download csv]</a>
+    <span class="flex items-center space-x-2">
+      <a class="text-blue-400 hover:text-blue-300"
+         href="/users/csv{{ if .ShowBlocked }}?showBlocked=true{{ end }}">[download csv]</a>
+      {{ if .ShowBlocked }}
+      <a class="text-blue-400 hover:text-blue-300" href="/users">[hide blocked]</a>
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300"
+         href="/users?showBlocked=true">[show blocked]</a>
+      {{ end }}
+    </span>
   </div>
   <div class="overflow-x-auto">
     <table class="w-full text-xs border-collapse">
@@ -47,6 +56,9 @@
             <a class="hover:text-white" href="/user/{{$user.ID}}">@{{$user.Username}}</a>
             {{ if $user.IsTeacher }}
             <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-purple-800 text-purple-200">Teacher</span>
+            {{ end }}
+            {{ if $user.IsBlocked }}
+            <span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-red-900 text-red-300">Blocked</span>
             {{ end }}
           </td>
           {{ range $.Tasks }}

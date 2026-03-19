@@ -30,6 +30,7 @@ type User struct {
 	Now              time.Time
 	DefaultDateTime  time.Time
 	TZName           string
+	IsBlocked        bool
 }
 
 var JwtAuth *auth.JWTConfig

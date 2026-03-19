@@ -22,6 +22,7 @@ type UserData struct {
 	Journals      map[TaskID][]TaskRecord `json:"journals"`
 	ResetToken    string                  `json:"reset_token,omitempty"`
 	ResetTokenExp time.Time               `json:"reset_token_exp,omitempty"`
+	IsBlocked     bool                    `json:"is_blocked,omitempty"`
 }
 
 func (d *DB) SaveUser(userData *UserData) error {
@@ -177,6 +178,18 @@ func (d *DB) UpdateIsTeacher(userID UserID, isTeacher bool) error {
 			return err
 		}
 		user.IsTeacher = isTeacher
+		return setValue(b, userID, *user)
+	})
+}
+
+func (d *DB) SetUserBlocked(userID UserID, blocked bool) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		user, err := getValue[UserData](b, userID)
+		if err != nil {
+			return err
+		}
+		user.IsBlocked = blocked
 		return setValue(b, userID, *user)
 	})
 }

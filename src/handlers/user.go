@@ -88,6 +88,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Now:              now,
 		DefaultDateTime:  getTomorrowNoon(),
 		TZName:           PrimaryTZName,
+		IsBlocked:        dbUser.IsBlocked,
 	}
 
 	// Load lessons for all users
@@ -135,8 +136,13 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	showBlocked := r.URL.Query().Get("showBlocked") == "true"
+
 	rows := make([]UserTableRow, 0, len(users))
 	for _, u := range users {
+		if u.IsBlocked && !showBlocked {
+			continue
+		}
 		row := UserTableRow{
 			UserData: *u,
 			TaskData: make(map[storage.TaskID]UserTaskSummary),
@@ -208,10 +214,12 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		SessionUserID string
 		Users         []UserTableRow
 		Tasks         []config.Task
+		ShowBlocked   bool
 	}{
 		SessionUserID: sessionUser.ID,
 		Users:         rows,
 		Tasks:         AppConfig.Tasks,
+		ShowBlocked:   showBlocked,
 	})
 }
 
@@ -244,8 +252,13 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	showBlocked := r.URL.Query().Get("showBlocked") == "true"
+
 	for _, u := range users {
 		if !u.IsStudent {
+			continue
+		}
+		if u.IsBlocked && !showBlocked {
 			continue
 		}
 		row := []string{string(u.ID), u.Username}
@@ -274,6 +287,36 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cw.Flush()
+}
+
+// BlockUserHandler blocks or unblocks a user. Teacher only.
+// POST /api/user/{userID}/block  body: blocked=true|false
+func BlockUserHandler(w http.ResponseWriter, r *http.Request) {
+	sessionUser := teacherSession(w, r)
+	if sessionUser == nil {
+		return
+	}
+
+	targetUserID := mux.Vars(r)["userID"]
+	if targetUserID == sessionUser.ID {
+		http.Error(w, "Cannot block yourself", http.StatusBadRequest)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+	blocked := r.FormValue("blocked") == "true"
+
+	if err := DB.SetUserBlocked(targetUserID, blocked); err != nil {
+		log.Printf("action=set_user_blocked teacher=%s target=%s blocked=%v error=%v", sessionUser.ID, targetUserID, blocked, err)
+		http.Error(w, "Failed to update block status", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("action=set_user_blocked teacher=%s target=%s blocked=%v", sessionUser.ID, targetUserID, blocked)
+	http.Redirect(w, r, "/user/"+targetUserID, http.StatusSeeOther)
 }
 
 // getTomorrowNoon returns tomorrow's date at 12:00 PM in PrimaryLoc

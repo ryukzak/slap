@@ -209,8 +209,9 @@ func main() {
 	r.HandleFunc("/user/{userID}/settings/password", handlers.SettingsPasswordHandler).Methods("POST")
 	r.HandleFunc("/user/{userID}/settings/username", handlers.SettingsUsernameHandler).Methods("POST")
 
-	// Password reset (teacher-only)
+	// Password reset and block (teacher-only)
 	r.HandleFunc("/user/{userID}/reset", handlers.TeacherResetPasswordHandler).Methods("GET", "POST")
+	r.HandleFunc("/api/user/{userID}/block", handlers.BlockUserHandler).Methods("POST")
 
 	// Lesson routes
 	r.HandleFunc("/api/lessons", handlers.CreateLessonHandler).Methods("POST")

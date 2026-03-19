@@ -19,6 +19,22 @@
 {{ else if .SessionIsTeacher }}
 <a class="text-red-400 hover:text-red-300" href="/user/{{.ID}}/reset">[reset password]</a>
 <span class="text-gray-500">·</span>
+{{ if .IsBlocked }}
+<form class="inline" action="/api/user/{{.ID}}/block" method="post">
+  <input type="hidden" name="blocked" value="false" />
+  <button class="text-blue-400 hover:text-blue-300 text-xs" type="submit">
+    [unblock]
+  </button>
+</form>
+{{ else }}
+<form class="inline" action="/api/user/{{.ID}}/block" method="post">
+  <input type="hidden" name="blocked" value="true" />
+  <button class="text-red-400 hover:text-red-300 text-xs" type="submit">
+    [block]
+  </button>
+</form>
+{{ end }}
+<span class="text-gray-500">·</span>
 {{ end }}
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}
