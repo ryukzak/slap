@@ -5,13 +5,9 @@
 {{end}}
 {{define "header"}}
 <span class="text-gray-500">·</span>
-<a class="text-gray-300 hover:text-white" href="/user/{{.TeacherID}}">// {{.Lesson.TeacherName}}</a>
-<span class="text-gray-500">·</span>
-<span>// lesson: {{ formatDateTime .Lesson.DateTime }}</span>
+<span>// @{{.Lesson.TeacherName}} · lesson: {{ formatDateTime .Lesson.DateTime }}</span>
 {{end}}
 {{define "footer_nav"}}
-<span class="text-gray-500">·</span>
-<a class="text-blue-400 hover:text-blue-300" href="/user/{{.TeacherID}}">[back]</a>
 {{ if eq .Lesson.TeacherID .SessionUserID }}
 <span class="text-gray-500">·</span>
 <button class="text-red-400 hover:text-red-300 text-xs"
