@@ -37,7 +37,7 @@ make build
 Or directly:
 
 ```sh
-go run main.go
+SLAP_JWT_SECRET=test go run main.go
 ```
 
 Flags:
