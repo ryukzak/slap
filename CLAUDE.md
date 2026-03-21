@@ -55,6 +55,15 @@ The top bar follows: `SLAP · // page-name` on the left, nav links on the right.
 
 All nav links use ghost button style. No IDs or raw data in the header.
 
+## Fixing UI Bugs
+
+For UI bug fixes (except purely visual/style changes), follow TDD with hurl tests:
+
+1. Write an hurl test covering the broken behavior (place UI-specific tests in a separate file)
+2. Run the test and confirm it **fails**
+3. Fix the bug
+4. Run the test again and confirm it **passes**
+
 ## Testing
 
 ```bash
