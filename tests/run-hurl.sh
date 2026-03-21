@@ -81,6 +81,12 @@ run_test tests/password-reset-flow.hurl \
 run_test tests/lesson-cascade-delete.hurl \
     --variable "student_id=${TIMESTAMP}8"
 
+run_test tests/ui/user-list-student-row.hurl \
+    --variable "student_id=${TIMESTAMP}10"
+
+run_test tests/ui/task-registered-lesson-info.hurl \
+    --variable "student_id=${TIMESTAMP}11"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

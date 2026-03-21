@@ -47,6 +47,12 @@ test-hurl:
 		--variable student_a_id=student_a_$$(date +%s)4 \
 		--variable student_b_id=student_b_$$(date +%s)5 \
 		tests/access-control.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=student_$$(date +%s)10 \
+		tests/ui/user-list-student-row.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=student_$$(date +%s)11 \
+		tests/ui/task-registered-lesson-info.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]
