@@ -187,7 +187,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 					parts = append(parts, fmt.Sprintf("p:%d", pending))
 				}
 				if queued > 0 {
-					parts = append(parts, fmt.Sprintf("r:%d", queued))
+					parts = append(parts, fmt.Sprintf("q:%d", queued))
 				}
 				if feedback > 0 {
 					parts = append(parts, fmt.Sprintf("f:%d", feedback))
