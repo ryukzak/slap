@@ -59,10 +59,24 @@ All nav links use ghost button style. No IDs or raw data in the header.
 
 For UI bug fixes (except purely visual/style changes), follow TDD with hurl tests:
 
-1. Write an hurl test covering the broken behavior (place UI-specific tests in a separate file)
+1. Write an hurl test covering the broken behavior (place in `tests/ui/`)
 2. Run the test and confirm it **fails**
 3. Fix the bug
 4. Run the test again and confirm it **passes**
+
+### Writing UI hurl tests
+
+Place UI tests in `tests/ui/`, named after the use case (e.g. `user-list-student-row.hurl`).
+
+**Variables** — tests receive `base_url`, `teacher_id` from the runner. Define passwords, usernames, and other constants via `[Options] variable:` on the first request. Use `student_id` (passed from runner) to keep users unique across tests.
+
+**Auth pattern** — the teacher (id `123`) is signed up by earlier tests; use `POST /signin` to get its token. For students, use `POST /signup`. Always `GET /logout` between user switches to clear the cookie jar, then pass tokens explicitly via `Cookie: user_data={{token}}`.
+
+**Assertions** — use `body contains` / `body not contains` to check rendered HTML: links (`/user/{{student_id}}/task/task1`), text content (`@Username`, `Queued`), and data (`(q:1)`, `[0/1]`).
+
+**Wiring** — after creating a test file, register it in both:
+- `tests/run-hurl.sh` — add a `run_test` call with a unique `student_id` suffix (`${TIMESTAMP}<N>`)
+- `Makefile` `test-hurl` target — add a matching `hurl --test` entry
 
 ## Testing
 
