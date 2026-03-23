@@ -1,4 +1,4 @@
-.PHONY: all build test test-unit test-hurl test-hurl-ci test-e2e test-e2e-ci run clean format format-go format-templates format-check format-check-go format-check-templates lint lint-go lint-templates install-hooks
+.PHONY: all build test test-unit test-hurl test-hurl-ci run clean format format-go format-templates format-check format-check-go format-check-templates lint lint-go lint-templates install-hooks
 
 GOCMD=go
 GOTEST=$(GOCMD) test
@@ -66,17 +66,6 @@ TEST_PORT ?= 18080
 
 test-hurl-ci:
 	./tests/run-hurl.sh $(TEST_PORT) $(TEACHER_ID)
-
-# Run Playwright e2e tests against a running server.
-test-e2e:
-	cd e2e && npm test
-
-# Build, start server with a temp DB, run e2e tests, stop server.
-# Usage: make test-e2e-ci [E2E_PORT=18090]
-E2E_PORT ?= 18090
-
-test-e2e-ci:
-	./tests/run-e2e.sh $(E2E_PORT)
 
 run:
 	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) -v $(MAIN_PACKAGE)
