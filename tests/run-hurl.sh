@@ -87,6 +87,12 @@ run_test tests/ui/user-list-student-row.hurl \
 run_test tests/ui/task-registered-lesson-info.hurl \
     --variable "student_id=${TIMESTAMP}11"
 
+run_test tests/ui/dashboard-role-sections.hurl \
+    --variable "student_id=${TIMESTAMP}12"
+
+run_test tests/ui/task-markdown-rendering.hurl \
+    --variable "student_id=${TIMESTAMP}13"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
