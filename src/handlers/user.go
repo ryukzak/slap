@@ -110,6 +110,14 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, "templates/user.html", user)
 }
 
+type TaskStats struct {
+	Pending  int
+	Queued   int
+	Dropped  int
+	Feedback int
+	Checked  int
+}
+
 type UserTaskSummary struct {
 	Count   int
 	Score   string
@@ -205,14 +213,49 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		rows = append(rows, row)
 	}
 
+	// Compute per-task aggregate stats (students only).
+	studentCount := 0
+	taskStats := make(map[storage.TaskID]TaskStats)
+	for _, row := range rows {
+		if !row.IsStudent {
+			continue
+		}
+		studentCount++
+		for _, task := range AppConfig.Tasks {
+			ts := taskStats[task.ID]
+			td, ok := row.TaskData[task.ID]
+			if !ok || td.Count == 0 {
+				taskStats[task.ID] = ts
+				continue
+			}
+			switch td.Status {
+			case storage.SubmitTaskRecord:
+				ts.Pending++
+			case storage.RegisterTaskRecord:
+				ts.Queued++
+			case storage.RevokedTaskRecord:
+				ts.Dropped++
+			case storage.ReviewTaskRecord:
+				ts.Feedback++
+			case storage.ReviewedTaskRecord:
+				ts.Checked++
+			}
+			taskStats[task.ID] = ts
+		}
+	}
+
 	renderPage(w, "templates/users.html", struct {
 		SessionUserID string
 		Users         []UserTableRow
 		Tasks         []config.Task
+		StudentCount  int
+		TaskStats     map[storage.TaskID]TaskStats
 	}{
 		SessionUserID: sessionUser.ID,
 		Users:         rows,
 		Tasks:         AppConfig.Tasks,
+		StudentCount:  studentCount,
+		TaskStats:     taskStats,
 	})
 }
 
