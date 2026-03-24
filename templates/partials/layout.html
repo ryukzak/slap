@@ -8,9 +8,10 @@
     <meta name="keywords" content="slap, student, lab, activity" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <title>{{block "title" .}}SLAP{{end}}</title>
-    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    {{block "head_extra" .}}{{end}}
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/tailwindcss.js"></script>
+    <script src="/static/js/override.js"></script>
+    <link href="/static/styles.css" rel="stylesheet" />
   </head>
   <body class="bg-gray-900 text-gray-300 min-h-screen font-mono">
     <header class="border-b border-gray-700 px-4 py-2 flex items-center justify-between text-xs">
