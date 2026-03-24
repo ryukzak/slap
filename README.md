@@ -6,14 +6,15 @@
 
 Student Lesson & Attempts Platform. A lightweight queue and task management system for university courses with multiple teachers.
 
-## Features
+## What it does
 
-- Registration with ID, name, and group
-- Config-based teacher roles via GUID list in `conf/config.yaml`
-- Task journals with lesson scheduling
-- Markdown rendering for task descriptions
-- Embedded BoltDB storage (no external database required)
-- JWT-based authentication
+**Students** submit task solutions, register for lessons, and defend their work in a queued review session.
+
+**Teachers** schedule lessons, review queued submissions one by one, leave feedback or scores, and track progress across all students.
+
+**Teacher dashboard** (`/users`) provides an activity timeline, per-task statistics with visual bars, a students table with scores and statuses, and CSV export.
+
+Under the hood: embedded BoltDB (no external database), JWT authentication, Markdown rendering, self-hosted static assets.
 
 ## Quick Start
 
@@ -24,8 +25,6 @@ docker compose up
 ```
 
 The app will be available at http://localhost:8080.
-
-To customize the config, edit `conf/config.yaml` — changes are picked up on restart.
 
 ### Local
 
@@ -40,21 +39,50 @@ Or directly:
 SLAP_JWT_SECRET=test go run main.go
 ```
 
-Flags:
-- `-port` — HTTP port (default: `8080`)
-- `-config` — config file path (default: `conf/config.yaml`)
-
 ## Configuration
 
-Teacher accounts are defined by ID in `conf/config.yaml`:
+### Config file
+
+Default path: `conf/config.yaml` (override with `-config` flag or `SLAP_CONF` env var).
 
 ```yaml
 teacher_ids:
-  - "teacher-guid-1"
-  - "teacher-guid-2"
+  - "123"
+
+default_lesson_description: |
+  ## Agenda
+
+  ## Notes
+
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+    description: |
+      # Task description (Markdown)
 ```
 
-Users signing up with a matching ID get the teacher role. All other signups create student accounts.
+- **teacher_ids** — users signing up with a matching ID get the teacher role
+- **tasks** — task list available to all students
+- **default_lesson_description** — pre-filled text when creating a new lesson
+
+### Environment variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SLAP_JWT_SECRET` | yes | — | Secret key for JWT token signing |
+| `SLAP_PORT` | no | `8080` | HTTP port (also `-port` flag) |
+| `SLAP_CONF` | no | `conf/config.yaml` | Config file path (also `-config` flag) |
+| `SLAP_DB` | no | `tmp/slap.db` | BoltDB database file path |
+| `SLAP_TZ` | no | `Europe/Moscow` | Primary timezone for date display |
+| `SLAP_SECURE_COOKIES` | no | `false` | Set to `true` for HTTPS deployments |
+| `SLAP_POSTHOG_KEY` | no | built-in | PostHog analytics API key |
+| `SLAP_POSTHOG_HOST` | no | `https://eu.i.posthog.com` | PostHog host URL |
+
+## Documentation
+
+- [GUIDE.md](GUIDE.md) — user guide for students and teachers (in Russian)
+- [FEATURES.md](FEATURES.md) — use cases and requirements
+- [CONTRIBUTE.md](CONTRIBUTE.md) — contribution guidelines
 
 ## Development
 
@@ -66,11 +94,10 @@ make test      # run Go unit tests
 
 ### Integration Tests
 
-Start the server, then run [hurl](https://hurl.dev) tests:
+Run integration tests (builds server, runs hurl, tears down):
 
 ```sh
-./slap &
-hurl --test --variable "test_user_id=testuser_$(date +%s)" tests/auth-flow.hurl
+make test-hurl-ci
 ```
 
 ## Project Structure
@@ -78,6 +105,7 @@ hurl --test --variable "test_user_id=testuser_$(date +%s)" tests/auth-flow.hurl
 ```
 conf/           Configuration files (config.yaml)
 src/
+  analytics/    PostHog analytics + logging
   auth/         JWT authentication
   config/       YAML config loading
   handlers/     HTTP handlers

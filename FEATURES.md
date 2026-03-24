@@ -7,8 +7,7 @@
 2. System checks that the ID is not already taken.
 3. System validates password strength.
 4. Account is created. Student is always assigned the student role.
-5. System shows a token page with the generated JWT token and a "Sign in" link, or redirects to the dashboard directly, depending on configuration.
-6. Student sees their dashboard with upcoming lessons, their tasks and submission statuses, and profile information.
+5. Student is redirected to their dashboard.
 
 # Use Case: teacher registration
 
@@ -23,8 +22,7 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 
 1. User opens the sign-in page and enters their ID and password.
 2. System validates credentials.
-3. System shows the token page with a "Sign in" link, or redirects to the dashboard directly, depending on configuration.
-4. User sees their dashboard. The teacher dashboard includes a section for scheduling and managing lessons.
+3. User is redirected to their dashboard. The teacher dashboard includes a section for scheduling and managing lessons.
 
 # Use Case: student submits a task
 
@@ -35,6 +33,7 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - A student can add multiple records over time; each is appended to the task history.
 4. Student can view the full history of their records on the task page.
    - Records with status `review` are teacher feedback entries, shown inline below the submission they belong to.
+   - A compact summary of record counts by status is shown next to the task status (e.g. `p:2 f:1 c:1`).
 
 # Use Case: teacher checks a student task (outside of a lesson)
 
@@ -43,6 +42,7 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 3. Teacher writes feedback in the review field and submits.
    - This creates a new record with status `review` authored by the teacher.
    - If the student's latest record had status `register`, it is automatically transitioned to `reviewed`.
+   - If the review text starts with a number, it is extracted as the score for that task.
 4. Student sees the teacher feedback on their task page, shown inline below their submission.
 5. Teacher can submit multiple feedback entries; all are shown concatenated with a separator.
 
@@ -63,12 +63,35 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Submit feedback via the review form — the student will see it on their task page.
    - Move to the next task from another student.
 6. Teacher can see which tasks have been reviewed and which are still pending.
+7. Teacher can bulk-revoke all queued registrations via `[revoke all]`.
+8. Teacher can edit the lesson description after creation.
+9. Teacher can toggle `[show history]` to see previously revoked registration attempts.
+10. Teacher can expand or collapse all task records with `[open all]`.
+
+# Use Case: teacher views student dashboard
+
+1. Teacher navigates to `/users` (the students page).
+2. **Activity timeline** — shows a 3-week window (2 weeks past, 1 week future) with:
+   - Past days: count of teacher reviews performed that day.
+   - Future days: scheduled lessons with registered/reviewed counts.
+3. **Task statistics** — per-task aggregate bars showing status distribution across all students
+   (Pending, Queued, Feedback, Checked, Dropped, no submission).
+4. **Students table** — all registered users with per-task columns. Each cell shows:
+   - Score (if the teacher started a review with a number) and status badge.
+   - Compact status summary (e.g. `p:2 q:1 c:1`).
+5. Teacher can download the table as CSV via `[download csv]`.
+
+# Use Case: task record visibility on lesson page
+
+1. When a student views a lesson page, only their own task records are shown.
+2. When a teacher views a lesson page, all task records from all students are shown.
 
 # General requirements
 
 1. Teacher can see all profiles, tasks, and their statuses.
 2. Student can see only their own task submissions, and the lesson list and schedules.
-3. All multiline text fields should support markdown formatting with rendered output.
-4. Teacher has access to a users table (`/users`) showing all registered students with
+3. On lesson pages, students only see their own records; teachers see all records.
+4. All multiline text fields should support markdown formatting with rendered output.
+5. Teacher has access to a users table (`/users`) showing all registered students with
    per-task columns. Each cell shows the score (if the teacher started the review with a
-   number) and the entry count (e.g. `8-3`), or a status badge if no score is present.
+   number) and a status badge.
