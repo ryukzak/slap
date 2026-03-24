@@ -142,7 +142,7 @@
       </form>
       {{ end }}
     </span>
-    <span>
+    <span class="space-x-2">
       <button class="text-blue-400 hover:text-blue-300 text-xs"
               type="button"
               data-action="open-all"
@@ -150,14 +150,34 @@
         [open queued]
       </button>
       {{ if .ShowRevoked }}
-      <a class="text-blue-400 hover:text-blue-300" href="?">[hide history]</a>
+      <a class="text-blue-400 hover:text-blue-300" href="?sort={{.SortMode}}">[hide history]</a>
     {{ else }}
-      <a class="text-blue-400 hover:text-blue-300" href="?showRevoked=true">[show history]</a>
+      <a class="text-blue-400 hover:text-blue-300"
+         href="?showRevoked=true&sort={{.SortMode}}">[show history]</a>
+      {{ end }}
+      <span class="text-gray-600">|</span>
+      {{ if eq (printf "%s" .SortMode) "date" }}
+      date
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300"
+         href="?showRevoked={{.ShowRevoked}}&sort=date">date</a>
+      {{ end }}
+      {{ if eq (printf "%s" .SortMode) "task-mix" }}
+      task-mix
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300"
+         href="?showRevoked={{.ShowRevoked}}&sort=task-mix">task-mix</a>
+      {{ end }}
+      {{ if eq (printf "%s" .SortMode) "student-mix" }}
+      student-mix
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300"
+         href="?showRevoked={{.ShowRevoked}}&sort=student-mix">student-mix</a>
       {{ end }}
     </span>
   </div>
   <div id="lesson-task-records"
-       hx-get="/lesson/{{.Lesson.ID}}/records?showRevoked={{.ShowRevoked}}"
+       hx-get="/lesson/{{.Lesson.ID}}/records?showRevoked={{.ShowRevoked}}&sort={{.SortMode}}"
        hx-trigger="lessonRecordsRefresh"
        hx-swap="innerHTML">
     {{template "lesson_task_records.html" .}}

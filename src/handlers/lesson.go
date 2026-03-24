@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ryukzak/slap/src/analytics"
 	"github.com/ryukzak/slap/src/storage"
+	"github.com/ryukzak/slap/src/util"
 )
 
 func CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
@@ -71,9 +72,10 @@ type lessonRecordsData struct {
 	TotalRecords     int
 	SessionIsTeacher bool
 	SessionUserID    string
+	SortMode         SortMode
 }
 
-func buildLessonRecords(lesson *storage.Lesson, showRevoked bool) ([]TaskRecordWithInfo, int, error) {
+func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortMode) ([]TaskRecordWithInfo, int, error) {
 	taskRecords, err := DB.ListLessonTaskRecords(lesson)
 	if err != nil {
 		return nil, 0, err
@@ -161,6 +163,14 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool) ([]TaskRecordW
 			visible = append(visible, r)
 		}
 	}
+
+	switch sortMode {
+	case SortByTaskMix:
+		visible = util.InterleaveByKey(visible, func(r TaskRecordWithInfo) string { return string(r.TaskID) })
+	case SortByStudentMix:
+		visible = util.InterleaveByKey(visible, func(r TaskRecordWithInfo) string { return r.StudentID })
+	}
+
 	return visible, totalRecords, nil
 }
 
@@ -173,6 +183,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	lessonID := vars["lessonID"]
 	showRevoked := r.URL.Query().Get("showRevoked") == "true"
+	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
 
 	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
 	if err != nil {
@@ -181,7 +192,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked)
+	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked, sortMode)
 	if err != nil {
 		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
 		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
@@ -208,6 +219,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		TotalRecords     int
 		DefaultDateTime  time.Time
 		TZName           string
+		SortMode         SortMode
 	}{
 		Lesson:           lesson,
 		TeacherID:        lesson.TeacherID,
@@ -218,6 +230,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		TotalRecords:     totalRecords,
 		DefaultDateTime:  time.Now().In(PrimaryLoc).Add(15 * time.Minute),
 		TZName:           PrimaryTZName,
+		SortMode:         sortMode,
 	})
 }
 
@@ -229,6 +242,7 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 
 	lessonID := mux.Vars(r)["lessonID"]
 	showRevoked := r.URL.Query().Get("showRevoked") == "true"
+	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
 
 	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
 	if err != nil {
@@ -237,7 +251,7 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked)
+	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked, sortMode)
 	if err != nil {
 		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
 		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
@@ -259,6 +273,8 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 		ShowRevoked:      showRevoked,
 		TotalRecords:     totalRecords,
 		SessionIsTeacher: user.IsTeacher,
+		SessionUserID:    user.ID,
+		SortMode:         sortMode,
 	}
 
 	t, err := BaseTemplates.Clone()
