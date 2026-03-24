@@ -87,5 +87,4 @@ Check that `README.md`, `GUIDE.md`, and `FEATURES.md` reflect any new or changed
 ```bash
 make test           # unit tests
 make test-hurl-ci   # integration tests (builds server, runs hurl, tears down)
-make test-e2e-ci    # e2e tests (builds server, runs playwright, tears down)
 ```
