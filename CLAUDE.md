@@ -78,6 +78,10 @@ Place UI tests in `tests/ui/`, named after the use case (e.g. `user-list-student
 - `tests/run-hurl.sh` — add a `run_test` call with a unique `student_id` suffix (`${TIMESTAMP}<N>`)
 - `Makefile` `test-hurl` target — add a matching `hurl --test` entry
 
+## Before Creating a PR
+
+Check that `README.md`, `GUIDE.md`, and `FEATURES.md` reflect any new or changed functionality. If a PR adds features, changes UI, or modifies behavior, ask the user whether the docs need updating before opening the PR.
+
 ## Testing
 
 ```bash
