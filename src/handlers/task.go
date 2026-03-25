@@ -167,7 +167,9 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		EntryAuthorID:   user.ID,
 		EntryAuthorName: user.Username,
 	}
-	if userIDFromURL == user.ID {
+	if user.IsTeacher && r.PostForm.Get("role") == "review" {
+		record.Status = storage.ReviewTaskRecord
+	} else if userIDFromURL == user.ID {
 		record.Status = storage.SubmitTaskRecord
 	} else {
 		record.Status = storage.ReviewTaskRecord

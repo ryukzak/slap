@@ -76,10 +76,10 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 			}
 
 			if existingRecord.Status == RegisterTaskRecord {
-				if record.EntryAuthorID == record.StudentID {
-					existingRecord.Status = RevokedTaskRecord
-				} else {
+				if record.Status == ReviewTaskRecord {
 					existingRecord.Status = ReviewedTaskRecord
+				} else {
+					existingRecord.Status = RevokedTaskRecord
 				}
 				if err := setValue(b, key, existingRecord); err != nil {
 					return err
