@@ -133,6 +133,7 @@
       {{ if $ts.Feedback }}<span class="text-orange-400">feedback:{{$ts.Feedback}}</span> {{ end }}
       {{ if $ts.Checked }}<span class="text-teal-400">checked:{{$ts.Checked}}</span> {{ end }}
       {{ if $ts.Evaluated }}<span class="text-green-400">evaluated:{{$ts.Evaluated}}</span> {{ end }}
+      {{ if $ts.Scores }}<span class="text-gray-500">(min:{{$ts.Scores.Min}}&nbsp;avg:{{printf "%.1f" $ts.Scores.Avg}}&nbsp;med:{{printf "%.1f" $ts.Scores.Median}}&nbsp;max:{{$ts.Scores.Max}})</span>{{ end }}
     </div>
   </div>
   {{ end }}

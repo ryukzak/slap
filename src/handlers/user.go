@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,6 +112,13 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, "templates/user.html", user)
 }
 
+type ScoreStats struct {
+	Min    int
+	Avg    float64
+	Median float64
+	Max    int
+}
+
 type TaskStats struct {
 	Pending   int
 	Queued    int
@@ -117,6 +126,7 @@ type TaskStats struct {
 	Feedback  int
 	Checked   int
 	Evaluated int
+	Scores    *ScoreStats
 }
 
 type UserTaskSummary struct {
@@ -240,6 +250,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	// Compute per-task aggregate stats (students only).
 	studentCount := 0
 	taskStats := make(map[storage.TaskID]TaskStats)
+	scoreValues := make(map[storage.TaskID][]int)
 	for _, row := range rows {
 		if !row.IsStudent {
 			continue
@@ -264,12 +275,40 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			case storage.ReviewedTaskRecord:
 				if td.Score != "" && td.Score != "0" {
 					ts.Evaluated++
+					if v, err := strconv.Atoi(td.Score); err == nil {
+						scoreValues[task.ID] = append(scoreValues[task.ID], v)
+					}
 				} else {
 					ts.Checked++
 				}
 			}
 			taskStats[task.ID] = ts
 		}
+	}
+	for taskID, vals := range scoreValues {
+		if len(vals) == 0 {
+			continue
+		}
+		sort.Ints(vals)
+		sum := 0
+		for _, v := range vals {
+			sum += v
+		}
+		n := len(vals)
+		var median float64
+		if n%2 == 0 {
+			median = float64(vals[n/2-1]+vals[n/2]) / 2
+		} else {
+			median = float64(vals[n/2])
+		}
+		ts := taskStats[taskID]
+		ts.Scores = &ScoreStats{
+			Min:    vals[0],
+			Avg:    float64(sum) / float64(n),
+			Median: median,
+			Max:    vals[n-1],
+		}
+		taskStats[taskID] = ts
 	}
 
 	// Build activity timeline
