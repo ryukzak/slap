@@ -77,7 +77,7 @@
       </div>
       {{ end }}
       {{ if $ts.Queued }}
-      <div class="bg-yellow-700"
+      <div class="bg-purple-800"
            style="width: {{ pct $ts.Queued $.StudentCount }}%"
            title="Queued: {{$ts.Queued}}">
       </div>
@@ -95,13 +95,13 @@
       </div>
       {{ end }}
       {{ if $ts.Checked }}
-      <div class="bg-green-800"
+      <div class="bg-teal-800"
            style="width: {{ pct $ts.Checked $.StudentCount }}%"
            title="Checked: {{$ts.Checked}}">
       </div>
       {{ end }}
       {{ if $ts.Evaluated }}
-      <div class="bg-emerald-600"
+      <div class="bg-green-700"
            style="width: {{ pct $ts.Evaluated $.StudentCount }}%"
            title="Evaluated: {{$ts.Evaluated}}">
       </div>
@@ -117,11 +117,11 @@
     </div>
     <div class="text-xs text-gray-500 mt-0.5">
       {{ if $ts.Pending }}<span class="text-blue-400">pending:{{$ts.Pending}}</span> {{ end }}
-      {{ if $ts.Queued }}<span class="text-yellow-400">queued:{{$ts.Queued}}</span> {{ end }}
+      {{ if $ts.Queued }}<span class="text-purple-400">queued:{{$ts.Queued}}</span> {{ end }}
       {{ if $ts.Dropped }}<span class="text-red-400">dropped:{{$ts.Dropped}}</span> {{ end }}
       {{ if $ts.Feedback }}<span class="text-orange-400">feedback:{{$ts.Feedback}}</span> {{ end }}
-      {{ if $ts.Checked }}<span class="text-green-400">checked:{{$ts.Checked}}</span> {{ end }}
-      {{ if $ts.Evaluated }}<span class="text-emerald-400">evaluated:{{$ts.Evaluated}}</span> {{ end }}
+      {{ if $ts.Checked }}<span class="text-teal-400">checked:{{$ts.Checked}}</span> {{ end }}
+      {{ if $ts.Evaluated }}<span class="text-green-400">evaluated:{{$ts.Evaluated}}</span> {{ end }}
     </div>
   </div>
   {{ end }}
@@ -177,7 +177,7 @@
               {{ if and $td.Score (ne $td.Score "0") }}
               <span class="text-green-300">{{$td.Score}}</span>
               {{ end }}
-              <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+              <span class="{{ if eq $td.Status "reviewed" }}text-teal-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-purple-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
               {{ if $td.Summary }}
               <span class="text-gray-500">({{$td.Summary}})</span>
               {{ end }}
