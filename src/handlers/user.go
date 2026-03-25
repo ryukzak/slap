@@ -227,7 +227,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				if dropped > 0 {
 					parts = append(parts, fmt.Sprintf("d:%d", dropped))
 				}
-				summary.Summary = strings.Join(parts, " ")
+				summary.Summary = strings.Join(parts, "\u00a0")
 				row.TaskData[task.ID] = summary
 			}
 		}
