@@ -139,11 +139,13 @@ type TimelineLesson struct {
 }
 
 type TimelineEntry struct {
-	Date     string // "Mon 02 Jan"
-	Checked  int    // teacher reviews that day (past only)
-	Lessons  []TimelineLesson
-	IsToday  bool
-	IsFuture bool
+	Date       string // "Mon 02 Jan"
+	Checked    int    // teacher reviews that day (past only)
+	Lessons    []TimelineLesson
+	Registered int // total registered across all lessons (future only)
+	Reviewed   int // total reviewed across all lessons (future only)
+	IsToday    bool
+	IsFuture   bool
 }
 
 // UserListHandler shows all registered users with task summaries. Teacher-only.
@@ -324,6 +326,10 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		e.IsToday = day == todayKey
 		e.IsFuture = day > todayKey
 		e.Date = d.Format("Mon 02 Jan")
+		for _, l := range e.Lessons {
+			e.Registered += l.Registered
+			e.Reviewed += l.Reviewed
+		}
 		timeline = append(timeline, *e)
 	}
 
@@ -332,10 +338,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		if e.Checked > maxBar {
 			maxBar = e.Checked
 		}
-		for _, l := range e.Lessons {
-			if l.Registered > maxBar {
-				maxBar = l.Registered
-			}
+		if e.Registered > maxBar {
+			maxBar = e.Registered
 		}
 	}
 
