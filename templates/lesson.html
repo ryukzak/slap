@@ -1,8 +1,4 @@
 {{define "title"}}Lesson - {{ formatDateTime .Lesson.DateTime }}{{end}}
-{{define "head_extra"}}
-<script src="/static/js/override.js"></script>
-<link href="/static/styles.css" rel="stylesheet" />
-{{end}}
 {{define "header"}}
 <span class="text-gray-500">·</span>
 <span>// @{{.Lesson.TeacherName}} · lesson: {{ formatDateTime .Lesson.DateTime }}</span>
