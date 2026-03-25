@@ -70,6 +70,7 @@ type lessonRecordsData struct {
 	ShowRevoked      bool
 	TotalRecords     int
 	SessionIsTeacher bool
+	SessionUserID    string
 }
 
 func buildLessonRecords(lesson *storage.Lesson, showRevoked bool) ([]TaskRecordWithInfo, int, error) {
@@ -187,6 +188,16 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !user.IsTeacher {
+		filtered := visibleTaskRecords[:0]
+		for _, r := range visibleTaskRecords {
+			if r.StudentID == user.ID {
+				filtered = append(filtered, r)
+			}
+		}
+		visibleTaskRecords = filtered
+	}
+
 	renderPage(w, "templates/lesson.html", struct {
 		Lesson           *storage.Lesson
 		TeacherID        string
@@ -231,6 +242,16 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
 		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
 		return
+	}
+
+	if !user.IsTeacher {
+		filtered := visibleTaskRecords[:0]
+		for _, r := range visibleTaskRecords {
+			if r.StudentID == user.ID {
+				filtered = append(filtered, r)
+			}
+		}
+		visibleTaskRecords = filtered
 	}
 
 	data := lessonRecordsData{
@@ -442,6 +463,26 @@ func RegisterTaskRecordToLessonHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("action=register_to_lesson user=%s lesson=%s task=%s", studentID, lessonID, taskID)
 	analytics.Track(studentID, "lesson_registered", map[string]any{"lesson_id": lessonID, "task_id": taskID})
 	w.Header().Set("HX-Redirect", "/user/"+studentID+"/task/"+taskID)
+}
+
+func UnregisterAllFromLessonHandler(w http.ResponseWriter, r *http.Request) {
+	user := teacherSession(w, r)
+	if user == nil {
+		return
+	}
+
+	lessonID := mux.Vars(r)["lessonID"]
+
+	count, err := DB.UnregisterAllFromLesson(storage.LessonID(lessonID))
+	if err != nil {
+		log.Printf("action=unregister_all_from_lesson user=%s lesson=%s error=%v", user.ID, lessonID, err)
+		http.Error(w, "Failed to revoke all registrations: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("action=unregister_all_from_lesson user=%s lesson=%s count=%d", user.ID, lessonID, count)
+	analytics.Track(user.ID, "lesson_unregistered_all", map[string]any{"lesson_id": lessonID, "count": count})
+	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
 }
 
 func UnregisterFromLessonHandler(w http.ResponseWriter, r *http.Request) {

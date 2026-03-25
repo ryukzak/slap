@@ -117,6 +117,18 @@ func init() {
 		"boldScore": func(s string) template.HTML {
 			return template.HTML(util.BoldScore(s)) //nolint:gosec
 		},
+		"truncateID": func(s string) string {
+			if len(s) <= 9 {
+				return s
+			}
+			return s[:9] + "…"
+		},
+		"pct": func(part, total int) int {
+			if total == 0 {
+				return 0
+			}
+			return part * 100 / total
+		},
 		"appVersion": func() string { return version },
 		"uptime": func() string {
 			d := time.Since(handlers.StartTime)
@@ -219,6 +231,7 @@ func main() {
 	r.HandleFunc("/api/lessons", handlers.RenderLessonListHandler).Methods("GET")
 	r.HandleFunc("/api/lesson/{lessonID}/register", handlers.RegisterTaskRecordToLessonHandler).Methods("POST")
 	r.HandleFunc("/api/lesson/{lessonID}/unregister", handlers.UnregisterFromLessonHandler).Methods("POST")
+	r.HandleFunc("/api/lesson/{lessonID}/unregister-all", handlers.UnregisterAllFromLessonHandler).Methods("POST")
 	r.HandleFunc("/api/lesson/{lessonID}/extend", handlers.ExtendLessonDeadlineHandler).Methods("POST")
 	r.HandleFunc("/api/lesson/{lessonID}/description", handlers.UpdateLessonDescriptionHandler).Methods("POST")
 	r.HandleFunc("/api/lessons/{lessonID}", handlers.DeleteLessonHandler).Methods("DELETE")

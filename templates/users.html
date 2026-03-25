@@ -1,10 +1,125 @@
 {{define "title"}}Users - SLAP{{end}}
 {{define "header"}}
 <span class="text-gray-500">·</span>
-<span>// users</span>
+<span>// students</span>
 {{end}}
 {{define "footer_nav"}}{{end}}
 {{define "content"}}
+{{ if .Timeline }}
+<section class="mb-8">
+  <details class="group">
+    <summary class="text-xs text-gray-500 mb-2 flex items-center cursor-pointer list-none">
+      <span>// activity</span>
+      <span class="flex-1 mx-2 border-b border-dashed border-gray-700"></span>
+      <span class="group-open:hidden">[+]</span>
+      <span class="hidden group-open:inline">[-]</span>
+    </summary>
+    <div class="mt-2">
+      {{ range .Timeline }}
+    <div class="flex items-center gap-2 text-xs mb-1 {{ if .IsToday }}text-white{{ else if .IsFuture }}text-gray-400{{ else }}text-gray-500{{ end }}">
+      <span class="w-24 shrink-0 font-mono">{{ if .IsToday }}*Today{{ else }}{{.Date}}{{ end }}</span>
+      {{ if .IsFuture }}
+      {{ range .Lessons }}
+      <a href="/lesson/{{.ID}}"
+         class="flex items-center gap-2 flex-1 min-w-0 hover:text-white">
+        <span class="text-gray-500">@{{.Teacher}}</span>
+        <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
+          {{ if .Reviewed }}
+          <div class="bg-green-800" style="width: {{ pct .Reviewed $.MaxBar }}%">
+          </div>
+          {{ end }}
+          {{ $remaining := sub .Registered .Reviewed }}
+          {{ if $remaining }}
+          <div class="bg-yellow-700" style="width: {{ pct $remaining $.MaxBar }}%">
+          </div>
+          {{ end }}
+        </div>
+        <span class="shrink-0">{{.Reviewed}}/{{.Registered}}</span>
+      </a>
+      {{ end }}
+      {{ if not .Lessons }}
+      <div class="flex-1">
+      </div>
+      {{ end }}
+    {{ else }}
+      <div class="flex items-center gap-2 flex-1 min-w-0">
+        <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
+          {{ if .Checked }}
+          <div class="bg-green-800" style="width: {{ pct .Checked $.MaxBar }}%">
+          </div>
+          {{ end }}
+        </div>
+        <span class="shrink-0">{{.Checked}}</span>
+      </div>
+      {{ end }}
+    </div>
+    {{ end }}
+  </div>
+</details>
+</section>
+{{ end }}
+{{ if .StudentCount }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // statistics ({{.StudentCount}} students)
+  </div>
+  {{ range .Tasks }}
+  {{ $ts := index $.TaskStats .ID }}
+  <div class="mb-2">
+    <div class="text-xs text-gray-400 mb-1">
+      {{.Title}}
+    </div>
+    <div class="flex h-4 w-full rounded overflow-hidden">
+      {{ if $ts.Pending }}
+      <div class="bg-blue-800"
+           style="width: {{ pct $ts.Pending $.StudentCount }}%"
+           title="Pending: {{$ts.Pending}}">
+      </div>
+      {{ end }}
+      {{ if $ts.Queued }}
+      <div class="bg-yellow-700"
+           style="width: {{ pct $ts.Queued $.StudentCount }}%"
+           title="Queued: {{$ts.Queued}}">
+      </div>
+      {{ end }}
+      {{ if $ts.Dropped }}
+      <div class="bg-red-800"
+           style="width: {{ pct $ts.Dropped $.StudentCount }}%"
+           title="Dropped: {{$ts.Dropped}}">
+      </div>
+      {{ end }}
+      {{ if $ts.Feedback }}
+      <div class="bg-orange-800"
+           style="width: {{ pct $ts.Feedback $.StudentCount }}%"
+           title="Feedback: {{$ts.Feedback}}">
+      </div>
+      {{ end }}
+      {{ if $ts.Checked }}
+      <div class="bg-green-800"
+           style="width: {{ pct $ts.Checked $.StudentCount }}%"
+           title="Checked: {{$ts.Checked}}">
+      </div>
+      {{ end }}
+      {{ $sum := add (add (add (add $ts.Pending $ts.Queued) $ts.Dropped) $ts.Feedback) $ts.Checked }}
+      {{ $none := sub $.StudentCount $sum }}
+      {{ if $none }}
+      <div class="bg-gray-700"
+           style="width: {{ pct $none $.StudentCount }}%"
+           title="No submission: {{$none}}">
+      </div>
+      {{ end }}
+    </div>
+    <div class="text-xs text-gray-500 mt-0.5">
+      {{ if $ts.Pending }}<span class="text-blue-400">p:{{$ts.Pending}}</span> {{ end }}
+      {{ if $ts.Queued }}<span class="text-yellow-400">q:{{$ts.Queued}}</span> {{ end }}
+      {{ if $ts.Dropped }}<span class="text-red-400">d:{{$ts.Dropped}}</span> {{ end }}
+      {{ if $ts.Feedback }}<span class="text-orange-400">f:{{$ts.Feedback}}</span> {{ end }}
+      {{ if $ts.Checked }}<span class="text-green-400">c:{{$ts.Checked}}</span> {{ end }}
+    </div>
+  </div>
+  {{ end }}
+</section>
+{{ end }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>// users</span>
@@ -37,7 +152,9 @@
             {{add $i 1}}
           </td>
           <td class="py-1 pr-4 text-gray-500">
-            <a class="hover:text-white" href="/user/{{$user.ID}}">{{$user.ID}}</a>
+            <a class="hover:text-white"
+               href="/user/{{$user.ID}}"
+               title="{{$user.ID}}">{{truncateID $user.ID}}</a>
           </td>
           <td class="py-1 pr-4">
             <a class="hover:text-white" href="/user/{{$user.ID}}">@{{$user.Username}}</a>

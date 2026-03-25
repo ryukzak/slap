@@ -76,10 +76,10 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 			}
 
 			if existingRecord.Status == RegisterTaskRecord {
-				if record.EntryAuthorID == record.StudentID {
-					existingRecord.Status = RevokedTaskRecord
-				} else {
+				if record.Status == ReviewTaskRecord {
 					existingRecord.Status = ReviewedTaskRecord
+				} else {
+					existingRecord.Status = RevokedTaskRecord
 				}
 				if err := setValue(b, key, existingRecord); err != nil {
 					return err
@@ -236,6 +236,46 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID)
 		lastTaskRecord.LessonID = lessonID
 		return setValue(b, lastTaskRecord.ID, lastTaskRecord)
 	})
+}
+
+func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
+	if lessonID == "" {
+		return 0, fmt.Errorf("lessonID must be provided")
+	}
+
+	var count int
+	err := d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+
+		lesson, err := getValue[Lesson](b, lessonID)
+		if err != nil {
+			return err
+		}
+
+		var remaining []EnrolledTask
+		for _, enrolled := range lesson.EnrolledTasks {
+			if enrolled.Status != RegisterTaskRecord {
+				remaining = append(remaining, enrolled)
+				continue
+			}
+
+			taskRecord, err := getValue[TaskRecord](b, enrolled.TaskRecordID)
+			if err != nil {
+				return err
+			}
+			taskRecord.Status = RevokedTaskRecord
+			if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
+				return err
+			}
+
+			enrolled.Status = RevokedTaskRecord
+			lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, enrolled)
+			count++
+		}
+		lesson.EnrolledTasks = remaining
+		return setValue(b, lessonID, *lesson)
+	})
+	return count, err
 }
 
 func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID UserID) error {
