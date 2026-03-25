@@ -100,7 +100,13 @@
            title="Checked: {{$ts.Checked}}">
       </div>
       {{ end }}
-      {{ $sum := add (add (add (add $ts.Pending $ts.Queued) $ts.Dropped) $ts.Feedback) $ts.Checked }}
+      {{ if $ts.Evaluated }}
+      <div class="bg-emerald-600"
+           style="width: {{ pct $ts.Evaluated $.StudentCount }}%"
+           title="Evaluated: {{$ts.Evaluated}}">
+      </div>
+      {{ end }}
+      {{ $sum := add (add (add (add (add $ts.Pending $ts.Queued) $ts.Dropped) $ts.Feedback) $ts.Checked) $ts.Evaluated }}
       {{ $none := sub $.StudentCount $sum }}
       {{ if $none }}
       <div class="bg-gray-700"
@@ -115,6 +121,7 @@
       {{ if $ts.Dropped }}<span class="text-red-400">dropped:{{$ts.Dropped}}</span> {{ end }}
       {{ if $ts.Feedback }}<span class="text-orange-400">feedback:{{$ts.Feedback}}</span> {{ end }}
       {{ if $ts.Checked }}<span class="text-green-400">checked:{{$ts.Checked}}</span> {{ end }}
+      {{ if $ts.Evaluated }}<span class="text-emerald-400">evaluated:{{$ts.Evaluated}}</span> {{ end }}
     </div>
   </div>
   {{ end }}
@@ -167,7 +174,7 @@
           <td class="py-1 px-2">
             {{ if $td.Count }}
             <a class="hover:text-white" href="/user/{{$user.ID}}/task/{{.ID}}">
-              {{ if $td.Score }}
+              {{ if and $td.Score (ne $td.Score "0") }}
               <span class="text-green-300">{{$td.Score}}</span>
               {{ end }}
               <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>

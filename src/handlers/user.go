@@ -111,11 +111,12 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type TaskStats struct {
-	Pending  int
-	Queued   int
-	Dropped  int
-	Feedback int
-	Checked  int
+	Pending   int
+	Queued    int
+	Dropped   int
+	Feedback  int
+	Checked   int
+	Evaluated int
 }
 
 type UserTaskSummary struct {
@@ -259,7 +260,11 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			case storage.ReviewTaskRecord:
 				ts.Feedback++
 			case storage.ReviewedTaskRecord:
-				ts.Checked++
+				if td.Score != "" && td.Score != "0" {
+					ts.Evaluated++
+				} else {
+					ts.Checked++
+				}
 			}
 			taskStats[task.ID] = ts
 		}
