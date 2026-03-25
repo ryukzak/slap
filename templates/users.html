@@ -110,11 +110,11 @@
       {{ end }}
     </div>
     <div class="text-xs text-gray-500 mt-0.5">
-      {{ if $ts.Pending }}<span class="text-blue-400">p:{{$ts.Pending}}</span> {{ end }}
-      {{ if $ts.Queued }}<span class="text-yellow-400">q:{{$ts.Queued}}</span> {{ end }}
-      {{ if $ts.Dropped }}<span class="text-red-400">d:{{$ts.Dropped}}</span> {{ end }}
-      {{ if $ts.Feedback }}<span class="text-orange-400">f:{{$ts.Feedback}}</span> {{ end }}
-      {{ if $ts.Checked }}<span class="text-green-400">c:{{$ts.Checked}}</span> {{ end }}
+      {{ if $ts.Pending }}<span class="text-blue-400">pending:{{$ts.Pending}}</span> {{ end }}
+      {{ if $ts.Queued }}<span class="text-yellow-400">queued:{{$ts.Queued}}</span> {{ end }}
+      {{ if $ts.Dropped }}<span class="text-red-400">dropped:{{$ts.Dropped}}</span> {{ end }}
+      {{ if $ts.Feedback }}<span class="text-orange-400">feedback:{{$ts.Feedback}}</span> {{ end }}
+      {{ if $ts.Checked }}<span class="text-green-400">checked:{{$ts.Checked}}</span> {{ end }}
     </div>
   </div>
   {{ end }}
