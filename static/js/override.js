@@ -55,15 +55,16 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
+  // Track which review was just submitted so we close it after refresh.
+  var submittedRecordId = null;
+
   document.addEventListener("htmx:afterRequest", function (event) {
     if (!event.detail.successful) return;
 
-    // Close the <details> accordion after a lesson review is submitted.
-    // The list refresh is handled by the HX-Trigger response header.
     var elt = event.detail.elt || event.target;
     if (elt && elt.classList && elt.classList.contains("lesson-review-form")) {
       var details = elt.closest("details");
-      if (details) details.open = false;
+      if (details) submittedRecordId = details.getAttribute("data-record-id");
       elt.reset();
       return;
     }
@@ -71,5 +72,29 @@ document.addEventListener("DOMContentLoaded", function () {
     if (event.target.closest && event.target.closest("form")) {
       document.body.dispatchEvent(new CustomEvent("refreshLessons"));
     }
+  });
+
+  // Save open state before htmx swaps lesson records.
+  var openRecords = {};
+  document.addEventListener("htmx:beforeSwap", function (event) {
+    if (event.detail.target.id !== "lesson-task-records") return;
+    openRecords = {};
+    event.detail.target.querySelectorAll("details[data-record-id]").forEach(function (d) {
+      if (d.open) openRecords[d.getAttribute("data-record-id")] = true;
+    });
+    // The just-submitted record should be closed after refresh.
+    if (submittedRecordId) {
+      delete openRecords[submittedRecordId];
+      submittedRecordId = null;
+    }
+  });
+
+  // Restore open state after htmx swaps lesson records.
+  document.addEventListener("htmx:afterSwap", function (event) {
+    if (event.detail.target.id !== "lesson-task-records") return;
+    event.detail.target.querySelectorAll("details[data-record-id]").forEach(function (d) {
+      if (openRecords[d.getAttribute("data-record-id")]) d.open = true;
+    });
+    openRecords = {};
   });
 });

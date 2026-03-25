@@ -148,8 +148,8 @@
       <button class="text-blue-400 hover:text-blue-300 text-xs"
               type="button"
               data-action="open-all"
-              data-target="#lesson-task-records > ul > li > details">
-        [open all]
+              data-target="#lesson-task-records > ul > li > details[data-status='register']">
+        [open queued]
       </button>
       {{ if .ShowRevoked }}
       <a class="text-blue-400 hover:text-blue-300" href="?">[hide history]</a>
