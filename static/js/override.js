@@ -15,6 +15,32 @@ function toggleAccordion(header) {
   }
 }
 
+document.addEventListener("click", function (e) {
+  var btn = e.target.closest("[data-action]");
+  if (!btn) return;
+
+  var action = btn.getAttribute("data-action");
+
+  if (action === "delete-lesson") {
+    if (!confirm("Delete this lesson?")) return;
+    fetch(btn.getAttribute("data-url"), { method: "DELETE" }).then(function (r) {
+      if (r.ok) window.location.href = btn.getAttribute("data-redirect");
+      else alert("Failed to delete");
+    });
+  }
+
+  if (action === "revoke-all") {
+    if (!confirm("Revoke all queued registrations?")) return;
+    document.getElementById(btn.getAttribute("data-form")).submit();
+  }
+
+  if (action === "open-all") {
+    var d = document.querySelectorAll(btn.getAttribute("data-target"));
+    var s = ![].slice.call(d).every(function (x) { return x.open; });
+    d.forEach(function (x) { x.open = s; });
+  }
+});
+
 // Initialize all accordions when the DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
   const accordionHeaders = document.querySelectorAll(".accordion-header");

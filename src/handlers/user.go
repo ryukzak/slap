@@ -130,6 +130,21 @@ type UserTableRow struct {
 	TaskData map[storage.TaskID]UserTaskSummary
 }
 
+type TimelineLesson struct {
+	ID         string
+	Registered int
+	Reviewed   int
+	Teacher    string
+}
+
+type TimelineEntry struct {
+	Date     string // "Mon 02 Jan"
+	Checked  int    // teacher reviews that day (past only)
+	Lessons  []TimelineLesson
+	IsToday  bool
+	IsFuture bool
+}
+
 // UserListHandler shows all registered users with task summaries. Teacher-only.
 func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := teacherSession(w, r)
@@ -143,6 +158,10 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to list users", http.StatusInternalServerError)
 		return
 	}
+
+	now := time.Now().In(PrimaryLoc)
+	todayKey := now.Format("2006-01-02")
+	checkedByDay := make(map[string]int)
 
 	rows := make([]UserTableRow, 0, len(users))
 	for _, u := range users {
@@ -176,6 +195,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
 							summary.Score = score
 						}
+						dayKey := rec.CreatedAt.In(PrimaryLoc).Format("2006-01-02")
+						checkedByDay[dayKey]++
 					}
 					switch rec.Status {
 					case storage.SubmitTaskRecord:
@@ -244,18 +265,91 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Build activity timeline
+	lessons, err := DB.ListLessons()
+	if err != nil {
+		log.Printf("Error loading lessons for timeline: %v", err)
+	}
+
+	lessonsByDay := make(map[string][]TimelineLesson)
+	for _, l := range lessons {
+		dayKey := l.DateTime.In(PrimaryLoc).Format("2006-01-02")
+		lessonsByDay[dayKey] = append(lessonsByDay[dayKey], TimelineLesson{
+			ID:         l.ID,
+			Registered: l.RegisteredCount(),
+			Reviewed:   l.ReviewedCount(),
+			Teacher:    l.TeacherName,
+		})
+	}
+
+	timelineMap := make(map[string]*TimelineEntry)
+	for day, count := range checkedByDay {
+		isFuture := day > todayKey
+		e := &TimelineEntry{
+			Checked:  count,
+			IsToday:  day == todayKey,
+			IsFuture: isFuture,
+		}
+		timelineMap[day] = e
+	}
+	for day, tl := range lessonsByDay {
+		if e, ok := timelineMap[day]; ok {
+			e.Lessons = tl
+		} else {
+			isFuture := day > todayKey
+			timelineMap[day] = &TimelineEntry{
+				Lessons:  tl,
+				IsToday:  day == todayKey,
+				IsFuture: isFuture,
+			}
+		}
+	}
+
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, PrimaryLoc)
+	rangeStart := today.AddDate(0, 0, -14)
+	rangeEnd := today.AddDate(0, 0, 7)
+
+	var timeline []TimelineEntry
+	for d := rangeStart; !d.After(rangeEnd); d = d.AddDate(0, 0, 1) {
+		day := d.Format("2006-01-02")
+		e, ok := timelineMap[day]
+		if !ok {
+			e = &TimelineEntry{}
+		}
+		e.IsToday = day == todayKey
+		e.IsFuture = day > todayKey
+		e.Date = d.Format("Mon 02 Jan")
+		timeline = append(timeline, *e)
+	}
+
+	maxBar := 0
+	for _, e := range timeline {
+		if e.Checked > maxBar {
+			maxBar = e.Checked
+		}
+		for _, l := range e.Lessons {
+			if l.Registered > maxBar {
+				maxBar = l.Registered
+			}
+		}
+	}
+
 	renderPage(w, "templates/users.html", struct {
 		SessionUserID string
 		Users         []UserTableRow
 		Tasks         []config.Task
 		StudentCount  int
 		TaskStats     map[storage.TaskID]TaskStats
+		Timeline      []TimelineEntry
+		MaxBar        int
 	}{
 		SessionUserID: sessionUser.ID,
 		Users:         rows,
 		Tasks:         AppConfig.Tasks,
 		StudentCount:  studentCount,
 		TaskStats:     taskStats,
+		Timeline:      timeline,
+		MaxBar:        maxBar,
 	})
 }
 
