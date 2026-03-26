@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -110,12 +112,21 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, "templates/user.html", user)
 }
 
+type ScoreStats struct {
+	Min    int
+	Avg    float64
+	Median float64
+	Max    int
+}
+
 type TaskStats struct {
-	Pending  int
-	Queued   int
-	Dropped  int
-	Feedback int
-	Checked  int
+	Pending   int
+	Queued    int
+	Dropped   int
+	Feedback  int
+	Checked   int
+	Evaluated int
+	Scores    *ScoreStats
 }
 
 type UserTaskSummary struct {
@@ -138,11 +149,13 @@ type TimelineLesson struct {
 }
 
 type TimelineEntry struct {
-	Date     string // "Mon 02 Jan"
-	Checked  int    // teacher reviews that day (past only)
-	Lessons  []TimelineLesson
-	IsToday  bool
-	IsFuture bool
+	Date       string // "Mon 02 Jan"
+	Checked    int    // teacher reviews that day (past only)
+	Lessons    []TimelineLesson
+	Registered int // total registered across all lessons (future only)
+	Reviewed   int // total reviewed across all lessons (future only)
+	IsToday    bool
+	IsFuture   bool
 }
 
 // UserListHandler shows all registered users with task summaries. Teacher-only.
@@ -227,7 +240,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				if dropped > 0 {
 					parts = append(parts, fmt.Sprintf("d:%d", dropped))
 				}
-				summary.Summary = strings.Join(parts, " ")
+				summary.Summary = strings.Join(parts, "\u00a0")
 				row.TaskData[task.ID] = summary
 			}
 		}
@@ -237,6 +250,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	// Compute per-task aggregate stats (students only).
 	studentCount := 0
 	taskStats := make(map[storage.TaskID]TaskStats)
+	scoreValues := make(map[storage.TaskID][]int)
 	for _, row := range rows {
 		if !row.IsStudent {
 			continue
@@ -259,10 +273,42 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			case storage.ReviewTaskRecord:
 				ts.Feedback++
 			case storage.ReviewedTaskRecord:
-				ts.Checked++
+				if td.Score != "" && td.Score != "0" {
+					ts.Evaluated++
+					if v, err := strconv.Atoi(td.Score); err == nil {
+						scoreValues[task.ID] = append(scoreValues[task.ID], v)
+					}
+				} else {
+					ts.Checked++
+				}
 			}
 			taskStats[task.ID] = ts
 		}
+	}
+	for taskID, vals := range scoreValues {
+		if len(vals) == 0 {
+			continue
+		}
+		sort.Ints(vals)
+		sum := 0
+		for _, v := range vals {
+			sum += v
+		}
+		n := len(vals)
+		var median float64
+		if n%2 == 0 {
+			median = float64(vals[n/2-1]+vals[n/2]) / 2
+		} else {
+			median = float64(vals[n/2])
+		}
+		ts := taskStats[taskID]
+		ts.Scores = &ScoreStats{
+			Min:    vals[0],
+			Avg:    float64(sum) / float64(n),
+			Median: median,
+			Max:    vals[n-1],
+		}
+		taskStats[taskID] = ts
 	}
 
 	// Build activity timeline
@@ -319,6 +365,10 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		e.IsToday = day == todayKey
 		e.IsFuture = day > todayKey
 		e.Date = d.Format("Mon 02 Jan")
+		for _, l := range e.Lessons {
+			e.Registered += l.Registered
+			e.Reviewed += l.Reviewed
+		}
 		timeline = append(timeline, *e)
 	}
 
@@ -327,10 +377,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		if e.Checked > maxBar {
 			maxBar = e.Checked
 		}
-		for _, l := range e.Lessons {
-			if l.Registered > maxBar {
-				maxBar = l.Registered
-			}
+		if e.Registered > maxBar {
+			maxBar = e.Registered
 		}
 	}
 

@@ -19,41 +19,52 @@
     <div class="flex items-center gap-2 text-xs mb-1 {{ if .IsToday }}text-white{{ else if .IsFuture }}text-gray-400{{ else }}text-gray-500{{ end }}">
       <span class="w-24 shrink-0 font-mono">{{ if .IsToday }}*Today{{ else }}{{.Date}}{{ end }}</span>
       {{ if .IsFuture }}
-      {{ range .Lessons }}
-      <a href="/lesson/{{.ID}}"
-         class="flex items-center gap-2 flex-1 min-w-0 hover:text-white">
-        <span class="text-gray-500">@{{.Teacher}}</span>
+      <div class="flex items-center gap-2 flex-1 min-w-0">
         <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
           {{ if .Reviewed }}
-          <div class="bg-green-800" style="width: {{ pct .Reviewed $.MaxBar }}%">
+          <div class="bg-green-800"
+               style="width: {{ pct .Reviewed $.MaxBar }}%"
+               title="Reviewed: {{.Reviewed}}">
           </div>
           {{ end }}
           {{ $remaining := sub .Registered .Reviewed }}
           {{ if $remaining }}
-          <div class="bg-yellow-700" style="width: {{ pct $remaining $.MaxBar }}%">
+          <div class="bg-yellow-700"
+               style="width: {{ pct $remaining $.MaxBar }}%"
+               title="Registered: {{$remaining}}">
           </div>
           {{ end }}
         </div>
-        <span class="shrink-0">{{.Reviewed}}/{{.Registered}}</span>
-      </a>
-      {{ end }}
-      {{ if not .Lessons }}
-      <div class="flex-1">
+        <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
       </div>
-      {{ end }}
     {{ else }}
       <div class="flex items-center gap-2 flex-1 min-w-0">
         <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
           {{ if .Checked }}
-          <div class="bg-green-800" style="width: {{ pct .Checked $.MaxBar }}%">
+          <div class="bg-green-800"
+               style="width: {{ pct .Checked $.MaxBar }}%"
+               title="Checked: {{.Checked}}">
+          </div>
+          {{ end }}
+          {{ $queued := sub .Registered .Reviewed }}
+          {{ if $queued }}
+          <div class="bg-yellow-700"
+               style="width: {{ pct $queued $.MaxBar }}%"
+               title="Queued: {{$queued}}">
           </div>
           {{ end }}
         </div>
-        <span class="shrink-0">{{.Checked}}</span>
+        <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}</span>
       </div>
       {{ end }}
     </div>
     {{ end }}
+    <div class="text-xs text-gray-600 mt-2 flex gap-3">
+      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-green-800"></span> reviewed</span>
+      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-yellow-700"></span> queued</span>
+      <span class="flex-1"></span>
+      <span>l:lessons q:queued c:checked</span>
+    </div>
   </div>
 </details>
 </section>
@@ -77,7 +88,7 @@
       </div>
       {{ end }}
       {{ if $ts.Queued }}
-      <div class="bg-yellow-700"
+      <div class="bg-purple-800"
            style="width: {{ pct $ts.Queued $.StudentCount }}%"
            title="Queued: {{$ts.Queued}}">
       </div>
@@ -95,12 +106,18 @@
       </div>
       {{ end }}
       {{ if $ts.Checked }}
-      <div class="bg-green-800"
+      <div class="bg-teal-800"
            style="width: {{ pct $ts.Checked $.StudentCount }}%"
            title="Checked: {{$ts.Checked}}">
       </div>
       {{ end }}
-      {{ $sum := add (add (add (add $ts.Pending $ts.Queued) $ts.Dropped) $ts.Feedback) $ts.Checked }}
+      {{ if $ts.Evaluated }}
+      <div class="bg-green-700"
+           style="width: {{ pct $ts.Evaluated $.StudentCount }}%"
+           title="Evaluated: {{$ts.Evaluated}}">
+      </div>
+      {{ end }}
+      {{ $sum := add (add (add (add (add $ts.Pending $ts.Queued) $ts.Dropped) $ts.Feedback) $ts.Checked) $ts.Evaluated }}
       {{ $none := sub $.StudentCount $sum }}
       {{ if $none }}
       <div class="bg-gray-700"
@@ -110,11 +127,13 @@
       {{ end }}
     </div>
     <div class="text-xs text-gray-500 mt-0.5">
-      {{ if $ts.Pending }}<span class="text-blue-400">p:{{$ts.Pending}}</span> {{ end }}
-      {{ if $ts.Queued }}<span class="text-yellow-400">q:{{$ts.Queued}}</span> {{ end }}
-      {{ if $ts.Dropped }}<span class="text-red-400">d:{{$ts.Dropped}}</span> {{ end }}
-      {{ if $ts.Feedback }}<span class="text-orange-400">f:{{$ts.Feedback}}</span> {{ end }}
-      {{ if $ts.Checked }}<span class="text-green-400">c:{{$ts.Checked}}</span> {{ end }}
+      {{ if $ts.Pending }}<span class="text-blue-400">pending:{{$ts.Pending}}</span> {{ end }}
+      {{ if $ts.Queued }}<span class="text-purple-400">queued:{{$ts.Queued}}</span> {{ end }}
+      {{ if $ts.Dropped }}<span class="text-red-400">dropped:{{$ts.Dropped}}</span> {{ end }}
+      {{ if $ts.Feedback }}<span class="text-orange-400">feedback:{{$ts.Feedback}}</span> {{ end }}
+      {{ if $ts.Checked }}<span class="text-teal-400">checked:{{$ts.Checked}}</span> {{ end }}
+      {{ if $ts.Evaluated }}<span class="text-green-400">evaluated:{{$ts.Evaluated}}</span> {{ end }}
+      {{ if $ts.Scores }}<span class="text-gray-500">(min:{{$ts.Scores.Min}}&nbsp;avg:{{printf "%.1f" $ts.Scores.Avg}}&nbsp;med:{{printf "%.1f" $ts.Scores.Median}}&nbsp;max:{{$ts.Scores.Max}})</span>{{ end }}
     </div>
   </div>
   {{ end }}
@@ -167,10 +186,10 @@
           <td class="py-1 px-2">
             {{ if $td.Count }}
             <a class="hover:text-white" href="/user/{{$user.ID}}/task/{{.ID}}">
-              {{ if $td.Score }}
+              {{ if and $td.Score (ne $td.Score "0") }}
               <span class="text-green-300">{{$td.Score}}</span>
               {{ end }}
-              <span class="{{ if eq $td.Status "reviewed" }}text-green-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-yellow-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+              <span class="{{ if eq $td.Status "reviewed" }}text-teal-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-purple-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
               {{ if $td.Summary }}
               <span class="text-gray-500">({{$td.Summary}})</span>
               {{ end }}

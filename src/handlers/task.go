@@ -125,7 +125,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 	if dropped > 0 {
 		parts = append(parts, fmt.Sprintf("d:%d", dropped))
 	}
-	model.JournalSummary = strings.Join(parts, " ")
+	model.JournalSummary = strings.Join(parts, "\u00a0")
 
 	renderPage(w, "templates/task.html", model)
 }
