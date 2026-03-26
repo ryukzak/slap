@@ -3,7 +3,10 @@
 <span class="text-gray-500">·</span>
 <span>// students</span>
 {{end}}
-{{define "footer_nav"}}{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}
 {{define "content"}}
 {{ if .Timeline }}
 <section class="mb-8">
@@ -16,56 +19,114 @@
     </summary>
     <div class="mt-2">
       {{ range .Timeline }}
-    <div class="flex items-center gap-2 text-xs mb-1 {{ if .IsToday }}text-white{{ else if .IsFuture }}text-gray-400{{ else }}text-gray-500{{ end }}">
-      <span class="w-24 shrink-0 font-mono">{{ if .IsToday }}*Today{{ else }}{{.Date}}{{ end }}</span>
-      {{ if .IsFuture }}
-      <div class="flex items-center gap-2 flex-1 min-w-0">
-        <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
-          {{ if .Reviewed }}
-          <div class="bg-green-800"
-               style="width: {{ pct .Reviewed $.MaxBar }}%"
-               title="Reviewed: {{.Reviewed}}">
+      {{ if .Lessons }}
+      <details class="mb-1">
+      <summary class="flex items-center gap-2 text-xs cursor-pointer list-none {{ if .IsToday }}text-white{{ else if .IsFuture }}text-gray-400{{ else }}text-gray-500{{ end }}">
+        <span class="w-24 shrink-0 font-mono">{{ if .IsToday }}*Today{{ else }}{{.Date}}{{ end }}</span>
+        {{ if .IsFuture }}
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
+            {{ if .Reviewed }}
+            <div class="bg-green-800"
+                 style="width: {{ pct .Reviewed $.MaxBar }}%"
+                 title="Reviewed: {{.Reviewed}}">
+            </div>
+            {{ end }}
+            {{ $remaining := sub .Registered .Reviewed }}
+            {{ if $remaining }}
+            <div class="bg-yellow-700"
+                 style="width: {{ pct $remaining $.MaxBar }}%"
+                 title="Registered: {{$remaining}}">
+            </div>
+            {{ end }}
           </div>
-          {{ end }}
-          {{ $remaining := sub .Registered .Reviewed }}
-          {{ if $remaining }}
-          <div class="bg-yellow-700"
-               style="width: {{ pct $remaining $.MaxBar }}%"
-               title="Registered: {{$remaining}}">
-          </div>
-          {{ end }}
+          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
         </div>
-        <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
-      </div>
-    {{ else }}
-      <div class="flex items-center gap-2 flex-1 min-w-0">
-        <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
-          {{ if .Checked }}
-          <div class="bg-green-800"
-               style="width: {{ pct .Checked $.MaxBar }}%"
-               title="Checked: {{.Checked}}">
+      {{ else }}
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
+            {{ if .Checked }}
+            <div class="bg-green-800"
+                 style="width: {{ pct .Checked $.MaxBar }}%"
+                 title="Checked: {{.Checked}}">
+            </div>
+            {{ end }}
+            {{ $queued := sub .Registered .Reviewed }}
+            {{ if $queued }}
+            <div class="bg-yellow-700"
+                 style="width: {{ pct $queued $.MaxBar }}%"
+                 title="Queued: {{$queued}}">
+            </div>
+            {{ end }}
           </div>
-          {{ end }}
-          {{ $queued := sub .Registered .Reviewed }}
-          {{ if $queued }}
-          <div class="bg-yellow-700"
-               style="width: {{ pct $queued $.MaxBar }}%"
-               title="Queued: {{$queued}}">
-          </div>
-          {{ end }}
+          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}</span>
         </div>
-        <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}</span>
+        {{ end }}
+      </summary>
+      <div class="ml-[6.5rem] text-xs text-gray-600 mt-0.5 mb-1">
+        {{ range .Lessons }}
+        <div class="flex items-center gap-2">
+          <span>{{.ID}}</span>
+          <span class="text-gray-700">by</span>
+          <span>{{.Teacher}}</span>
+          <span class="text-gray-700">·</span>
+          <span>q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
+        </div>
+        {{ end }}
       </div>
-      {{ end }}
+    </details>
+  {{ else }}
+  <div class="flex items-center gap-2 text-xs mb-1 {{ if .IsToday }}text-white{{ else if .IsFuture }}text-gray-400{{ else }}text-gray-500{{ end }}">
+    <span class="w-24 shrink-0 font-mono">{{ if .IsToday }}*Today{{ else }}{{.Date}}{{ end }}</span>
+    {{ if .IsFuture }}
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
+        {{ if .Reviewed }}
+        <div class="bg-green-800"
+             style="width: {{ pct .Reviewed $.MaxBar }}%"
+             title="Reviewed: {{.Reviewed}}">
+        </div>
+        {{ end }}
+        {{ $remaining := sub .Registered .Reviewed }}
+        {{ if $remaining }}
+        <div class="bg-yellow-700"
+             style="width: {{ pct $remaining $.MaxBar }}%"
+             title="Registered: {{$remaining}}">
+        </div>
+        {{ end }}
+      </div>
+      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
+    </div>
+  {{ else }}
+    <div class="flex items-center gap-2 flex-1 min-w-0">
+      <div class="flex h-3 flex-1 rounded overflow-hidden bg-gray-800">
+        {{ if .Checked }}
+        <div class="bg-green-800"
+             style="width: {{ pct .Checked $.MaxBar }}%"
+             title="Checked: {{.Checked}}">
+        </div>
+        {{ end }}
+        {{ $queued := sub .Registered .Reviewed }}
+        {{ if $queued }}
+        <div class="bg-yellow-700"
+             style="width: {{ pct $queued $.MaxBar }}%"
+             title="Queued: {{$queued}}">
+        </div>
+        {{ end }}
+      </div>
+      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}</span>
     </div>
     {{ end }}
-    <div class="text-xs text-gray-600 mt-2 flex gap-3">
-      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-green-800"></span> reviewed</span>
-      <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-yellow-700"></span> queued</span>
-      <span class="flex-1"></span>
-      <span>l:lessons q:queued c:checked</span>
-    </div>
   </div>
+  {{ end }}
+  {{ end }}
+  <div class="text-xs text-gray-600 mt-2 flex gap-3">
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-green-800"></span> reviewed</span>
+    <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-yellow-700"></span> queued</span>
+    <span class="flex-1"></span>
+    <span>l:lessons q:queued c:checked</span>
+  </div>
+</div>
 </details>
 </section>
 {{ end }}
@@ -80,7 +141,7 @@
     <div class="text-xs text-gray-400 mb-1">
       {{.Title}}
     </div>
-    <div class="flex h-4 w-full rounded overflow-hidden">
+    <div class="flex h-4 w-full rounded overflow-hidden bg-gray-700">
       {{ if $ts.Pending }}
       <div class="bg-blue-800"
            style="width: {{ pct $ts.Pending $.StudentCount }}%"

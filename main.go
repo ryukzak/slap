@@ -207,6 +207,7 @@ func main() {
 	r.HandleFunc("/token", handlers.TokenHandler).Methods("GET")
 	r.HandleFunc("/set-cookie", handlers.SetCookieHandler).Methods("GET")
 	r.HandleFunc("/logout", handlers.LogoutHandler).Methods("GET")
+	r.HandleFunc("/reset-request", handlers.ResetRequestHandler).Methods("GET", "POST")
 
 	// Common
 	r.HandleFunc("/parts/user-line", handlers.UserLineHandler).Methods("GET")
