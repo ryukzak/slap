@@ -3,7 +3,10 @@
 <span class="text-gray-500">·</span>
 <span>// students</span>
 {{end}}
-{{define "footer_nav"}}{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}
 {{define "content"}}
 {{ if .Timeline }}
 <section class="mb-8">

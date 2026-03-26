@@ -52,4 +52,9 @@
   </div>
 </div>
 {{end}}
-{{define "footer_nav"}}{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/user/{{.ID}}">[back]</a>
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}

@@ -1,7 +1,7 @@
 {{define "title"}}Lesson - {{ formatDateTime .Lesson.DateTime }}{{end}}
 {{define "header"}}
 <span class="text-gray-500">·</span>
-<span>// @{{.Lesson.TeacherName}} · lesson: {{ formatDateTime .Lesson.DateTime }}</span>
+<span>// @{{.Lesson.TeacherName}} · // lesson: {{ formatDateTime .Lesson.DateTime }}</span>
 {{end}}
 {{define "footer_nav"}}
 {{ if eq .Lesson.TeacherID .SessionUserID }}
@@ -14,6 +14,8 @@
   [delete]
 </button>
 {{ end }}
+<span class="text-gray-500">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}
 {{define "content"}}
 <section class="mb-8">

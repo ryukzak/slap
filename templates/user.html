@@ -1,7 +1,7 @@
 {{define "title"}}User Profile{{end}}
 {{define "header"}}
 <span class="text-gray-500">·</span>
-<span>// {{.Username}}</span>
+<span>// {{ if eq .ID .SessionUserID }}me: {{ else if .SessionIsTeacher }}student: {{ end }}{{.Username}}</span>
 {{end}}
 {{define "footer_nav"}}
 <span class="text-gray-500">·</span>
