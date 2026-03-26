@@ -81,6 +81,10 @@ run_test tests/password-reset-flow.hurl \
 run_test tests/lesson-cascade-delete.hurl \
     --variable "student_id=${TIMESTAMP}8"
 
+run_test tests/reset-request-flow.hurl \
+    --variable "student_id=${TIMESTAMP}14" \
+    --variable "teacher_id=$TEACHER_ID"
+
 run_test tests/ui/user-list-student-row.hurl \
     --variable "student_id=${TIMESTAMP}10"
 

@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/ryukzak/slap/src/analytics"
@@ -20,8 +23,58 @@ type resetPageData struct {
 	Success  bool
 }
 
+// ResetRequestHandler lets an unauthenticated student generate a reset link.
+// GET: show form asking for user ID. POST: generate token and show link.
+func ResetRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{})
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"Failed to parse form"})
+		return
+	}
+
+	userID := strings.TrimSpace(r.FormValue("id"))
+	if userID == "" {
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"User ID is required"})
+		return
+	}
+
+	if _, err := DB.GetUser(userID); err != nil {
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"User not found"})
+		return
+	}
+
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		log.Printf("Error generating reset token: %v", err)
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"Failed to generate reset token"})
+		return
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	exp := time.Now().Add(24 * time.Hour)
+	if err := DB.SetResetToken(userID, token, exp); err != nil {
+		log.Printf("Error storing reset token for user %s: %v", userID, err)
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"Failed to save reset token"})
+		return
+	}
+
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	resetLink := fmt.Sprintf("%s://%s/user/%s/reset?token=%s", scheme, r.Host, userID, token)
+
+	log.Printf("action=reset_request user=%s", userID)
+	renderPage(w, "templates/reset_request.html", struct{ ResetLink string }{resetLink})
+}
+
 // TeacherResetPasswordHandler lets a teacher set a new password for a student.
 // GET: show form. POST: apply new password.
+// Supports an optional ?token= query param for student-initiated reset links.
 func TeacherResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	teacher := teacherSession(w, r)
 	if teacher == nil {
@@ -33,6 +86,18 @@ func TeacherResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token != "" {
+		if dbUser.ResetToken == "" || dbUser.ResetToken != token || time.Now().After(dbUser.ResetTokenExp) {
+			renderPage(w, "templates/reset.html", resetPageData{
+				Error:    "Invalid or expired reset link",
+				UserID:   userID,
+				Username: dbUser.Username,
+			})
+			return
+		}
 	}
 
 	if r.Method == http.MethodGet {

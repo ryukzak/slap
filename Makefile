@@ -48,6 +48,9 @@ test-hurl:
 		--variable student_b_id=student_b_$$(date +%s)5 \
 		tests/access-control.hurl
 	hurl --test $(HURL_VARS) \
+		--variable student_id=student_$$(date +%s)14 \
+		tests/reset-request-flow.hurl
+	hurl --test $(HURL_VARS) \
 		--variable student_id=student_$$(date +%s)10 \
 		tests/ui/user-list-student-row.hurl
 	hurl --test $(HURL_VARS) \
