@@ -306,8 +306,8 @@ func RenderLessonListHandler(w http.ResponseWriter, r *http.Request) {
 	registerMode := r.URL.Query().Get("register") == "1"
 	var waitingMessage string
 	if registerMode {
-		taskID := r.URL.Query().Get("taskID")
-		studentID := r.URL.Query().Get("studentID")
+		taskID := r.URL.Query().Get("task_id")
+		studentID := r.URL.Query().Get("student_id")
 		if taskID != "" && studentID != "" {
 			if task := AppConfig.GetTask(storage.TaskID(taskID)); task != nil {
 				wp := task.GetWaitingPeriod()
