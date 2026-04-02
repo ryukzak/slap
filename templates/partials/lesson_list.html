@@ -1,3 +1,8 @@
+{{ if and .RegisterMode .WaitingMessage }}
+<p class="text-xs text-orange-400 mb-2">
+  {{.WaitingMessage}}
+</p>
+{{ end }}
 {{if .Lessons}}
 <ul class="space-y-1">
   {{range .Lessons}}
@@ -11,15 +16,17 @@
       </div>
       <div class="flex items-center space-x-2">
         <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
-        {{ if .IsRegistrationOpen }}
+        {{ if not .IsRegistrationOpen }}
+        <span class="text-gray-500 text-xs">[closed]</span>
+        {{ else if $.WaitingMessage }}
+        <span class="text-gray-500 text-xs">[wait]</span>
+      {{ else }}
         <button class="text-blue-400 hover:text-blue-300 text-xs"
                 type="button"
                 hx-post="/api/lesson/{{.ID}}/register"
                 hx-include="closest form">
           [register]
         </button>
-      {{ else }}
-        <span class="text-gray-500 text-xs">[closed]</span>
         {{ end }}
       </div>
     </div>
