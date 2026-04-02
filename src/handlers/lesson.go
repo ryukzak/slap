@@ -454,7 +454,12 @@ func RegisterTaskRecordToLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := DB.RegisterToLesson(storage.LessonID(lessonID), storage.TaskID(taskID), studentID); err != nil {
+	var waitingPeriod time.Duration
+	if task := AppConfig.GetTask(storage.TaskID(taskID)); task != nil {
+		waitingPeriod = task.GetWaitingPeriod()
+	}
+
+	if err := DB.RegisterToLesson(storage.LessonID(lessonID), storage.TaskID(taskID), studentID, waitingPeriod); err != nil {
 		log.Printf("action=register_to_lesson user=%s lesson=%s task=%s error=%v", studentID, lessonID, taskID, err)
 		http.Error(w, "Failed to register: "+err.Error(), http.StatusInternalServerError)
 		return
