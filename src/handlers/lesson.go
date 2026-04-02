@@ -306,8 +306,8 @@ func RenderLessonListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	now := time.Now().In(PrimaryLoc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, PrimaryLoc)
 
 	availableLessons := []*storage.Lesson{}
 	for _, lesson := range lessons {
