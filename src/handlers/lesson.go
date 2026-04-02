@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -318,12 +319,42 @@ func RenderLessonListHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 
+	registerMode := r.URL.Query().Get("register") == "1"
+	var waitingMessage string
+	if registerMode {
+		taskID := r.URL.Query().Get("task_id")
+		studentID := r.URL.Query().Get("student_id")
+		if taskID != "" && studentID != "" {
+			if task := AppConfig.GetTask(storage.TaskID(taskID)); task != nil {
+				wp := task.GetWaitingPeriod()
+				if wp > 0 {
+					records, err := DB.ListTaskRecords(studentID, taskID)
+					if err == nil {
+						for _, rec := range records {
+							if rec.Status == storage.ReviewTaskRecord {
+								if time.Since(rec.CreatedAt) < wp {
+									remaining := wp - time.Since(rec.CreatedAt)
+									hours := int(remaining.Hours())
+									minutes := int(remaining.Minutes()) % 60
+									waitingMessage = fmt.Sprintf("Waiting period: %dh%dm remaining since last check", hours, minutes)
+								}
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	data := struct {
-		Lessons      []*storage.Lesson
-		RegisterMode bool
+		Lessons        []*storage.Lesson
+		RegisterMode   bool
+		WaitingMessage string
 	}{
-		Lessons:      availableLessons,
-		RegisterMode: r.URL.Query().Get("register") == "1",
+		Lessons:        availableLessons,
+		RegisterMode:   registerMode,
+		WaitingMessage: waitingMessage,
 	}
 
 	t, err := BaseTemplates.Clone()
@@ -470,7 +501,12 @@ func RegisterTaskRecordToLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := DB.RegisterToLesson(storage.LessonID(lessonID), storage.TaskID(taskID), studentID); err != nil {
+	var waitingPeriod time.Duration
+	if task := AppConfig.GetTask(storage.TaskID(taskID)); task != nil {
+		waitingPeriod = task.GetWaitingPeriod()
+	}
+
+	if err := DB.RegisterToLesson(storage.LessonID(lessonID), storage.TaskID(taskID), studentID, waitingPeriod); err != nil {
 		log.Printf("action=register_to_lesson user=%s lesson=%s task=%s error=%v", studentID, lessonID, taskID, err)
 		http.Error(w, "Failed to register: "+err.Error(), http.StatusInternalServerError)
 		return

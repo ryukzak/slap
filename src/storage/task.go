@@ -169,7 +169,7 @@ func (d *DB) LatestTaskStatus(userID string, taskID TaskID) (TaskRecordStatus, e
 	return status, err
 }
 
-func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID) error {
+func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID, waitingPeriod ...time.Duration) error {
 	if lessonID == "" || authorID == "" || taskID == "" {
 		return fmt.Errorf("taskID and lessonID should provided")
 	}
@@ -183,6 +183,25 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID)
 		}
 		if len(keys) == 0 {
 			return fmt.Errorf("no task entries found for author %s and task %s", authorID, taskID)
+		}
+
+		// Check waiting period since last teacher review
+		if len(waitingPeriod) > 0 && waitingPeriod[0] > 0 {
+			for i := len(keys) - 1; i >= 0; i-- {
+				rec, err := getValue[TaskRecord](b, keys[i])
+				if err != nil {
+					return err
+				}
+				if rec.Status == ReviewTaskRecord {
+					if time.Since(rec.CreatedAt) < waitingPeriod[0] {
+						remaining := waitingPeriod[0] - time.Since(rec.CreatedAt)
+						hours := int(remaining.Hours())
+						minutes := int(remaining.Minutes()) % 60
+						return fmt.Errorf("waiting period: %dh%dm remaining since last check", hours, minutes)
+					}
+					break
+				}
+			}
 		}
 
 		lesson, err := getValue[Lesson](b, lessonID)

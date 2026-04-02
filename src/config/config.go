@@ -3,10 +3,13 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ryukzak/slap/src/storage"
 	"gopkg.in/yaml.v3"
 )
+
+const DefaultWaitingPeriod = 24 * time.Hour
 
 // Config represents the application configuration
 type Config struct {
@@ -28,9 +31,18 @@ func (c *Config) IsTeacher(userID string) bool {
 
 // Task represents a task in the system
 type Task struct {
-	ID          storage.TaskID `yaml:"id"`
-	Title       string         `yaml:"title"`
-	Description string         `yaml:"description"`
+	ID            storage.TaskID `yaml:"id"`
+	Title         string         `yaml:"title"`
+	Description   string         `yaml:"description"`
+	WaitingPeriod *time.Duration `yaml:"waiting_period,omitempty"`
+}
+
+// GetWaitingPeriod returns the task's waiting period, defaulting to 24h.
+func (t *Task) GetWaitingPeriod() time.Duration {
+	if t.WaitingPeriod != nil {
+		return *t.WaitingPeriod
+	}
+	return DefaultWaitingPeriod
 }
 
 // LoadConfig loads the configuration from the specified YAML file

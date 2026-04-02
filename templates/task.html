@@ -94,10 +94,10 @@
     <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />
     <input type="hidden" name="studentID" value="{{.StudentID}}" />
     <div class="max-h-60 overflow-y-auto"
-         hx-get="/api/lessons?register=1"
+         hx-get="/api/lessons?register=1&task_id={{.TaskID}}&student_id={{.StudentID}}"
          hx-trigger="load"
          hx-swap="outerHTML"
-         hx-on:htmx:error="this.innerHTML='<p class=\'text-red-400 text-xs\'>Error loading lessons. Please try again.</p>'">
+         hx-on--htmx--error="this.innerHTML='<p class=\'text-red-400 text-xs\'>Error loading lessons. Please try again.</p>'">
       <p class="text-gray-400 text-xs">
         Loading available lessons...
       </p>
