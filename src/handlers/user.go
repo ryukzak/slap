@@ -101,8 +101,9 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		if showPast {
 			user.Lessons = lessons
 		} else {
+			startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 			for _, l := range lessons {
-				if !l.DateTime.Before(now) {
+				if !l.DateTime.Before(startOfDay) {
 					user.Lessons = append(user.Lessons, l)
 				}
 			}
