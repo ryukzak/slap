@@ -50,11 +50,11 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self'; "+
+				"script-src 'self' 'unsafe-inline' https://eu-assets.i.posthog.com; "+
 				"style-src 'self' 'unsafe-inline'; "+
 				"img-src 'self' data: https:; "+
 				"font-src 'self'; "+
-				"connect-src 'self'")
+				"connect-src 'self' https://eu.i.posthog.com")
 		next.ServeHTTP(w, r)
 	})
 }
