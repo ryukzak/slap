@@ -59,10 +59,12 @@ func GetRestText(s string, maxLen int) string {
 
 func FormatDateTime(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location) func(time.Time) string {
 	return func(t time.Time) string {
-		return fmt.Sprintf("%s(%s) / %s(%s)",
-			t.In(fstLoc).Format("Mon 2.1.2006 15:04"),
+		return fmt.Sprintf("%s\u00a0%s(%s)/%s(%s)",
+			t.In(fstLoc).Format("Mon\u00a02.1.2006"),
+			t.In(fstLoc).Format("15:04"),
 			fstName,
-			t.In(sndLoc).Format("15:04"), sndName,
+			t.In(sndLoc).Format("15:04"),
+			sndName,
 		)
 	}
 }
