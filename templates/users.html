@@ -1,10 +1,10 @@
 {{define "title"}}Users - SLAP{{end}}
 {{define "header"}}
-<span class="text-gray-500">·</span>
-<span>// students</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span>//&nbsp;students</span>
 {{end}}
 {{define "footer_nav"}}
-<span class="text-gray-500">·</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}
 {{define "content"}}
@@ -19,7 +19,7 @@
     </summary>
     <div class="mt-2">
       {{ range .Timeline }}
-      {{ if .Lessons }}
+      {{ if or .Lessons .TeacherReviews }}
       <details class="mb-1">
       <summary class="flex items-center gap-2 text-xs cursor-pointer list-none {{ if .IsToday }}text-white{{ else if .IsFuture }}text-gray-400{{ else }}text-gray-500{{ end }}">
         <span class="w-24 shrink-0 font-mono">{{ if .IsToday }}*Today{{ else }}{{.Date}}{{ end }}</span>
@@ -40,7 +40,7 @@
             </div>
             {{ end }}
           </div>
-          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
+          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
         </div>
       {{ else }}
         <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -59,7 +59,7 @@
             </div>
             {{ end }}
           </div>
-          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}</span>
+          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
         </div>
         {{ end }}
       </summary>
@@ -70,7 +70,16 @@
           <span class="text-gray-700">by</span>
           <span>{{.Teacher}}</span>
           <span class="text-gray-700">·</span>
-          <span>q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
+          <span>q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
+        </div>
+        {{ end }}
+        {{ range .TeacherReviews }}
+        <div class="flex items-center gap-2">
+          <span class="text-gray-600">review</span>
+          <span class="text-gray-700">by</span>
+          <span>{{.Teacher}}</span>
+          <span class="text-gray-700">·</span>
+          <span>c:{{.Checked}}</span>
         </div>
         {{ end }}
       </div>
@@ -95,7 +104,7 @@
         </div>
         {{ end }}
       </div>
-      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}</span>
+      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
     </div>
   {{ else }}
     <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -114,7 +123,7 @@
         </div>
         {{ end }}
       </div>
-      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}</span>
+      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
     </div>
     {{ end }}
   </div>
@@ -124,7 +133,7 @@
     <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-green-800"></span> reviewed</span>
     <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-yellow-700"></span> queued</span>
     <span class="flex-1"></span>
-    <span>l:lessons q:queued c:checked</span>
+    <span>l:lessons q:queued c:checked d:dropped</span>
   </div>
 </div>
 </details>

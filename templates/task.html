@@ -1,16 +1,16 @@
 {{define "title"}}{{.Title}} - Task Details{{end}}
 {{define "header"}}
-<span class="text-gray-500">·</span>
-<a class="text-gray-300 hover:text-white" href="/user/{{.StudentID}}">// {{ if eq .StudentID .SessionUserID }}me: {{ else }}student: {{ end }}{{.StudentName}}</a>
-<span class="text-gray-500">·</span>
-<span>// task: {{.Title}}</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-gray-300 hover:text-white" href="/user/{{.StudentID}}">//&nbsp;{{ if eq .StudentID .SessionUserID }}me:&nbsp;{{ else }}student:&nbsp;{{ end }}{{.StudentName}}</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span>//&nbsp;task:&nbsp;{{.Title}}</span>
 {{ if .Score }}
-<span class="text-gray-500">·</span>
-<span class="text-gray-300">score: {{.Score}}</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span class="text-gray-300">score:&nbsp;{{.Score}}</span>
 {{ end }}
 {{end}}
 {{define "footer_nav"}}
-<span class="text-gray-500">·</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}
 {{define "content"}}

@@ -97,6 +97,9 @@ run_test tests/ui/dashboard-role-sections.hurl \
 run_test tests/ui/task-markdown-rendering.hurl \
     --variable "student_id=${TIMESTAMP}13"
 
+run_test tests/ui/lesson-student-queue-visibility.hurl \
+    --variable "student_id=${TIMESTAMP}15"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

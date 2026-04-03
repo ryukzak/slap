@@ -146,17 +146,25 @@ type TimelineLesson struct {
 	ID         string
 	Registered int
 	Reviewed   int
+	Revoked    int
 	Teacher    string
 }
 
+type TimelineTeacherReview struct {
+	Teacher string
+	Checked int
+}
+
 type TimelineEntry struct {
-	Date       string // "Mon 02 Jan"
-	Checked    int    // teacher reviews that day (past only)
-	Lessons    []TimelineLesson
-	Registered int // total registered across all lessons (future only)
-	Reviewed   int // total reviewed across all lessons (future only)
-	IsToday    bool
-	IsFuture   bool
+	Date           string // "Mon 02 Jan"
+	Checked        int    // teacher reviews that day (past only)
+	Lessons        []TimelineLesson
+	TeacherReviews []TimelineTeacherReview
+	Registered     int // total registered across all lessons (future only)
+	Reviewed       int // total reviewed across all lessons (future only)
+	Revoked        int // total revoked across all lessons
+	IsToday        bool
+	IsFuture       bool
 }
 
 // UserListHandler shows all registered users with task summaries. Teacher-only.
@@ -176,6 +184,14 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().In(PrimaryLoc)
 	todayKey := now.Format("2006-01-02")
 	checkedByDay := make(map[string]int)
+
+	userNames := make(map[string]string) // userID -> username
+	for _, u := range users {
+		userNames[u.ID] = u.Username
+	}
+
+	// dayKey -> teacherID -> count
+	checkedByDayTeacher := make(map[string]map[string]int)
 
 	rows := make([]UserTableRow, 0, len(users))
 	for _, u := range users {
@@ -211,6 +227,10 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						}
 						dayKey := rec.CreatedAt.In(PrimaryLoc).Format("2006-01-02")
 						checkedByDay[dayKey]++
+						if checkedByDayTeacher[dayKey] == nil {
+							checkedByDayTeacher[dayKey] = make(map[string]int)
+						}
+						checkedByDayTeacher[dayKey][rec.EntryAuthorID]++
 					}
 					switch rec.Status {
 					case storage.SubmitTaskRecord:
@@ -325,6 +345,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			ID:         l.ID,
 			Registered: l.RegisteredCount(),
 			Reviewed:   l.ReviewedCount(),
+			Revoked:    l.RevokedCount(),
 			Teacher:    l.TeacherName,
 		})
 	}
@@ -332,10 +353,22 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	timelineMap := make(map[string]*TimelineEntry)
 	for day, count := range checkedByDay {
 		isFuture := day > todayKey
+		var reviews []TimelineTeacherReview
+		for teacherID, c := range checkedByDayTeacher[day] {
+			name := userNames[teacherID]
+			if name == "" {
+				name = teacherID
+			}
+			reviews = append(reviews, TimelineTeacherReview{Teacher: name, Checked: c})
+		}
+		sort.Slice(reviews, func(i, j int) bool {
+			return reviews[i].Checked > reviews[j].Checked
+		})
 		e := &TimelineEntry{
-			Checked:  count,
-			IsToday:  day == todayKey,
-			IsFuture: isFuture,
+			Checked:        count,
+			TeacherReviews: reviews,
+			IsToday:        day == todayKey,
+			IsFuture:       isFuture,
 		}
 		timelineMap[day] = e
 	}
@@ -369,17 +402,25 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		for _, l := range e.Lessons {
 			e.Registered += l.Registered
 			e.Reviewed += l.Reviewed
+			e.Revoked += l.Revoked
 		}
 		timeline = append(timeline, *e)
 	}
 
 	maxBar := 0
 	for _, e := range timeline {
-		if e.Checked > maxBar {
-			maxBar = e.Checked
+		var total int
+		if e.IsFuture {
+			total = e.Registered
+		} else {
+			queued := e.Registered - e.Reviewed
+			if queued < 0 {
+				queued = 0
+			}
+			total = e.Checked + queued
 		}
-		if e.Registered > maxBar {
-			maxBar = e.Registered
+		if total > maxBar {
+			maxBar = total
 		}
 	}
 

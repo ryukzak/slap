@@ -200,16 +200,6 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !user.IsTeacher {
-		filtered := visibleTaskRecords[:0]
-		for _, r := range visibleTaskRecords {
-			if r.StudentID == user.ID {
-				filtered = append(filtered, r)
-			}
-		}
-		visibleTaskRecords = filtered
-	}
-
 	renderPage(w, "templates/lesson.html", struct {
 		Lesson           *storage.Lesson
 		TeacherID        string
@@ -257,16 +247,6 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
 		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
 		return
-	}
-
-	if !user.IsTeacher {
-		filtered := visibleTaskRecords[:0]
-		for _, r := range visibleTaskRecords {
-			if r.StudentID == user.ID {
-				filtered = append(filtered, r)
-			}
-		}
-		visibleTaskRecords = filtered
 	}
 
 	data := lessonRecordsData{

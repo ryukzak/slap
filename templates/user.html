@@ -1,21 +1,21 @@
 {{define "title"}}User Profile{{end}}
 {{define "header"}}
-<span class="text-gray-500">·</span>
-<span>// {{ if eq .ID .SessionUserID }}me: {{ else if .SessionIsTeacher }}student: {{ end }}{{.Username}}</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span>//&nbsp;{{ if eq .ID .SessionUserID }}me:&nbsp;{{ else if .SessionIsTeacher }}student:&nbsp;{{ end }}{{.Username}}</span>
 {{end}}
 {{define "footer_nav"}}
-<span class="text-gray-500">·</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
 {{ if .SessionIsTeacher }}
 <a class="text-blue-400 hover:text-blue-300" href="/users">[students]</a>
-<span class="text-gray-500">·</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
 {{ end }}
 {{ if eq .ID .SessionUserID }}
 <a class="text-blue-400 hover:text-blue-300"
    href="/user/{{.ID}}/settings">[settings]</a>
-<span class="text-gray-500">·</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
 {{ else if .SessionIsTeacher }}
 <a class="text-red-400 hover:text-red-300" href="/user/{{.ID}}/reset">[reset password]</a>
-<span class="text-gray-500">·</span>
+<span class="text-gray-500 hidden sm:inline">·</span>
 {{ end }}
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}

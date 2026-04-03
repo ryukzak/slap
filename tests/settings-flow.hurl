@@ -27,7 +27,7 @@ Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
-body contains "// settings"
+body contains "//&nbsp;settings"
 body contains "Settings Student"
 
 # Step 3: Change display name

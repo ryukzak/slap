@@ -1,1 +1,6 @@
 {{.Roles}}
+<script>
+    if (window.posthog) {
+        posthog.identify("{{.ID}}");
+    }
+</script>
