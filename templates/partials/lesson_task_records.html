@@ -26,6 +26,7 @@
       </div>
     </summary>
     <div class="px-4 pb-4 pt-2">
+      {{ if or $.SessionIsTeacher (eq $record.StudentID $.SessionUserID) }}
       {{ if and $.ShowRevoked $record.PreviousRecords }}
       <div class="mb-2">
         <div class="text-xs text-gray-500 mb-1">
@@ -72,6 +73,11 @@
       {{ end }}
     </div>
     {{ end }}
+  {{ else }}
+    <p class="text-xs text-gray-500">
+      Submission content is only visible to the author and teacher.
+    </p>
+    {{ end }}
     {{ if $.SessionIsTeacher }}
     <form class="lesson-review-form"
           hx-post="/user/{{$record.StudentID}}/task/{{$record.TaskID}}/journal"
@@ -96,7 +102,7 @@
         </div>
       </div>
     </form>
-  {{ else }}
+    {{ else if eq $record.StudentID $.SessionUserID }}
     <div class="flex justify-between mt-2">
       <div class="space-x-4">
         <a class="text-blue-400 hover:text-blue-300 text-xs"
