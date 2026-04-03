@@ -153,7 +153,7 @@
       <a class="text-blue-400 hover:text-blue-300" href="?sort={{.SortMode}}">[hide history]</a>
     {{ else }}
       <a class="text-blue-400 hover:text-blue-300"
-         href="?showRevoked=true&sort={{.SortMode}}">[show history]</a>
+         href="?showRevoked=true&sort={{.SortMode}}">[show all]</a>
       {{ end }}
       <span class="text-gray-600">|</span>
       {{ if eq (printf "%s" .SortMode) "date" }}
