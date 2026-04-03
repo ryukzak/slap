@@ -63,6 +63,16 @@ func (l *Lesson) ReviewedCount() int {
 	return count
 }
 
+func (l *Lesson) RevokedCount() int {
+	count := 0
+	for _, t := range l.PreviousEnrolledTasks {
+		if t.Status == RevokedTaskRecord {
+			count++
+		}
+	}
+	return count
+}
+
 const lessonsKey = "lessons"
 
 func sortLessonsByDate(entries []*Lesson) {
