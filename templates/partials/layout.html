@@ -1,21 +1,18 @@
 {{define "layout"}}
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta
-            name="description"
-            content="SLAP - Student Lesson Attempt Platform"
-        />
-        <meta name="keywords" content="slap, student, lab, activity" />
-        <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-        <title>{{block "title" .}}SLAP{{end}}</title>
-        <script src="/static/js/htmx.min.js"></script>
-        <script src="/static/js/tailwindcss.js"></script>
-        <script src="/static/js/override.js"></script>
-        <link href="/static/styles.css" rel="stylesheet" />
-        <script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="SLAP - Student Lesson Attempt Platform" />
+    <meta name="keywords" content="slap, student, lab, activity" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <title>{{block "title" .}}SLAP{{end}}</title>
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/tailwindcss.js"></script>
+    <script src="/static/js/override.js"></script>
+    <link href="/static/styles.css" rel="stylesheet" />
+    <script>
             !(function (t, e) {
                 var o, n, p, r;
                 e.__SV ||
@@ -83,29 +80,24 @@
                 defaults: "2026-01-30",
                 person_profiles: "identified_only", // or 'always' to create profiles for anonymous users as well
             });
-        </script>
-    </head>
-    <body class="bg-gray-900 text-gray-300 min-h-screen font-mono">
-        <header
-            class="border-b border-gray-700 px-4 py-2 flex items-center justify-between text-xs"
-        >
-            <div class="flex items-center space-x-3">
-                <a class="text-gray-500 hover:text-gray-300" href="/">SLAP</a>
-                {{block "header" .}}{{end}} {{block "footer_nav" .}}{{end}}
-            </div>
-            <div class="flex items-center space-x-3 text-gray-600">
-                <div hx-trigger="load" hx-get="/parts/user-line"></div>
-                <span>v{{appVersion}} · up {{uptime}}</span>
-                <a
-                    class="hover:text-gray-400"
-                    href="https://github.com/ryukzak/slap"
-                    >[github]</a
-                >
-            </div>
-        </header>
-        <main class="container mx-auto px-4 pt-2 pb-4">
-            {{block "content" .}}{{end}}
-        </main>
-    </body>
+    </script>
+  </head>
+  <body class="bg-gray-900 text-gray-300 min-h-screen font-mono">
+    <header class="border-b border-gray-700 px-4 py-2 flex items-center justify-between text-xs">
+      <div class="flex items-center space-x-3">
+        <a class="text-gray-500 hover:text-gray-300" href="/">SLAP</a>
+        {{block "header" .}}{{end}} {{block "footer_nav" .}}{{end}}
+      </div>
+      <div class="flex items-center space-x-3 text-gray-600">
+        <div hx-trigger="load" hx-get="/parts/user-line">
+        </div>
+        <span>v{{appVersion}} · up {{uptime}}</span>
+        <a class="hover:text-gray-400" href="https://github.com/ryukzak/slap">[github]</a>
+      </div>
+    </header>
+    <main class="container mx-auto px-4 pt-2 pb-4">
+      {{block "content" .}}{{end}}
+    </main>
+  </body>
 </html>
 {{end}}
