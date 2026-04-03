@@ -8,13 +8,13 @@
   {{range .Lessons}}
   <li class="border-b border-gray-800 pb-1">
     {{if $.RegisterMode}}
-    <div class="text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded">
-      <div class="flex items-center space-x-2">
+    <div class="text-xs flex items-start sm:items-center justify-between hover:bg-gray-800 py-1 px-1 rounded">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 min-w-0">
         <span>{{formatDateTime .DateTime}}</span>
         <span class="text-gray-500">@{{.TeacherName}}</span>
         <span class="text-gray-400 truncate min-w-0">{{getTitle .Description}}</span>
       </div>
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-2 flex-shrink-0">
         <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
         {{ if not .IsRegistrationOpen }}
         <span class="text-gray-500 text-xs">[closed]</span>
@@ -31,14 +31,14 @@
       </div>
     </div>
   {{else}}
-    <a class="block text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
+    <a class="block text-xs flex items-start sm:items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
        href="/lesson/{{.ID}}">
-      <div class="flex items-center space-x-2">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 min-w-0">
         <span>{{formatDateTime .DateTime}}</span>
         <span class="text-gray-500">@{{.TeacherName}}</span>
         <span class="text-gray-400 truncate min-w-0">{{getTitle .Description}}</span>
       </div>
-      <div class="flex items-center space-x-2">
+      <div class="flex items-center space-x-2 flex-shrink-0">
         {{ if not .IsRegistrationOpen }}
         <span class="text-orange-400 text-xs">[closed]</span>
         {{ end }}

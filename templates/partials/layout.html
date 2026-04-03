@@ -83,16 +83,43 @@
     </script>
   </head>
   <body class="bg-gray-900 text-gray-300 min-h-screen font-mono">
-    <header class="border-b border-gray-700 px-4 py-2 flex items-center justify-between text-xs">
-      <div class="flex items-center space-x-3">
-        <a class="text-gray-500 hover:text-gray-300" href="/">SLAP</a>
-        {{block "header" .}}{{end}} {{block "footer_nav" .}}{{end}}
-      </div>
-      <div class="flex items-center space-x-3 text-gray-600">
-        <div hx-trigger="load" hx-get="/parts/user-line">
+    <header class="border-b border-gray-700 px-4 py-2 text-xs">
+      <!-- large screen: single row -->
+      <div class="hidden sm:flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <a class="text-gray-500 hover:text-gray-300" href="/">SLAP</a>
+          {{block "header" .}}{{end}} {{block "footer_nav" .}}{{end}}
         </div>
-        <span>v{{appVersion}} · up {{uptime}}</span>
-        <a class="hover:text-gray-400" href="https://github.com/ryukzak/slap">[github]</a>
+        <div class="flex items-center space-x-3 text-gray-600">
+          <div hx-trigger="load" hx-get="/parts/user-line">
+          </div>
+          <span class="text-gray-500">·</span>
+          <span>v{{appVersion}}</span>
+          <span class="text-gray-500">·</span>
+          <span>up {{uptime}}</span>
+          <a class="hover:text-gray-400" href="https://github.com/ryukzak/slap">[github]</a>
+        </div>
+      </div>
+      <!-- small screen: three columns -->
+      <div class="grid grid-cols-[auto_1fr_auto] gap-x-3 sm:hidden">
+        <div>
+          <a class="text-gray-500 hover:text-gray-300" href="/">SLAP</a>
+        </div>
+        <div class="flex flex-col">
+          <div>
+            {{block "header" .}}{{end}}
+          </div>
+          <div>
+            {{block "footer_nav" .}}{{end}}
+          </div>
+        </div>
+        <div class="flex flex-col items-end text-gray-600">
+          <div hx-trigger="load" hx-get="/parts/user-line">
+          </div>
+          <span>v{{appVersion}}</span>
+          <span>up {{uptime}}</span>
+          <a class="hover:text-gray-400" href="https://github.com/ryukzak/slap">[github]</a>
+        </div>
       </div>
     </header>
     <main class="container mx-auto px-4 pt-2 pb-4">
