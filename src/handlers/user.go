@@ -123,16 +123,22 @@ type ScoreStats struct {
 }
 
 type WaitBucket struct {
-	Day1         int // <= 1 day
-	Days3        int // 1-3 days
-	Week1        int // 3-7 days
-	WeekPlus     int // > 7 days
-	Stall        int // students who skipped 4+ lessons
-	StallLessons int // total skipped lessons across stalled students
+	Day1          int // <= 1 day
+	Days3         int // 1-3 days
+	Week1         int // 3-7 days
+	WeekPlus      int // > 7 days
+	Day1Stall     int // stalled in <= 1 day bucket
+	Days3Stall    int // stalled in 1-3 days bucket
+	Week1Stall    int // stalled in 3-7 days bucket
+	WeekPlusStall int // stalled in > 7 days bucket
 }
 
 func (w WaitBucket) Total() int {
 	return w.Day1 + w.Days3 + w.Week1 + w.WeekPlus
+}
+
+func (w WaitBucket) TotalStall() int {
+	return w.Day1Stall + w.Days3Stall + w.Week1Stall + w.WeekPlusStall
 }
 
 type TaskStats struct {
@@ -382,21 +388,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			wait := now.Sub(td.WaitSince)
 			wb := pendingByTask[task.ID]
-			switch {
-			case wait <= 24*time.Hour:
-				wb.Day1++
-				pendingTotal.Day1++
-			case wait <= 3*24*time.Hour:
-				wb.Days3++
-				pendingTotal.Days3++
-			case wait <= 7*24*time.Hour:
-				wb.Week1++
-				pendingTotal.Week1++
-			default:
-				wb.WeekPlus++
-				pendingTotal.WeekPlus++
-			}
-			// A "submit" task is stalled if the student skipped 4+ lessons.
+			// Count skipped lessons for stall detection.
+			isStall := false
 			if td.Status == storage.SubmitTaskRecord {
 				skipped := 0
 				for _, ld := range pastLessonDates {
@@ -404,11 +397,36 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						skipped++
 					}
 				}
-				if skipped >= stallThreshold {
-					wb.Stall++
-					wb.StallLessons += skipped
-					pendingTotal.Stall++
-					pendingTotal.StallLessons += skipped
+				isStall = skipped >= stallThreshold
+			}
+			switch {
+			case wait <= 24*time.Hour:
+				wb.Day1++
+				pendingTotal.Day1++
+				if isStall {
+					wb.Day1Stall++
+					pendingTotal.Day1Stall++
+				}
+			case wait <= 3*24*time.Hour:
+				wb.Days3++
+				pendingTotal.Days3++
+				if isStall {
+					wb.Days3Stall++
+					pendingTotal.Days3Stall++
+				}
+			case wait <= 7*24*time.Hour:
+				wb.Week1++
+				pendingTotal.Week1++
+				if isStall {
+					wb.Week1Stall++
+					pendingTotal.Week1Stall++
+				}
+			default:
+				wb.WeekPlus++
+				pendingTotal.WeekPlus++
+				if isStall {
+					wb.WeekPlusStall++
+					pendingTotal.WeekPlusStall++
 				}
 			}
 			pendingByTask[task.ID] = wb

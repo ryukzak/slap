@@ -211,7 +211,7 @@
 {{ end }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-    // pending ({{.PendingTotal.Total}} students waiting{{ if .PendingTotal.Stall }}, {{.PendingTotal.Stall}} stall{{ end }})
+    // pending ({{.PendingTotal.Total}} students waiting{{ if .PendingTotal.TotalStall }}, {{.PendingTotal.TotalStall}} stall{{ end }})
   </div>
   <table class="w-full text-xs border-collapse">
     <thead>
@@ -231,11 +231,8 @@
         <th class="text-right text-gray-400 py-1 px-2 font-normal">
           &gt;7d
         </th>
-        <th class="text-right text-gray-400 py-1 px-2 font-normal">
-          total
-        </th>
         <th class="text-right text-gray-400 py-1 pl-2 font-normal">
-          stall
+          total
         </th>
       </tr>
     </thead>
@@ -247,22 +244,19 @@
           {{.Title}}
         </td>
       <td class="py-1 px-2 text-right {{ if $wb.Day1 }}text-green-400{{ else }}text-gray-700{{ end }}">
-        {{$wb.Day1}}
+        {{$wb.Day1}}{{ if $wb.Day1Stall }}<span class="text-purple-400">({{$wb.Day1Stall}})</span>{{ end }}
       </td>
     <td class="py-1 px-2 text-right {{ if $wb.Days3 }}text-yellow-400{{ else }}text-gray-700{{ end }}">
-      {{$wb.Days3}}
+      {{$wb.Days3}}{{ if $wb.Days3Stall }}<span class="text-purple-400">({{$wb.Days3Stall}})</span>{{ end }}
     </td>
   <td class="py-1 px-2 text-right {{ if $wb.Week1 }}text-orange-400{{ else }}text-gray-700{{ end }}">
-    {{$wb.Week1}}
+    {{$wb.Week1}}{{ if $wb.Week1Stall }}<span class="text-purple-400">({{$wb.Week1Stall}})</span>{{ end }}
   </td>
 <td class="py-1 px-2 text-right {{ if $wb.WeekPlus }}text-red-400{{ else }}text-gray-700{{ end }}">
-  {{$wb.WeekPlus}}
+  {{$wb.WeekPlus}}{{ if $wb.WeekPlusStall }}<span class="text-purple-400">({{$wb.WeekPlusStall}})</span>{{ end }}
 </td>
-<td class="py-1 px-2 text-right text-gray-300">
-  {{$wb.Total}}
-</td>
-<td class="py-1 pl-2 text-right {{ if $wb.Stall }}text-purple-400{{ else }}text-gray-700{{ end }}">
-{{ if $wb.Stall }}{{$wb.Stall}}&nbsp;({{$wb.StallLessons}}){{ else }}0{{ end }}
+<td class="py-1 pl-2 text-right text-gray-300">
+  {{$wb.Total}}{{ if $wb.TotalStall }}<span class="text-purple-400">({{$wb.TotalStall}})</span>{{ end }}
 </td>
 </tr>
 {{ end }}
@@ -271,28 +265,25 @@
     total
   </td>
 <td class="py-1 px-2 text-right {{ if .PendingTotal.Day1 }}text-green-400{{ else }}text-gray-700{{ end }}">
-  {{.PendingTotal.Day1}}
+  {{.PendingTotal.Day1}}{{ if .PendingTotal.Day1Stall }}<span class="text-purple-400">({{.PendingTotal.Day1Stall}})</span>{{ end }}
 </td>
 <td class="py-1 px-2 text-right {{ if .PendingTotal.Days3 }}text-yellow-400{{ else }}text-gray-700{{ end }}">
-{{.PendingTotal.Days3}}
+{{.PendingTotal.Days3}}{{ if .PendingTotal.Days3Stall }}<span class="text-purple-400">({{.PendingTotal.Days3Stall}})</span>{{ end }}
 </td>
 <td class="py-1 px-2 text-right {{ if .PendingTotal.Week1 }}text-orange-400{{ else }}text-gray-700{{ end }}">
-{{.PendingTotal.Week1}}
+{{.PendingTotal.Week1}}{{ if .PendingTotal.Week1Stall }}<span class="text-purple-400">({{.PendingTotal.Week1Stall}})</span>{{ end }}
 </td>
 <td class="py-1 px-2 text-right {{ if .PendingTotal.WeekPlus }}text-red-400{{ else }}text-gray-700{{ end }}">
-{{.PendingTotal.WeekPlus}}
+{{.PendingTotal.WeekPlus}}{{ if .PendingTotal.WeekPlusStall }}<span class="text-purple-400">({{.PendingTotal.WeekPlusStall}})</span>{{ end }}
 </td>
-<td class="py-1 px-2 text-right text-gray-300">
-  {{.PendingTotal.Total}}
-</td>
-<td class="py-1 pl-2 text-right {{ if .PendingTotal.Stall }}text-purple-400{{ else }}text-gray-700{{ end }}">
-{{ if .PendingTotal.Stall }}{{.PendingTotal.Stall}}&nbsp;({{.PendingTotal.StallLessons}}){{ else }}0{{ end }}
+<td class="py-1 pl-2 text-right text-gray-300">
+  {{.PendingTotal.Total}}{{ if .PendingTotal.TotalStall }}<span class="text-purple-400">({{.PendingTotal.TotalStall}})</span>{{ end }}
 </td>
 </tr>
 </tbody>
 </table>
 <div class="text-xs text-gray-600 mt-2">
-  wait time since last submit; stall = students (skipped lessons) who skipped 4+ lessons (student side)
+  wait time since last submit; <span class="text-purple-400">(N)</span> = stall, skipped 4+ lessons (student side)
 </div>
 </section>
 <section class="mb-8">
