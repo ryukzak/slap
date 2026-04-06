@@ -125,6 +125,7 @@ type WaitBucket struct {
 	Days3    int // 1-3 days
 	Week1    int // 3-7 days
 	WeekPlus int // > 7 days
+	Stall    int // students who skipped available lessons
 }
 
 func (w WaitBucket) Total() int {
@@ -344,8 +345,25 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		taskStats[taskID] = ts
 	}
 
+	// Build activity timeline
+	lessons, err := DB.ListLessons()
+	if err != nil {
+		log.Printf("Error loading lessons for timeline: %v", err)
+	}
+
+	// Collect past lesson dates for stall detection.
+	var pastLessonDates []time.Time
+	for _, l := range lessons {
+		if l.DateTime.Before(now) {
+			pastLessonDates = append(pastLessonDates, l.DateTime)
+		}
+	}
+
 	// Compute pending wait buckets (students with "submit" or "register" status).
 	pendingByTask := make(map[storage.TaskID]WaitBucket)
+	for _, task := range AppConfig.Tasks {
+		pendingByTask[task.ID] = WaitBucket{}
+	}
 	var pendingTotal WaitBucket
 	for _, row := range rows {
 		if !row.IsStudent {
@@ -375,14 +393,21 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				wb.WeekPlus++
 				pendingTotal.WeekPlus++
 			}
+			// A "submit" task is stalled if the student skipped past lessons.
+			if td.Status == storage.SubmitTaskRecord {
+				skipped := 0
+				for _, ld := range pastLessonDates {
+					if ld.After(td.WaitSince) {
+						skipped++
+					}
+				}
+				if skipped > 0 {
+					wb.Stall++
+					pendingTotal.Stall++
+				}
+			}
 			pendingByTask[task.ID] = wb
 		}
-	}
-
-	// Build activity timeline
-	lessons, err := DB.ListLessons()
-	if err != nil {
-		log.Printf("Error loading lessons for timeline: %v", err)
 	}
 
 	lessonsByDay := make(map[string][]TimelineLesson)

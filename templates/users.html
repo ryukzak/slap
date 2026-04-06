@@ -209,10 +209,9 @@
   {{ end }}
 </section>
 {{ end }}
-{{ if .PendingTotal.Total }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-    // pending ({{.PendingTotal.Total}} students waiting)
+    // pending ({{.PendingTotal.Total}} students waiting{{ if .PendingTotal.Stall }}, {{.PendingTotal.Stall}} stall{{ end }})
   </div>
   <table class="w-full text-xs border-collapse">
     <thead>
@@ -232,15 +231,17 @@
         <th class="text-right text-gray-400 py-1 px-2 font-normal">
           &gt;7d
         </th>
-        <th class="text-right text-gray-400 py-1 pl-2 font-normal">
+        <th class="text-right text-gray-400 py-1 px-2 font-normal">
           total
+        </th>
+        <th class="text-right text-gray-400 py-1 pl-2 font-normal">
+          stall
         </th>
       </tr>
     </thead>
     <tbody>
       {{ range .Tasks }}
       {{ $wb := index $.PendingByTask .ID }}
-      {{ if $wb.Total }}
       <tr class="border-b border-gray-800">
         <td class="py-1 pr-4 text-gray-400">
           {{.Title}}
@@ -257,11 +258,13 @@
 <td class="py-1 px-2 text-right {{ if $wb.WeekPlus }}text-red-400{{ else }}text-gray-700{{ end }}">
   {{$wb.WeekPlus}}
 </td>
-<td class="py-1 pl-2 text-right text-gray-300">
+<td class="py-1 px-2 text-right text-gray-300">
   {{$wb.Total}}
 </td>
+<td class="py-1 pl-2 text-right {{ if $wb.Stall }}text-purple-400{{ else }}text-gray-700{{ end }}">
+{{$wb.Stall}}
+</td>
 </tr>
-{{ end }}
 {{ end }}
 <tr class="border-t border-gray-600">
   <td class="py-1 pr-4 text-gray-300">
@@ -279,14 +282,19 @@
 <td class="py-1 px-2 text-right {{ if .PendingTotal.WeekPlus }}text-red-400{{ else }}text-gray-700{{ end }}">
 {{.PendingTotal.WeekPlus}}
 </td>
-<td class="py-1 pl-2 text-right text-gray-300">
+<td class="py-1 px-2 text-right text-gray-300">
   {{.PendingTotal.Total}}
+</td>
+<td class="py-1 pl-2 text-right {{ if .PendingTotal.Stall }}text-purple-400{{ else }}text-gray-700{{ end }}">
+{{.PendingTotal.Stall}}
 </td>
 </tr>
 </tbody>
 </table>
+<div class="text-xs text-gray-600 mt-2">
+  wait time since last submit/register; stall = submitted but skipped available lessons (student side)
+</div>
 </section>
-{{ end }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>// users</span>
