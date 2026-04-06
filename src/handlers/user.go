@@ -123,11 +123,12 @@ type ScoreStats struct {
 }
 
 type WaitBucket struct {
-	Day1     int // <= 1 day
-	Days3    int // 1-3 days
-	Week1    int // 3-7 days
-	WeekPlus int // > 7 days
-	Stall    int // students who skipped available lessons
+	Day1         int // <= 1 day
+	Days3        int // 1-3 days
+	Week1        int // 3-7 days
+	WeekPlus     int // > 7 days
+	Stall        int // students who skipped 4+ lessons
+	StallLessons int // total skipped lessons across stalled students
 }
 
 func (w WaitBucket) Total() int {
@@ -405,7 +406,9 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				if skipped >= stallThreshold {
 					wb.Stall++
+					wb.StallLessons += skipped
 					pendingTotal.Stall++
+					pendingTotal.StallLessons += skipped
 				}
 			}
 			pendingByTask[task.ID] = wb
