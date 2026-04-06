@@ -16,6 +16,8 @@ import (
 	"github.com/ryukzak/slap/src/util"
 )
 
+const stallThreshold = 4 // lessons skipped before marking as stalled
+
 // UserInfoHandler displays the user information and available tasks
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := userSession(w, r)
@@ -393,7 +395,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				wb.WeekPlus++
 				pendingTotal.WeekPlus++
 			}
-			// A "submit" task is stalled if the student skipped past lessons.
+			// A "submit" task is stalled if the student skipped 4+ lessons.
 			if td.Status == storage.SubmitTaskRecord {
 				skipped := 0
 				for _, ld := range pastLessonDates {
@@ -401,7 +403,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						skipped++
 					}
 				}
-				if skipped > 0 {
+				if skipped >= stallThreshold {
 					wb.Stall++
 					pendingTotal.Stall++
 				}
