@@ -120,6 +120,17 @@ type ScoreStats struct {
 	Max    int
 }
 
+type WaitBucket struct {
+	Day1     int // <= 1 day
+	Days3    int // 1-3 days
+	Week1    int // 3-7 days
+	WeekPlus int // > 7 days
+}
+
+func (w WaitBucket) Total() int {
+	return w.Day1 + w.Days3 + w.Week1 + w.WeekPlus
+}
+
 type TaskStats struct {
 	Pending   int
 	Queued    int
@@ -131,10 +142,11 @@ type TaskStats struct {
 }
 
 type UserTaskSummary struct {
-	Count   int
-	Score   string
-	Status  storage.TaskRecordStatus
-	Summary string // compact status counts e.g. "p:2 r:1 c:1"
+	Count     int
+	Score     string
+	Status    storage.TaskRecordStatus
+	Summary   string // compact status counts e.g. "p:2 r:1 c:1"
+	WaitSince time.Time
 }
 
 type UserTableRow struct {
@@ -218,7 +230,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 				}
-				summary := UserTaskSummary{Count: len(records), Status: bestStatus}
+				summary := UserTaskSummary{Count: len(records), Status: bestStatus, WaitSince: records[0].CreatedAt}
 				var pending, queued, dropped, feedback, checked int
 				for _, rec := range records {
 					if rec.EntryAuthorID != rec.StudentID {
@@ -332,6 +344,41 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		taskStats[taskID] = ts
 	}
 
+	// Compute pending wait buckets (students with "submit" or "register" status).
+	pendingByTask := make(map[storage.TaskID]WaitBucket)
+	var pendingTotal WaitBucket
+	for _, row := range rows {
+		if !row.IsStudent {
+			continue
+		}
+		for _, task := range AppConfig.Tasks {
+			td, ok := row.TaskData[task.ID]
+			if !ok || td.Count == 0 {
+				continue
+			}
+			if td.Status != storage.SubmitTaskRecord && td.Status != storage.RegisterTaskRecord {
+				continue
+			}
+			wait := now.Sub(td.WaitSince)
+			wb := pendingByTask[task.ID]
+			switch {
+			case wait <= 24*time.Hour:
+				wb.Day1++
+				pendingTotal.Day1++
+			case wait <= 3*24*time.Hour:
+				wb.Days3++
+				pendingTotal.Days3++
+			case wait <= 7*24*time.Hour:
+				wb.Week1++
+				pendingTotal.Week1++
+			default:
+				wb.WeekPlus++
+				pendingTotal.WeekPlus++
+			}
+			pendingByTask[task.ID] = wb
+		}
+	}
+
 	// Build activity timeline
 	lessons, err := DB.ListLessons()
 	if err != nil {
@@ -430,6 +477,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		Tasks         []config.Task
 		StudentCount  int
 		TaskStats     map[storage.TaskID]TaskStats
+		PendingByTask map[storage.TaskID]WaitBucket
+		PendingTotal  WaitBucket
 		Timeline      []TimelineEntry
 		MaxBar        int
 	}{
@@ -438,6 +487,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		Tasks:         AppConfig.Tasks,
 		StudentCount:  studentCount,
 		TaskStats:     taskStats,
+		PendingByTask: pendingByTask,
+		PendingTotal:  pendingTotal,
 		Timeline:      timeline,
 		MaxBar:        maxBar,
 	})
