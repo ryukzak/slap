@@ -262,7 +262,7 @@
   {{$wb.Total}}
 </td>
 <td class="py-1 pl-2 text-right {{ if $wb.Stall }}text-purple-400{{ else }}text-gray-700{{ end }}">
-{{$wb.Stall}}
+{{ if $wb.Stall }}{{$wb.Stall}}&nbsp;({{$wb.StallLessons}}){{ else }}0{{ end }}
 </td>
 </tr>
 {{ end }}
@@ -286,13 +286,13 @@
   {{.PendingTotal.Total}}
 </td>
 <td class="py-1 pl-2 text-right {{ if .PendingTotal.Stall }}text-purple-400{{ else }}text-gray-700{{ end }}">
-{{.PendingTotal.Stall}}
+{{ if .PendingTotal.Stall }}{{.PendingTotal.Stall}}&nbsp;({{.PendingTotal.StallLessons}}){{ else }}0{{ end }}
 </td>
 </tr>
 </tbody>
 </table>
 <div class="text-xs text-gray-600 mt-2">
-  wait time since last submit; stall = submitted but skipped 4+ lessons (student side)
+  wait time since last submit; stall = students (skipped lessons) who skipped 4+ lessons (student side)
 </div>
 </section>
 <section class="mb-8">
