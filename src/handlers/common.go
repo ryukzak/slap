@@ -76,10 +76,10 @@ func UserLineHandler(w http.ResponseWriter, r *http.Request) {
 
 	var roleList []string
 	if AppConfig.IsTeacher(dbUser.ID) {
-		roleList = append(roleList, "Teacher")
+		roleList = append(roleList, "teacher")
 	}
 	if dbUser.IsStudent {
-		roleList = append(roleList, "Student")
+		roleList = append(roleList, "student")
 	}
 	roles := strings.Join(roleList, ":")
 
