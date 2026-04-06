@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -33,13 +31,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.x"
+          cache: pip
 
       - name: Install djlint
         run: pip install djlint==1.36.4
@@ -56,8 +53,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -70,10 +65,19 @@ jobs:
       - name: Build binary
         run: make build
 
+      - name: Cache Hurl
+        id: cache-hurl
+        uses: actions/cache@v4
+        with:
+          path: hurl_6.1.1_amd64.deb
+          key: hurl-6.1.1
+
+      - name: Download Hurl
+        if: steps.cache-hurl.outputs.cache-hit != 'true'
+        run: curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/6.1.1/hurl_6.1.1_amd64.deb
+
       - name: Install Hurl
-        run: |
-          curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/6.1.1/hurl_6.1.1_amd64.deb
-          sudo apt-get install -y ./hurl_6.1.1_amd64.deb
+        run: sudo apt-get install -y ./hurl_6.1.1_amd64.deb
 
       - name: Run integration tests
         run: make test-hurl-ci
