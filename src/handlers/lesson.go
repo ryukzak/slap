@@ -64,6 +64,8 @@ type TaskRecordWithInfo struct {
 	TaskDescription string
 	PreviousRecords []storage.TaskRecord
 	ReviewRecords   []storage.TaskRecord
+	JournalRecords  []storage.TaskRecord
+	JournalSummary  string
 }
 
 // lessonRecordsData is the data passed to the lesson_task_records partial.
@@ -109,25 +111,40 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		key := taskRecord.StudentID + ":" + taskRecord.TaskID
 
 		var reviewRecords []storage.TaskRecord
-		if taskRecord.Status == storage.ReviewedTaskRecord {
-			allForTask, err := DB.ListTaskRecords(taskRecord.StudentID, taskRecord.TaskID)
-			if err == nil {
-				// allForTask is newest-first. Find this taskRecord's index, then
-				// collect consecutive review records immediately before it (newer
-				// records) — those are the reviews belonging to this enrollment.
-				for i, r := range allForTask {
-					if r.ID == taskRecord.ID {
-						for j := i - 1; j >= 0; j-- {
-							if allForTask[j].Status == storage.ReviewTaskRecord {
-								reviewRecords = append(reviewRecords, allForTask[j])
-							} else {
-								break
-							}
+		allForTask, err := DB.ListTaskRecords(taskRecord.StudentID, taskRecord.TaskID)
+		if err != nil {
+			allForTask = nil
+		}
+		if taskRecord.Status == storage.ReviewedTaskRecord && allForTask != nil {
+			// allForTask is newest-first. Find this taskRecord's index, then
+			// collect consecutive review records immediately before it (newer
+			// records) — those are the reviews belonging to this enrollment.
+			for i, r := range allForTask {
+				if r.ID == taskRecord.ID {
+					for j := i - 1; j >= 0; j-- {
+						if allForTask[j].Status == storage.ReviewTaskRecord {
+							reviewRecords = append(reviewRecords, allForTask[j])
+						} else {
+							break
 						}
-						break
 					}
+					break
 				}
 			}
+		}
+
+		// Build journal summary: count records by author name.
+		authorCounts := map[string]int{}
+		var authorOrder []string
+		for _, r := range allForTask {
+			if authorCounts[r.EntryAuthorName] == 0 {
+				authorOrder = append(authorOrder, r.EntryAuthorName)
+			}
+			authorCounts[r.EntryAuthorName]++
+		}
+		var summaryParts []string
+		for _, name := range authorOrder {
+			summaryParts = append(summaryParts, fmt.Sprintf("@%s:%d", name, authorCounts[name]))
 		}
 
 		allRecords = append(allRecords, TaskRecordWithInfo{
@@ -136,6 +153,8 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			TaskDescription: taskDescription,
 			PreviousRecords: reviewedByKey[key],
 			ReviewRecords:   reviewRecords,
+			JournalRecords:  allForTask,
+			JournalSummary:  strings.Join(summaryParts, " "),
 		})
 	}
 	for _, pr := range previousTaskRecords {
