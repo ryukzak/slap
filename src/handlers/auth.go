@@ -38,7 +38,7 @@ func setAuthCookie(w http.ResponseWriter, tokenString string) {
 func userSession(w http.ResponseWriter, r *http.Request) *auth.UserClaims {
 	cookie, err := r.Cookie("user_data")
 	if err != nil {
-		http.Error(w, "Authentication required", http.StatusUnauthorized)
+		renderAuthRequired(w)
 		return nil
 	}
 
@@ -282,7 +282,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 func getUserClaim(w http.ResponseWriter, r *http.Request) *auth.UserClaims {
 	cookie, err := r.Cookie("user_data")
 	if err != nil {
-		http.Error(w, "Authentication required, please login first", http.StatusUnauthorized)
+		renderAuthRequired(w)
 		return nil
 	}
 

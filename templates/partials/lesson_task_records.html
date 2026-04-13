@@ -5,27 +5,63 @@
     <details class="group"
              data-status="{{$record.Status}}"
              data-record-id="{{$record.StudentID}}:{{$record.TaskID}}">
-      <summary class="cursor-pointer list-none flex items-center justify-between px-4 py-2 rounded hover:bg-gray-800">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center space-x-3">
-            {{ if eq $record.Status "register" }}
-            <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 flex-shrink-0">
-              Queued
-            </span>
-          {{ else }}
-          <span class="px-2 py-0.5 rounded-full text-xs flex-shrink-0 {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
-          {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
+      <summary class="cursor-pointer list-none flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-2 rounded hover:bg-gray-800">
+        <div class="flex items-center space-x-3 min-w-0">
+          {{ if eq $record.Status "register" }}
+          <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 flex-shrink-0">
+            Queued
           </span>
-          {{ end }}
-          <span class="text-sm flex-shrink-0">@{{$record.EntryAuthorName}}</span>
-          <span class="text-xs text-gray-400 truncate">{{$record.TaskTitle}}</span>
-        </div>
+        {{ else }}
+        <span class="px-2 py-0.5 rounded-full text-xs flex-shrink-0 {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+        {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
+        </span>
+        {{ end }}
+        <span class="text-sm flex-shrink-0">@{{$record.EntryAuthorName}}</span>
+        <span class="text-xs text-gray-400 truncate hidden sm:inline">{{$record.TaskTitle}}</span>
       </div>
-      <div class="text-xs text-gray-400 flex-shrink-0 ml-4">
+      <div class="text-xs text-gray-400 truncate sm:hidden pl-1">
+        {{$record.TaskTitle}}
+      </div>
+      <div class="text-xs text-gray-400 flex-shrink-0 sm:ml-4 pl-1 sm:pl-0">
         {{ formatDateTime $record.LessonAt }}
       </div>
     </summary>
     <div class="px-4 pb-4 pt-2">
+      {{ if and $.SessionIsTeacher $record.JournalRecords }}
+      <details class="mb-2 border border-gray-700 rounded">
+        <summary class="cursor-pointer list-none px-3 py-1 text-xs text-gray-500 hover:bg-gray-800 rounded">
+          // full journal {{$record.JournalSummary}}
+        </summary>
+        <ul class="px-3 pb-2 space-y-1">
+          {{ $total := len $record.JournalRecords }}
+          {{ range $i, $jr := $record.JournalRecords }}
+          <li class="border-b border-gray-800 py-1">
+            <div class="text-xs flex items-center justify-between mb-1">
+              <div class="flex items-center space-x-2">
+                <span class="text-gray-600">#{{ sub $total $i }}</span>
+                <span class="{{ if ne $jr.EntryAuthorID $jr.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$jr.EntryAuthorName}}</span>
+                <span class="text-gray-500">{{ formatDateTime $jr.CreatedAt }}</span>
+              </div>
+              {{ if eq $jr.Status "submit" }}
+              <span class="text-blue-400">Pending</span>
+              {{ else if eq $jr.Status "register" }}
+              <span class="text-yellow-400">Queued</span>
+              {{ else if eq $jr.Status "revoked" }}
+              <span class="text-red-400">Dropped</span>
+              {{ else if eq $jr.Status "review" }}
+              <span class="text-orange-400">Feedback</span>
+              {{ else if eq $jr.Status "reviewed" }}
+              <span class="text-green-400">Checked</span>
+              {{ end }}
+            </div>
+            <div class="markdown text-xs">
+              {{ markdown $jr.Content }}
+            </div>
+          </li>
+          {{ end }}
+        </ul>
+      </details>
+      {{ end }}
       {{ if or $.SessionIsTeacher (eq $record.StudentID $.SessionUserID) }}
       {{ if and $.ShowRevoked $record.PreviousRecords }}
       <div class="mb-2">

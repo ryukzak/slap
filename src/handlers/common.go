@@ -43,6 +43,12 @@ var StartTime time.Time
 var PrimaryLoc *time.Location
 var PrimaryTZName string
 
+func renderAuthRequired(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusUnauthorized)
+	renderPage(w, "templates/auth_required.html", nil)
+}
+
 func renderPage(w http.ResponseWriter, pageFile string, data any) {
 	t, err := BaseTemplates.Clone()
 	if err != nil {
