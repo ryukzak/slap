@@ -133,7 +133,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 	user := userSession(w, r)
 	if user == nil {
-		http.Error(w, "Authentication required, please login first", http.StatusUnauthorized)
+		renderAuthRequired(w)
 		return
 	}
 
