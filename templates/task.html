@@ -143,4 +143,19 @@
     {{ markdown .Description }}
   </div>
 </section>
+{{ if .Deadlines }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // deadlines
+  </div>
+  <ul class="space-y-1">
+    {{ range .Deadlines }}
+    <li class="text-xs border-b border-gray-800 py-2 flex justify-between">
+      <span class="font-mono">{{ formatDateTime .Date }}</span>
+      <span class="text-red-400">Penalty: -{{ .Penalty }} point(s)</span>
+    </li>
+    {{ end }}
+  </ul>
+</section>
+{{ end }}
 {{end}}
