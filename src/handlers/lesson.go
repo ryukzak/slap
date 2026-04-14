@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/gorilla/mux"
 	"github.com/ryukzak/slap/src/analytics"
 	"github.com/ryukzak/slap/src/storage"
@@ -153,7 +155,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			TaskDescription: taskDescription,
 			PreviousRecords: reviewedByKey[key],
 			ReviewRecords:   reviewRecords,
-			JournalRecords:  allForTask,
+			JournalRecords:  reverseSlice(allForTask),
 			JournalSummary:  strings.Join(summaryParts, " "),
 		})
 	}
@@ -558,4 +560,10 @@ func UnregisterFromLessonHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("action=unregister_from_lesson user=%s lesson=%s task=%s", user.ID, lessonID, taskID)
 	analytics.Track(user.ID, "lesson_unregistered", map[string]any{"lesson_id": lessonID, "task_id": taskID})
 	http.Redirect(w, r, "/user/"+user.ID+"/task/"+taskID, http.StatusSeeOther)
+}
+
+func reverseSlice(s []storage.TaskRecord) []storage.TaskRecord {
+	c := slices.Clone(s)
+	slices.Reverse(c)
+	return c
 }

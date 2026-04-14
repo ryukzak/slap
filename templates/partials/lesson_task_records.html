@@ -38,7 +38,7 @@
           <li class="border-b border-gray-800 py-1">
             <div class="text-xs flex items-center justify-between mb-1">
               <div class="flex items-center space-x-2">
-                <span class="text-gray-600">#{{ sub $total $i }}</span>
+                <span class="text-gray-600">#{{ add $i 1 }}</span>
                 <span class="{{ if ne $jr.EntryAuthorID $jr.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$jr.EntryAuthorName}}</span>
                 <span class="text-gray-500">{{ formatDateTime $jr.CreatedAt }}</span>
               </div>
