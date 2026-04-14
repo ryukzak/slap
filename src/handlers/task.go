@@ -56,6 +56,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		JournalSummary   string
 		IsTeacher        bool
 		RegisteredLesson *storage.Lesson
+		CurrentTime      time.Time
 	}
 
 	model := TaskViewModel{
@@ -65,6 +66,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SessionUserID: user.ID,
 		TaskID:        storage.TaskID(taskID),
 		IsTeacher:     user.IsTeacher,
+		CurrentTime:   time.Now(),
 	}
 
 	if userData != nil {

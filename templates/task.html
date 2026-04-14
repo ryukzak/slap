@@ -150,12 +150,17 @@
   </div>
   <ul class="space-y-1">
     {{ range .Deadlines }}
+    {{ $isOverdue := ($.CurrentTime).After .Date }}
     <li class="text-xs border-b border-gray-800 py-2 flex justify-between">
-      <span class="font-mono">{{ formatDateTime .Date }}</span>
-      <span class="text-red-400">Penalty: -{{ .Penalty }} point(s)</span>
+      <span class="font-mono {{ if $isOverdue }}text-gray-600{{ else }}text-gray-300{{ end }}">
+        {{ formatDateTime .Date }}
+      </span>
+      <span class="{{ if $isOverdue }}text-red-400{{ else }}text-gray-600{{ end }}">
+        Penalty: -{{ .Penalty }} point(s)
+      </span>
     </li>
-    {{ end }}
-  </ul>
+{{ end }}
+</ul>
 </section>
 {{ end }}
 {{end}}
