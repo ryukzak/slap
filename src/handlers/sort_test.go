@@ -15,7 +15,7 @@ func TestParseSortMode_Valid(t *testing.T) {
 		input string
 		want  SortMode
 	}{
-		{"date", SortByDate},
+		{"submit-ord", SortBySubmitOrd},
 		{"task-mix", SortByTaskMix},
 		{"student-mix", SortByStudentMix},
 	}
@@ -30,8 +30,8 @@ func TestParseSortMode_Valid(t *testing.T) {
 func TestParseSortMode_Unknown(t *testing.T) {
 	for _, input := range []string{"", "unknown", "TASK-MIX", "Date"} {
 		got := ParseSortMode(input)
-		if got != SortByDate {
-			t.Errorf("ParseSortMode(%q) = %q, want %q", input, got, SortByDate)
+		if got != SortBySubmitOrd {
+			t.Errorf("ParseSortMode(%q) = %q, want %q", input, got, SortBySubmitOrd)
 		}
 	}
 }
@@ -82,9 +82,9 @@ func TestSortModes(t *testing.T) {
 		expected string // "student:task student:task ..."
 	}{
 		{
-			name:     "date: keeps original order",
+			name:     "submit-ord: keeps original order",
 			input:    []reg{{"Alice", "T1"}, {"Bob", "T1"}, {"Alice", "T2"}, {"Bob", "T2"}},
-			mode:     SortByDate,
+			mode:     SortBySubmitOrd,
 			expected: "Alice:T1 Bob:T1 Alice:T2 Bob:T2",
 		},
 		{
