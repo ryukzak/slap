@@ -146,21 +146,72 @@
 {{ if .Deadlines }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-    // deadlines
+    // task deadlines
   </div>
   <ul class="space-y-1">
     {{ range .Deadlines }}
     {{ $isOverdue := ($.CurrentTime).After .Date }}
-    <li class="text-xs border-b border-gray-800 py-2 flex justify-between">
-      <span class="font-mono {{ if $isOverdue }}text-gray-600{{ else }}text-gray-300{{ end }}">
-        {{ formatDateTime .Date }}
-      </span>
-      <span class="{{ if $isOverdue }}text-red-400{{ else }}text-gray-600{{ end }}">
-        Penalty: -{{ .Penalty }} point(s)
-      </span>
+    {{ $submittedOnTime := false }}
+    {{ if $.LatestRecord }}
+    {{ $submittedOnTime = not ($.LatestRecord.CreatedAt.After .Date) }}
+    {{ end }}
+    <li class="text-xs border-b border-gray-800 py-2">
+      <div class="flex justify-between">
+        <span class="font-mono {{ if or $isOverdue (not $submittedOnTime) }}text-gray-300{{ else }}text-gray-600{{ end }} {{ if $isOverdue }}line-through{{ end }}">
+          {{ formatDateTime .Date }}
+        </span>
+        <span class="{{ if $isOverdue }}text-red-400{{ else if $submittedOnTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
+          Penalty: {{ if $submittedOnTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
+        </span>
+      </div>
+      <div class="text-gray-500 text-xs mt-1">
+        {{ if $submittedOnTime }}
+        <span class="text-green-400">✓ Submitted on time</span>
+        {{ else if $isOverdue }}
+        <span class="text-red-400">✗ Deadline missed</span>
+        {{ else }}
+        <span class="text-yellow-400">⏳ Pending</span>
+        {{ end }}
+      </div>
     </li>
+    {{ end }}
+  </ul>
+</section>
 {{ end }}
-</ul>
+{{ if .TaskGroup }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2 flex justify-between">
+    <span>// group deadlines - {{ .TaskGroup.GroupID }}</span>
+    <span class="text-gray-600">submitted: {{ .CompletedCount }}/{{ len .TaskGroup.TasksIDs }}</span>
+  </div>
+  <ul class="space-y-1">
+    {{ range .TaskGroup.Deadlines }}
+    {{ $isOverdue := ($.CurrentTime).After .Date }}
+    {{ $isCompleted := ge $.CompletedCount .RequiredTasks }}
+    {{ $metInTime := and $isCompleted (not $isOverdue) }}
+    {{ $metLate := and $isCompleted $isOverdue }}
+    <li class="text-xs border-b border-gray-800 py-2">
+      <div class="flex justify-between">
+        <span class="font-mono {{ if $metInTime }}text-gray-600{{ else if $metLate }}text-gray-300 line-through{{ else if $isOverdue }}text-gray-300 line-through{{ else }}text-gray-300{{ end }}">
+          {{ formatDateTime .Date }}
+        </span>
+        <span class="{{ if $isOverdue }}text-red-400{{ else if $metInTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
+          Penalty: {{ if $metInTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
+        </span>
+      </div>
+      <div class="text-gray-500 text-xs mt-1">
+        Required {{ .RequiredTasks }} submitted record(s)
+        {{ if $metInTime }}
+        <span class="text-green-400">✓ Submitted on time</span>
+        {{ else if $metLate }}
+        <span class="text-red-400">✗ Deadline missed</span>
+        {{ else }}
+        <span class="text-yellow-400">⚠️ Not met</span>
+        {{ end }}
+      </div>
+    </li>
+    {{ end }}
+  </ul>
 </section>
 {{ end }}
 {{end}}

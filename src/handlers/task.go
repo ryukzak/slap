@@ -57,16 +57,31 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		IsTeacher        bool
 		RegisteredLesson *storage.Lesson
 		CurrentTime      time.Time
+		TaskGroup        *config.TasksGroup
+		CompletedCount   int
+	}
+
+	taskGroup := AppConfig.GetTaskGroupForTask(task.ID)
+
+	var completedCount int
+	if taskGroup != nil {
+		// Получаем количество сданных заданий в этой группе
+		completedCount, err = DB.GetCompletedTasksCountInGroup(userIDFromURL, taskGroup.TasksIDs)
+		if err != nil {
+			completedCount = 0
+		}
 	}
 
 	model := TaskViewModel{
-		Task:          *task,
-		UserID:        user.ID,
-		StudentID:     userIDFromURL,
-		SessionUserID: user.ID,
-		TaskID:        storage.TaskID(taskID),
-		IsTeacher:     user.IsTeacher,
-		CurrentTime:   time.Now(),
+		Task:           *task,
+		UserID:         user.ID,
+		StudentID:      userIDFromURL,
+		SessionUserID:  user.ID,
+		TaskID:         storage.TaskID(taskID),
+		IsTeacher:      user.IsTeacher,
+		CurrentTime:    time.Now(),
+		TaskGroup:      taskGroup,
+		CompletedCount: completedCount,
 	}
 
 	if userData != nil {

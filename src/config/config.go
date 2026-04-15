@@ -36,6 +36,12 @@ type Deadline struct {
 	Penalty int       `yaml:"penalty"`
 }
 
+type GroupDeadline struct {
+	Date          time.Time `yaml:"date"`
+	Penalty       int       `yaml:"penalty"`
+	RequiredTasks int       `yaml:"required_tasks"`
+}
+
 // Task represents a task in the system
 type Task struct {
 	ID            storage.TaskID `yaml:"id"`
@@ -49,7 +55,7 @@ type Task struct {
 type TasksGroup struct {
 	GroupID   string           `yaml:"group_id"`
 	TasksIDs  []storage.TaskID `yaml:"tasks_ids"`
-	Deadlines []Deadline       `yaml:"deadlines"`
+	Deadlines []GroupDeadline  `yaml:"deadlines"`
 }
 
 // GetWaitingPeriod returns the task's waiting period, defaulting to 24h.
