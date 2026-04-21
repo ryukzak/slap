@@ -124,6 +124,11 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	showPast := r.URL.Query().Get("showPast") == "true"
 	now := time.Now()
 
+	taskTitles := make(map[storage.TaskID]string)
+	for _, task := range AppConfig.Tasks {
+		taskTitles[task.ID] = task.Title
+	}
+
 	user = User{
 		Username:                 dbUser.Username,
 		ID:                       dbUser.ID,
@@ -144,6 +149,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		ScoreRules:               relevantRules,
 		RuleApplies:              ruleApplies,
 		TotalEffect:              totalEffect,
+		TaskTitles:               taskTitles,
 	}
 
 	// Load lessons for all users

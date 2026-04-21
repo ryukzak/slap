@@ -34,6 +34,7 @@ type User struct {
 	ScoreRules               []config.ScoreRule
 	RuleApplies              map[string]bool
 	TotalEffect              int
+	TaskTitles               map[storage.TaskID]string
 }
 
 var JwtAuth *auth.JWTConfig
