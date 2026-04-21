@@ -168,21 +168,13 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 	}
 
 	if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil {
-		// Checked after date (deadline penalty)
-		deadlinePassed := now.After(*rule.Condition.CheckedAfter)
-		if !deadlinePassed {
-			// Deadline hasn't passed yet
-			return false, nil
-		}
-		// Deadline passed - check if there's any submission before deadline
+		// Checked after date - applies if ANY task was checked after the date
 		for _, t := range checkedTimes {
-			if t.Before(*rule.Condition.CheckedAfter) {
-				// Submitted on time - no penalty
-				return false, nil
+			if t.After(*rule.Condition.CheckedAfter) {
+				return true, nil
 			}
 		}
-		// No submissions or all submissions after deadline - penalty applies
-		return true, nil
+		return false, nil
 	}
 
 	if rule.Condition.CheckedBefore != nil {
