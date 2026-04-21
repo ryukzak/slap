@@ -197,15 +197,10 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 }
 
 func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
-	user := userSession(w, r)
-	if user == nil {
-		return
-	}
-
 	vars := mux.Vars(r)
 	lessonID := vars["lessonID"]
-	showRevoked := r.URL.Query().Get("showRevoked") == "true"
-	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
+
+	user := optionalUserSession(r)
 
 	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
 	if err != nil {
@@ -213,6 +208,18 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Lesson not found", http.StatusNotFound)
 		return
 	}
+
+	if user == nil {
+		renderPage(w, "templates/lesson_preview.html", struct {
+			Lesson *storage.Lesson
+		}{
+			Lesson: lesson,
+		})
+		return
+	}
+
+	showRevoked := r.URL.Query().Get("showRevoked") == "true"
+	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
 
 	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked, sortMode)
 	if err != nil {

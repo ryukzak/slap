@@ -81,6 +81,14 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Compact status summary (e.g. `p:2 q:1 c:1`).
 5. Teacher can download the table as CSV via `[download csv]`.
 
+# Use Case: lesson preview for unauthenticated users
+
+1. An unauthenticated user opens a lesson page link (e.g. shared via Telegram).
+2. The system shows a public preview with: teacher name, date/time, enrolled count, registration status, and the lesson description.
+3. A `[sign in]` link is shown so the user can authenticate and register.
+4. Telegram (and other messengers) can generate a link preview from the page title and content.
+5. No task records, edit controls, or user-specific data are exposed.
+
 # Use Case: task record visibility on lesson page
 
 1. When a student views a lesson page, only their own task records are shown.
