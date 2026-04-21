@@ -644,6 +644,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	for _, task := range AppConfig.Tasks {
 		header = append(header, "Score "+task.Title)
 	}
+	header = append(header, "Bonus/Penalty")
 	if err := cw.Write(header); err != nil {
 		log.Printf("Error writing CSV header: %v", err)
 		return
@@ -672,6 +673,26 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			row = append(row, score)
 		}
+
+		getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
+			records, err := DB.ListTaskRecords(u.ID, taskID)
+			if err != nil {
+				return nil, err
+			}
+			for _, record := range records {
+				if record.Status == storage.ReviewedTaskRecord {
+					return &record.CreatedAt, nil
+				}
+			}
+			return nil, nil
+		}
+
+		totalEffect, err := AppConfig.CalculateTotalEffect(getCheckedTime)
+		if err != nil {
+			totalEffect = 0
+		}
+		row = append(row, fmt.Sprintf("%d", totalEffect))
+
 		if err := cw.Write(row); err != nil {
 			log.Printf("Error writing CSV row: %v", err)
 			return
