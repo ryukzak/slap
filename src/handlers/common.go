@@ -31,7 +31,7 @@ type User struct {
 	DefaultDateTime          time.Time
 	TZName                   string
 	DefaultLessonDescription string
-	ScoreRules               []config.ScoreRule
+	ScoreRules               []ScoreRuleWithStatus
 	RuleApplies              map[string]bool
 	TotalEffect              int
 	TaskTitles               map[storage.TaskID]string

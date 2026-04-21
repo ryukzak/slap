@@ -138,18 +138,19 @@ func (c *Config) CalculateScoreEffects(getCheckedTime func(taskID storage.TaskID
 
 // RuleApplies checks if a rule applies to a student
 func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (bool, error) {
-	checkedCount := 0
 	var checkedTimes []time.Time
+	checkedMap := make(map[storage.TaskID]*time.Time)
 
 	// Collect checked tasks data
 	for _, taskID := range rule.TaskIDs {
 		checkedTime, err := getCheckedTime(taskID)
 		if err != nil {
 			// Error equals task was not checked
+			checkedMap[taskID] = nil
 			continue
 		}
+		checkedMap[taskID] = checkedTime
 		if checkedTime != nil {
-			checkedCount++
 			checkedTimes = append(checkedTimes, *checkedTime)
 		}
 	}
@@ -168,13 +169,24 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 	}
 
 	if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil {
-		// Checked after date - applies if ANY task was checked after the date
-		for _, t := range checkedTimes {
-			if t.After(*rule.Condition.CheckedAfter) {
-				return true, nil
+		// Checked after date - penalty applies if NOT ALL tasks were checked before deadline
+		deadlinePassed := now.After(*rule.Condition.CheckedAfter)
+		if !deadlinePassed {
+			return false, nil
+		}
+
+		// Check if ALL tasks were checked BEFORE deadline
+		allCheckedBefore := true
+		for _, taskID := range rule.TaskIDs {
+			checkedTime := checkedMap[taskID]
+			if checkedTime == nil || !checkedTime.Before(*rule.Condition.CheckedAfter) {
+				allCheckedBefore = false
+				break
 			}
 		}
-		return false, nil
+
+		// Penalty applies if NOT all tasks were checked before deadline
+		return !allCheckedBefore, nil
 	}
 
 	if rule.Condition.CheckedBefore != nil {
@@ -187,12 +199,12 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 				}
 			}
 
-			// if required amount is already fulfilled then rule would not be applied
+			// If already condition met - rule never applies
 			if countBefore >= rule.Condition.MinCheckedBefore {
 				return false, nil
 			}
 
-			// If required amount is not filled then check the deadline
+			// Condition not met - check if deadline passed
 			deadlinePassed := now.After(*rule.Condition.CheckedBefore)
 			return deadlinePassed, nil
 		}

@@ -18,6 +18,13 @@ import (
 
 const stallThreshold = 4 // lessons skipped before marking as stalled
 
+type ScoreRuleWithStatus struct {
+	config.ScoreRule
+	Status      string // "active", "applied", "not_applied"
+	StatusColor string // "yellow", "red", "green", "gray"
+	EffectColor string // "yellow", "red", "green", "gray"
+}
+
 // UserInfoHandler displays the user information and available tasks
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := userSession(w, r)
@@ -73,12 +80,12 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var relevantRules []config.ScoreRule
+	// Инициализируем переменные ДО блока
+	var rulesWithStatus []ScoreRuleWithStatus
 	ruleApplies := make(map[string]bool)
 	totalEffect := 0
 
 	if dbUser.IsStudent {
-		// Функция для получения времени проверки задания
 		getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
 			records, err := DB.ListTaskRecords(profileUserID, taskID)
 			if err != nil {
@@ -92,9 +99,10 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			return nil, nil
 		}
 
-		// Собираем правила, которые относятся к задачам студента
+		now := time.Now()
+
 		for _, rule := range AppConfig.ScoreRules {
-			// Проверяем, есть ли у студента хотя бы одно задание из правила
+			// Проверяем, есть ли у студента хоть одно задание из правила
 			hasTask := false
 			for _, taskID := range rule.TaskIDs {
 				for _, studentTask := range AppConfig.Tasks {
@@ -108,16 +116,117 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			if hasTask {
-				relevantRules = append(relevantRules, rule)
-				applies, err := AppConfig.RuleApplies(rule, getCheckedTime)
-				if err == nil && applies {
+			if !hasTask {
+				continue
+			}
+
+			ruleWithStatus := ScoreRuleWithStatus{
+				ScoreRule: rule,
+			}
+
+			// Для min_checked_before
+			if rule.Condition.MinCheckedBefore > 0 {
+				countBefore := 0
+				for _, taskID := range rule.TaskIDs {
+					checkedTime, _ := getCheckedTime(taskID)
+					if checkedTime != nil && checkedTime.Before(*rule.Condition.CheckedBefore) {
+						countBefore++
+					}
+				}
+
+				if now.After(*rule.Condition.CheckedBefore) {
+					// Дедлайн наступил
+					if countBefore < rule.Condition.MinCheckedBefore {
+						ruleWithStatus.Status = "applied"
+						ruleWithStatus.StatusColor = "red"
+						ruleWithStatus.EffectColor = "red"
+						ruleApplies[rule.Name] = true
+						totalEffect += rule.Effect
+					} else {
+						ruleWithStatus.Status = "not_applied"
+						ruleWithStatus.StatusColor = "green"
+						ruleWithStatus.EffectColor = "green"
+						ruleApplies[rule.Name] = false
+					}
+				} else {
+					// Дедлайн не наступил
+					if countBefore >= rule.Condition.MinCheckedBefore {
+						ruleWithStatus.Status = "not_applied"
+						ruleWithStatus.StatusColor = "gray"
+						ruleWithStatus.EffectColor = "gray"
+						ruleApplies[rule.Name] = false
+					} else {
+						ruleWithStatus.Status = "active"
+						ruleWithStatus.StatusColor = "yellow"
+						ruleWithStatus.EffectColor = "yellow"
+						ruleApplies[rule.Name] = false
+					}
+				}
+			} else if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil {
+				// after
+				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
+
+				if now.After(*rule.Condition.CheckedAfter) {
+					if applies {
+						ruleWithStatus.Status = "applied"
+						ruleWithStatus.StatusColor = "red"
+						ruleWithStatus.EffectColor = "red"
+						ruleApplies[rule.Name] = true
+						totalEffect += rule.Effect
+					} else {
+						ruleWithStatus.Status = "not_applied"
+						ruleWithStatus.StatusColor = "gray"
+						ruleWithStatus.EffectColor = "gray"
+						ruleApplies[rule.Name] = false
+					}
+				} else {
+					ruleWithStatus.Status = "active"
+					ruleWithStatus.StatusColor = "yellow"
+					ruleWithStatus.EffectColor = "yellow"
+					ruleApplies[rule.Name] = false
+				}
+			} else if rule.Condition.CheckedBefore != nil && rule.Condition.MinCheckedBefore == 0 {
+				// before (бонус)
+				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
+
+				if applies {
+					ruleWithStatus.Status = "applied"
+					ruleWithStatus.StatusColor = "green"
+					ruleWithStatus.EffectColor = "green"
 					ruleApplies[rule.Name] = true
 					totalEffect += rule.Effect
 				} else {
+					if now.After(*rule.Condition.CheckedBefore) {
+						ruleWithStatus.Status = "not_applied"
+						ruleWithStatus.StatusColor = "gray"
+						ruleWithStatus.EffectColor = "gray"
+						ruleApplies[rule.Name] = false
+					} else {
+						ruleWithStatus.Status = "active"
+						ruleWithStatus.StatusColor = "yellow"
+						ruleWithStatus.EffectColor = "yellow"
+						ruleApplies[rule.Name] = false
+					}
+				}
+			} else if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore != nil {
+				// диапазон
+				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
+
+				if applies {
+					ruleWithStatus.Status = "applied"
+					ruleWithStatus.StatusColor = "red"
+					ruleWithStatus.EffectColor = "red"
+					ruleApplies[rule.Name] = true
+					totalEffect += rule.Effect
+				} else {
+					ruleWithStatus.Status = "not_applied"
+					ruleWithStatus.StatusColor = "gray"
+					ruleWithStatus.EffectColor = "gray"
 					ruleApplies[rule.Name] = false
 				}
 			}
+
+			rulesWithStatus = append(rulesWithStatus, ruleWithStatus)
 		}
 	}
 
@@ -146,7 +255,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		DefaultDateTime:          getTomorrowNoon(),
 		TZName:                   PrimaryTZName,
 		DefaultLessonDescription: AppConfig.DefaultLessonDescription,
-		ScoreRules:               relevantRules,
+		ScoreRules:               rulesWithStatus,
 		RuleApplies:              ruleApplies,
 		TotalEffect:              totalEffect,
 		TaskTitles:               taskTitles,

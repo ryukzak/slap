@@ -153,9 +153,7 @@
           <div class="flex flex-col space-y-1">
             {{ range .TaskIDs }}
             {{ $title := index $.TaskTitles . }}
-            <span class="text-xs">
-            {{ if $title }}{{ $title }}{{ else }}{{ . }}{{ end }}
-            </span>
+            <span class="text-xs">{{ if $title }}{{ $title }}{{ else }}{{ . }}{{ end }}</span>
             {{ end }}
           </div>
         </td>
@@ -195,83 +193,21 @@
           {{ end }}
         </td>
         <td class="py-2 px-3 text-center">
-          {{ if $isAfter }}
-          {{ if $applies }}
-          <span class="text-red-400">applied</span>
-        {{ else }}
-          {{ if $now.After .Condition.CheckedAfter }}
-          <span class="text-gray-500">not applied</span>
-        {{ else }}
-          <span class="text-yellow-400">active</span>
-          {{ end }}
-          {{ end }}
-          {{ else if $isMin }}
-          {{ if $now.After .Condition.CheckedBefore }}
-          {{ if $applies }}
-          <span class="text-red-400">applied</span>
-        {{ else }}
-          <span class="text-green-400">not applied</span>
-          {{ end }}
-        {{ else }}
-          {{ if $applies }}
-          <span class="text-yellow-400">active</span>
-        {{ else }}
-          <span class="text-gray-500">not applied</span>
-          {{ end }}
-          {{ end }}
-          {{ else if $isBefore }}
-          {{ if $applies }}
-          <span class="text-green-400">applied</span>
-        {{ else }}
-          {{ if $now.After .Condition.CheckedBefore }}
-          <span class="text-gray-500">not applied</span>
-        {{ else }}
-          <span class="text-yellow-400">active</span>
-          {{ end }}
-          {{ end }}
-        {{ else }}
-          <span class="text-gray-500">—</span>
-          {{ end }}
-        </td>
-        <td class="py-2 px-3 text-center">
-          {{ if $isAfter }}
-          {{ if $applies }}
-          <span class="text-red-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-        {{ else }}
-          {{ if $now.After .Condition.CheckedAfter }}
-          <span class="text-gray-500 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-        {{ else }}
-          <span class="text-yellow-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-          {{ end }}
-          {{ end }}
-          {{ else if $isMin }}
-          {{ if $applies }}
-          <span class="text-red-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-        {{ else }}
-          {{ if $now.After .Condition.CheckedBefore }}
-          <span class="text-green-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-        {{ else }}
-          <span class="text-gray-500 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-          {{ end }}
-          {{ end }}
-          {{ else if $isBefore }}
-          {{ if $applies }}
-          <span class="text-green-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-        {{ else }}
-          {{ if $now.After .Condition.CheckedBefore }}
-          <span class="text-gray-500 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-        {{ else }}
-          <span class="text-yellow-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-          {{ end }}
-          {{ end }}
-        {{ else }}
-          <span class="text-gray-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
-          {{ end }}
-        </td>
-      </tr>
-      {{ end }}
-    </tbody>
-  </table>
+        <span class=" {{ if eq .StatusColor "red" }}text-red-400 {{ else if eq .StatusColor "green" }}text-green-400 {{ else if eq .StatusColor "yellow" }}text-yellow-400 {{ else }}text-gray-500{{ end }}">
+          {{ if eq .Status "applied" }}applied
+          {{ else if eq .Status "not_applied" }}not applied
+        {{ else }}active{{ end }}
+        </span>
+      </td>
+      <td class="py-2 px-3 text-center">
+      <span class="{{ if eq .EffectColor "red" }}text-red-400 {{ else if eq .EffectColor "green" }}text-green-400 {{ else if eq .EffectColor "yellow" }}text-yellow-400 {{ else }}text-gray-500{{ end }} font-mono">
+        {{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}
+      </span>
+    </td>
+  </tr>
+  {{ end }}
+</tbody>
+</table>
 </div>
 </section>
 {{ end }}
