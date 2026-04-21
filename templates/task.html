@@ -16,7 +16,7 @@
 {{ define "content"}}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-    {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
+  {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
   </div>
   <form class="space-y-2"
         action="/user/{{.StudentID}}/task/{{.ID}}/journal"
@@ -45,9 +45,7 @@
     <span class="flex items-center space-x-1">
       {{ if .Score }}<span class="text-green-300">{{.Score}}</span>{{ end }}
       {{ with .LatestRecord }}
-      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400
-        {{ else if eq .Status "register" }}text-yellow-400
-        {{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400 {{ else if eq .Status "register" }}text-yellow-400 {{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
       {{ end }}
       {{ if $.JournalSummary }}<span class="text-gray-600">({{$.JournalSummary}})</span>{{ end }}
     </span>
@@ -59,8 +57,7 @@
       <div class="text-xs flex items-center justify-between mb-1">
         <div class="flex items-center space-x-2">
           <span class="text-gray-600">#{{ sub $total $i }}</span>
-          <span
-            class="{{ if ne $record.EntryAuthorID $record.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$record.EntryAuthorName}}</span>
+          <span class="{{ if ne $record.EntryAuthorID $record.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$record.EntryAuthorName}}</span>
           <span class="text-gray-500">{{ formatDateTime $record.CreatedAt }}</span>
         </div>
         {{ if eq $record.Status "submit" }}
@@ -80,7 +77,7 @@
         {{ markdown $record.Content }}
       </div>
     </li>
-    {{ else }}
+  {{ else }}
     <li class="text-xs text-gray-400">
       No records for this task yet.
     </li>
@@ -94,8 +91,8 @@
   </div>
   {{ if and (eq .Status "submit") (eq .EntryAuthorID $.SessionUserID) }}
   <form>
-    <input type="hidden" name="taskRecordID" value="{{.TaskID}}"/>
-    <input type="hidden" name="studentID" value="{{.StudentID}}"/>
+    <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />
+    <input type="hidden" name="studentID" value="{{.StudentID}}" />
     <div class="max-h-60 overflow-y-auto"
          hx-get="/api/lessons?register=1&task_id={{.TaskID}}&student_id={{.StudentID}}"
          hx-trigger="load"
@@ -116,15 +113,14 @@
           <span class="flex-shrink-0">{{ formatDateTime $.RegisteredLesson.DateTime}}</span>
           <span class="text-gray-500 flex-shrink-0">@{{$.RegisteredLesson.TeacherName}}</span>
           <span class="text-gray-400 truncate">{{ getTitle $.RegisteredLesson.Description}}</span>
-          <span
-            class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}]</span>
+          <span class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}]</span>
         </a>
-        {{ else }}
+      {{ else }}
         <a class="text-yellow-400 hover:text-yellow-300"
            href="/lesson/{{.LessonID}}">{{.LessonAt.Format "2006-01-02 15:04"}}</a>
         {{ end }}
         <form action="/api/lesson/{{.LessonID}}/unregister" method="post">
-          <input type="hidden" name="taskID" value="{{.TaskID}}"/>
+          <input type="hidden" name="taskID" value="{{.TaskID}}" />
           <button class="text-red-400 hover:text-red-300 text-xs" type="submit">
             [revoke]
           </button>
@@ -132,7 +128,7 @@
       </div>
     </li>
   </ul>
-  {{ else }}
+{{ else }}
   <p class="text-gray-500 text-xs">
     Only student can register own submitted task to the lesson.
   </p>

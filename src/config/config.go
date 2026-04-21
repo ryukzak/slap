@@ -103,7 +103,7 @@ func LoadConfig(filePath string) (*Config, error) {
 			return nil, fmt.Errorf("score rule %s has no task_ids", rule.Name)
 		}
 
-		// Проверяем, что все задачи из правила существуют
+		// Check all tasks are exist
 		taskExists := make(map[storage.TaskID]bool)
 		for _, task := range config.Tasks {
 			taskExists[task.ID] = true
@@ -141,11 +141,11 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 	checkedCount := 0
 	var checkedTimes []time.Time
 
-	// Собираем информацию о проверенных заданиях
+	// Collect checked tasks data
 	for _, taskID := range rule.TaskIDs {
 		checkedTime, err := getCheckedTime(taskID)
 		if err != nil {
-			// Если ошибка, считаем что задание не проверено
+			// Error equals task was not checked
 			continue
 		}
 		if checkedTime != nil {
@@ -154,9 +154,11 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 		}
 	}
 
-	// Проверяем условия
+	now := time.Now()
+
+	// Check conditions
 	if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore != nil {
-		// Диапазон: проверено между двумя датами
+		// Interval: checked between dates
 		for _, t := range checkedTimes {
 			if t.After(*rule.Condition.CheckedAfter) && t.Before(*rule.Condition.CheckedBefore) {
 				return true, nil
@@ -165,18 +167,33 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 		return false, nil
 	}
 
-	if rule.Condition.CheckedAfter != nil {
-		// Проверено после даты
+	if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil {
+		// Checked after date (deadline penalty)
+		deadlinePassed := now.After(*rule.Condition.CheckedAfter)
+		if !deadlinePassed {
+			// Deadline hasn't passed yet
+			return false, nil
+		}
+		// Deadline passed - check if there's any submission before deadline
 		for _, t := range checkedTimes {
-			if t.After(*rule.Condition.CheckedAfter) {
-				return true, nil
+			if t.Before(*rule.Condition.CheckedAfter) {
+				// Submitted on time - no penalty
+				return false, nil
 			}
 		}
-		return false, nil
+		// No submissions or all submissions after deadline - penalty applies
+		return true, nil
 	}
 
 	if rule.Condition.CheckedBefore != nil {
 		if rule.Condition.MinCheckedBefore > 0 {
+			// Minimum checked before date (group penalty)
+			deadlinePassed := now.After(*rule.Condition.CheckedBefore)
+			if !deadlinePassed {
+				// Deadline hasn't passed yet
+				return false, nil
+			}
+			// Deadline passed - check if enough tasks were checked before deadline
 			countBefore := 0
 			for _, t := range checkedTimes {
 				if t.Before(*rule.Condition.CheckedBefore) {
@@ -186,6 +203,7 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 			return countBefore < rule.Condition.MinCheckedBefore, nil
 		}
 
+		// Checked before date (early bird bonus)
 		for _, t := range checkedTimes {
 			if t.Before(*rule.Condition.CheckedBefore) {
 				return true, nil
