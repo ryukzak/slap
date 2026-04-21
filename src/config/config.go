@@ -13,11 +13,34 @@ const DefaultWaitingPeriod = 24 * time.Hour
 
 // Config represents the application configuration
 type Config struct {
-	Tasks                    []Task       `yaml:"tasks"`
-	TasksGroups              []TasksGroup `yaml:"tasks_groups"`
-	TeacherIDs               []string     `yaml:"teacher_ids"`
-	TitleMaxLen              int          `yaml:"title_max_len"`
-	DefaultLessonDescription string       `yaml:"default_lesson_description"`
+	Tasks                    []Task      `yaml:"tasks"`
+	TeacherIDs               []string    `yaml:"teacher_ids"`
+	TitleMaxLen              int         `yaml:"title_max_len"`
+	DefaultLessonDescription string      `yaml:"default_lesson_description"`
+	ScoreRules               []ScoreRule `yaml:"score_rules"`
+}
+
+// ScoreRule defines a rule that adds effect to student's total score
+type ScoreRule struct {
+	Name      string           `yaml:"name"`
+	TaskIDs   []storage.TaskID `yaml:"task_ids"`
+	Condition Condition        `yaml:"condition"`
+	Effect    int              `yaml:"effect"`
+}
+
+// Condition defines when the rule applies
+type Condition struct {
+	CheckedAfter     *time.Time `yaml:"checked_after,omitempty"`
+	CheckedBefore    *time.Time `yaml:"checked_before,omitempty"`
+	MinCheckedBefore int        `yaml:"min_checked_before,omitempty"`
+}
+
+// Task represents a task in the system
+type Task struct {
+	ID            storage.TaskID `yaml:"id"`
+	Title         string         `yaml:"title"`
+	Description   string         `yaml:"description"`
+	WaitingPeriod *time.Duration `yaml:"waiting_period,omitempty"`
 }
 
 // IsTeacher checks if the given user ID is in the teacher list
@@ -30,55 +53,12 @@ func (c *Config) IsTeacher(userID string) bool {
 	return false
 }
 
-// Deadline defines a single deadline with penalty
-type Deadline struct {
-	Date    time.Time `yaml:"date"`
-	Penalty int       `yaml:"penalty"`
-}
-
-type GroupDeadline struct {
-	Date          time.Time `yaml:"date"`
-	Penalty       int       `yaml:"penalty"`
-	RequiredTasks int       `yaml:"required_tasks"`
-}
-
-// Task represents a task in the system
-type Task struct {
-	ID            storage.TaskID `yaml:"id"`
-	Title         string         `yaml:"title"`
-	Description   string         `yaml:"description"`
-	WaitingPeriod *time.Duration `yaml:"waiting_period,omitempty"`
-	Deadlines     []Deadline     `yaml:"deadlines,omitempty"`
-}
-
-// TasksGroup represents a group of tasks with collective deadlines
-type TasksGroup struct {
-	GroupID   string           `yaml:"group_id"`
-	TasksIDs  []storage.TaskID `yaml:"tasks_ids"`
-	Deadlines []GroupDeadline  `yaml:"deadlines"`
-}
-
 // GetWaitingPeriod returns the task's waiting period, defaulting to 24h.
 func (t *Task) GetWaitingPeriod() time.Duration {
 	if t.WaitingPeriod != nil {
 		return *t.WaitingPeriod
 	}
 	return DefaultWaitingPeriod
-}
-
-// CalculatePenalty calculates penalty for a submission based on individual deadlines
-func (t *Task) CalculatePenalty(submissionTime time.Time) int {
-	if len(t.Deadlines) == 0 {
-		return 0
-	}
-
-	// Get first missed deadline
-	for _, deadline := range t.Deadlines {
-		if submissionTime.After(deadline.Date) {
-			return deadline.Penalty
-		}
-	}
-	return 0
 }
 
 // LoadConfig loads the configuration from the specified YAML file
@@ -112,45 +92,119 @@ func LoadConfig(filePath string) (*Config, error) {
 		if task.Title == "" {
 			return nil, fmt.Errorf("task at index %d has an empty title", i)
 		}
-
-		// Validate deadlines are in chronological order
-		for j := 1; j < len(task.Deadlines); j++ {
-			if task.Deadlines[j].Date.Before(task.Deadlines[j-1].Date) {
-				return nil, fmt.Errorf("task %s: deadlines must be in chronological order", task.ID)
-			}
-		}
 	}
 
-	// Validate task groups
-	for i, group := range config.TasksGroups {
-		if group.GroupID == "" {
-			return nil, fmt.Errorf("task group at index %d has an empty group_id", i)
+	// Validate score rules
+	for i, rule := range config.ScoreRules {
+		if rule.Name == "" {
+			return nil, fmt.Errorf("score rule at index %d has an empty name", i)
 		}
-		if len(group.TasksIDs) == 0 {
-			return nil, fmt.Errorf("task group %s has no tasks", group.GroupID)
+		if len(rule.TaskIDs) == 0 {
+			return nil, fmt.Errorf("score rule %s has no task_ids", rule.Name)
 		}
 
-		// Check all tasks_ids are exist
+		// Проверяем, что все задачи из правила существуют
 		taskExists := make(map[storage.TaskID]bool)
 		for _, task := range config.Tasks {
 			taskExists[task.ID] = true
 		}
 
-		for _, taskID := range group.TasksIDs {
+		for _, taskID := range rule.TaskIDs {
 			if !taskExists[taskID] {
-				return nil, fmt.Errorf("task group %s references non-existent task: %s", group.GroupID, taskID)
-			}
-		}
-
-		// Validate deadlines are in chronological order
-		for j := 1; j < len(group.Deadlines); j++ {
-			if group.Deadlines[j].Date.Before(group.Deadlines[j-1].Date) {
-				return nil, fmt.Errorf("task group %s: deadlines must be in chronological order", group.GroupID)
+				return nil, fmt.Errorf("score rule %s references non-existent task: %s", rule.Name, taskID)
 			}
 		}
 	}
 
 	return &config, nil
+}
+
+// CalculateScoreEffects calculates total effect of all rules
+func (c *Config) CalculateScoreEffects(getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (int, error) {
+	totalEffect := 0
+
+	for _, rule := range c.ScoreRules {
+		applies, err := c.ruleApplies(rule, getCheckedTime)
+		if err != nil {
+			return 0, fmt.Errorf("error checking rule %s: %w", rule.Name, err)
+		}
+		if applies {
+			totalEffect += rule.Effect
+		}
+	}
+
+	return totalEffect, nil
+}
+
+// ruleApplies checks if a rule applies to a student
+func (c *Config) ruleApplies(rule ScoreRule, getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (bool, error) {
+	checkedCount := 0
+	var checkedTimes []time.Time
+
+	// Собираем информацию о проверенных заданиях
+	for _, taskID := range rule.TaskIDs {
+		checkedTime, err := getCheckedTime(taskID)
+		if err != nil {
+			// Если ошибка, считаем что задание не проверено
+			continue
+		}
+		if checkedTime != nil {
+			checkedCount++
+			checkedTimes = append(checkedTimes, *checkedTime)
+		}
+	}
+
+	// Проверяем условия
+	if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore != nil {
+		// Диапазон: проверено между двумя датами
+		for _, t := range checkedTimes {
+			if t.After(*rule.Condition.CheckedAfter) && t.Before(*rule.Condition.CheckedBefore) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	if rule.Condition.CheckedAfter != nil {
+		// Проверено после даты
+		for _, t := range checkedTimes {
+			if t.After(*rule.Condition.CheckedAfter) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	if rule.Condition.CheckedBefore != nil {
+		if rule.Condition.MinCheckedBefore > 0 {
+			countBefore := 0
+			for _, t := range checkedTimes {
+				if t.Before(*rule.Condition.CheckedBefore) {
+					countBefore++
+				}
+			}
+			return countBefore < rule.Condition.MinCheckedBefore, nil
+		}
+
+		for _, t := range checkedTimes {
+			if t.Before(*rule.Condition.CheckedBefore) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	return false, nil
+}
+
+// GetTask returns task by ID
+func (c *Config) GetTask(taskID storage.TaskID) *Task {
+	for i := range c.Tasks {
+		if c.Tasks[i].ID == taskID {
+			return &c.Tasks[i]
+		}
+	}
+	return nil
 }
 
 // DefaultConfig returns a default configuration for development purposes
@@ -173,53 +227,6 @@ func DefaultConfig() *Config {
 				Description: "Implement a custom data structure solving a real-world problem.",
 			},
 		},
-		TasksGroups: []TasksGroup{},
+		ScoreRules: []ScoreRule{},
 	}
-}
-
-// GetTask returns task by ID
-func (c *Config) GetTask(taskID storage.TaskID) *Task {
-	for i := range c.Tasks {
-		if c.Tasks[i].ID == taskID {
-			return &c.Tasks[i]
-		}
-	}
-	return nil
-}
-
-// GetTaskGroup returns task group by ID
-func (c *Config) GetTaskGroup(groupID string) *TasksGroup {
-	for i := range c.TasksGroups {
-		if c.TasksGroups[i].GroupID == groupID {
-			return &c.TasksGroups[i]
-		}
-	}
-	return nil
-}
-
-// GetTaskGroupForTask returns the group that contains the given task
-func (c *Config) GetTaskGroupForTask(taskID storage.TaskID) *TasksGroup {
-	for i := range c.TasksGroups {
-		for _, id := range c.TasksGroups[i].TasksIDs {
-			if id == taskID {
-				return &c.TasksGroups[i]
-			}
-		}
-	}
-	return nil
-}
-
-// CalculateGroupPenalty calculates penalty based on group deadlines
-func (g *TasksGroup) CalculateGroupPenalty(completedCount int, submissionTime time.Time) int {
-	if len(g.Deadlines) == 0 {
-		return 0
-	}
-
-	// Apply penalty to first missed deadline
-	for _, deadline := range g.Deadlines {
-		if submissionTime.After(deadline.Date) {
-			return deadline.Penalty
-		}
-	}
-	return 0
 }

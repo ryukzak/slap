@@ -60,7 +60,7 @@ func (d *DB) Close() error {
 func (d *DB) GetCompletedTasksCountInGroup(userID string, taskIDs []TaskID) (int, error) {
 	completed := 0
 	for _, taskID := range taskIDs {
-		records, err := d.ListTaskRecords(userID, TaskID(taskID))
+		records, err := d.ListTaskRecords(userID, taskID)
 		if err != nil {
 			continue
 		}

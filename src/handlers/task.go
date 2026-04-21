@@ -32,7 +32,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task := AppConfig.GetTask(storage.TaskID(taskID))
+	task := AppConfig.GetTask(taskID)
 	if task == nil {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
@@ -57,30 +57,19 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		IsTeacher        bool
 		RegisteredLesson *storage.Lesson
 		CurrentTime      time.Time
-		TaskGroup        *config.TasksGroup
 		CompletedCount   int
 	}
 
-	taskGroup := AppConfig.GetTaskGroupForTask(task.ID)
-
 	var completedCount int
-	if taskGroup != nil {
-		// Получаем количество сданных заданий в этой группе
-		completedCount, err = DB.GetCompletedTasksCountInGroup(userIDFromURL, taskGroup.TasksIDs)
-		if err != nil {
-			completedCount = 0
-		}
-	}
 
 	model := TaskViewModel{
 		Task:           *task,
 		UserID:         user.ID,
 		StudentID:      userIDFromURL,
 		SessionUserID:  user.ID,
-		TaskID:         storage.TaskID(taskID),
+		TaskID:         taskID,
 		IsTeacher:      user.IsTeacher,
 		CurrentTime:    time.Now(),
-		TaskGroup:      taskGroup,
 		CompletedCount: completedCount,
 	}
 
@@ -88,7 +77,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		model.StudentName = userData.Username
 	}
 
-	rawRecords, err := DB.ListTaskRecords(userIDFromURL, storage.TaskID(taskID))
+	rawRecords, err := DB.ListTaskRecords(userIDFromURL, taskID)
 	if err != nil {
 		log.Printf("Error retrieving task records: %v", err)
 	}
@@ -177,7 +166,7 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := &storage.TaskRecord{
-		TaskID:          storage.TaskID(taskID),
+		TaskID:          taskID,
 		StudentID:       userIDFromURL,
 		Content:         content,
 		CreatedAt:       time.Now(),

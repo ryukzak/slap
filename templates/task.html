@@ -157,25 +157,25 @@
     {{ end }}
     <li class="text-xs border-b border-gray-800 py-2">
       <div class="flex justify-between">
-        <span class="font-mono {{ if or $isOverdue (not $submittedOnTime) }}text-gray-300{{ else }}text-gray-600{{ end }} {{ if $isOverdue }}line-through{{ end }}">
-          {{ formatDateTime .Date }}
-        </span>
-        <span class="{{ if $isOverdue }}text-red-400{{ else if $submittedOnTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
-          Penalty: {{ if $submittedOnTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
-        </span>
-      </div>
-      <div class="text-gray-500 text-xs mt-1">
-        {{ if $submittedOnTime }}
-        <span class="text-green-400">✓ Submitted on time</span>
-        {{ else if $isOverdue }}
-        <span class="text-red-400">✗ Deadline missed</span>
-        {{ else }}
-        <span class="text-yellow-400">⏳ Pending</span>
-        {{ end }}
-      </div>
-    </li>
+      <span class="font-mono {{ if or $isOverdue (not $submittedOnTime) }}text-gray-300{{ else }}text-gray-600{{ end }} {{ if $isOverdue }}line-through{{ end }}">
+        {{ formatDateTime .Date }}
+      </span>
+    <span class="{{ if $isOverdue }}text-red-400{{ else if $submittedOnTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
+    Penalty: {{ if $submittedOnTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
+    </span>
+  </div>
+  <div class="text-gray-500 text-xs mt-1">
+    {{ if $submittedOnTime }}
+    <span class="text-green-400">✓ Submitted on time</span>
+    {{ else if $isOverdue }}
+    <span class="text-red-400">✗ Deadline missed</span>
+  {{ else }}
+    <span class="text-yellow-400">⏳ Pending</span>
     {{ end }}
-  </ul>
+  </div>
+</li>
+{{ end }}
+</ul>
 </section>
 {{ end }}
 {{ if .TaskGroup }}
@@ -192,26 +192,26 @@
     {{ $metLate := and $isCompleted $isOverdue }}
     <li class="text-xs border-b border-gray-800 py-2">
       <div class="flex justify-between">
-        <span class="font-mono {{ if $metInTime }}text-gray-600{{ else if $metLate }}text-gray-300 line-through{{ else if $isOverdue }}text-gray-300 line-through{{ else }}text-gray-300{{ end }}">
-          {{ formatDateTime .Date }}
-        </span>
-        <span class="{{ if $isOverdue }}text-red-400{{ else if $metInTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
-          Penalty: {{ if $metInTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
-        </span>
-      </div>
-      <div class="text-gray-500 text-xs mt-1">
-        Required {{ .RequiredTasks }} submitted record(s)
-        {{ if $metInTime }}
-        <span class="text-green-400">✓ Submitted on time</span>
-        {{ else if $metLate }}
-        <span class="text-red-400">✗ Deadline missed</span>
-        {{ else }}
-        <span class="text-yellow-400">⚠️ Not met</span>
-        {{ end }}
-      </div>
-    </li>
+      <span class="font-mono {{ if $metInTime }}text-gray-600{{ else if $metLate }}text-gray-300 line-through{{ else if $isOverdue }}text-gray-300 line-through{{ else }}text-gray-300{{ end }}">
+        {{ formatDateTime .Date }}
+      </span>
+    <span class="{{ if $isOverdue }}text-red-400{{ else if $metInTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
+    Penalty: {{ if $metInTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
+    </span>
+  </div>
+  <div class="text-gray-500 text-xs mt-1">
+    Required {{ .RequiredTasks }} submitted record(s)
+    {{ if $metInTime }}
+    <span class="text-green-400">✓ Submitted on time</span>
+    {{ else if $metLate }}
+    <span class="text-red-400">✗ Deadline missed</span>
+  {{ else }}
+    <span class="text-yellow-400">⚠️ Not met</span>
     {{ end }}
-  </ul>
+  </div>
+</li>
+{{ end }}
+</ul>
 </section>
 {{ end }}
 {{end}}
