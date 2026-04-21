@@ -180,19 +180,21 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 	if rule.Condition.CheckedBefore != nil {
 		if rule.Condition.MinCheckedBefore > 0 {
 			// Minimum checked before date (group penalty)
-			deadlinePassed := now.After(*rule.Condition.CheckedBefore)
-			if !deadlinePassed {
-				// Deadline hasn't passed yet
-				return false, nil
-			}
-			// Deadline passed - check if enough tasks were checked before deadline
 			countBefore := 0
 			for _, t := range checkedTimes {
 				if t.Before(*rule.Condition.CheckedBefore) {
 					countBefore++
 				}
 			}
-			return countBefore < rule.Condition.MinCheckedBefore, nil
+
+			// if required amount is already fulfilled then rule would not be applied
+			if countBefore >= rule.Condition.MinCheckedBefore {
+				return false, nil
+			}
+
+			// If required amount is not filled then check the deadline
+			deadlinePassed := now.After(*rule.Condition.CheckedBefore)
+			return deadlinePassed, nil
 		}
 
 		// Checked before date (early bird bonus)

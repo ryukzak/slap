@@ -206,13 +206,17 @@
           {{ end }}
           {{ end }}
           {{ else if $isMin }}
+          {{ if $now.After .Condition.CheckedBefore }}
           {{ if $applies }}
           <span class="text-red-400">applied</span>
         {{ else }}
-          {{ if $now.After .Condition.CheckedBefore }}
           <span class="text-green-400">not applied</span>
+          {{ end }}
         {{ else }}
+          {{ if $applies }}
           <span class="text-yellow-400">active</span>
+        {{ else }}
+          <span class="text-gray-500">not applied</span>
           {{ end }}
           {{ end }}
           {{ else if $isBefore }}
@@ -247,7 +251,7 @@
           {{ if $now.After .Condition.CheckedBefore }}
           <span class="text-green-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
         {{ else }}
-          <span class="text-yellow-400 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
+          <span class="text-gray-500 font-mono">{{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}</span>
           {{ end }}
           {{ end }}
           {{ else if $isBefore }}
