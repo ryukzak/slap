@@ -215,6 +215,21 @@ func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.
 	return false, nil
 }
 
+// CalculateTotalEffect calculates total effect of all rules for a student
+func (c *Config) CalculateTotalEffect(getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (int, error) {
+	total := 0
+	for _, rule := range c.ScoreRules {
+		applies, err := c.RuleApplies(rule, getCheckedTime)
+		if err != nil {
+			continue
+		}
+		if applies {
+			total += rule.Effect
+		}
+	}
+	return total, nil
+}
+
 // GetTask returns task by ID
 func (c *Config) GetTask(taskID storage.TaskID) *Task {
 	for i := range c.Tasks {

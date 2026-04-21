@@ -218,7 +218,8 @@ type UserTaskSummary struct {
 
 type UserTableRow struct {
 	storage.UserData
-	TaskData map[storage.TaskID]UserTaskSummary
+	TaskData    map[storage.TaskID]UserTaskSummary
+	TotalEffect int
 }
 
 type TimelineLesson struct {
@@ -343,6 +344,26 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				summary.Summary = strings.Join(parts, "\u00a0")
 				row.TaskData[task.ID] = summary
 			}
+
+			// Calculate total effect for this student
+			getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
+				records, err := DB.ListTaskRecords(u.ID, taskID)
+				if err != nil {
+					return nil, err
+				}
+				for _, record := range records {
+					if record.Status == storage.ReviewedTaskRecord {
+						return &record.CreatedAt, nil
+					}
+				}
+				return nil, nil
+			}
+
+			totalEffect, err := AppConfig.CalculateTotalEffect(getCheckedTime)
+			if err != nil {
+				totalEffect = 0
+			}
+			row.TotalEffect = totalEffect
 		}
 		rows = append(rows, row)
 	}

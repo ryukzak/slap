@@ -309,6 +309,9 @@
             {{.Title}}
           </th>
           {{ end }}
+          <th class="text-center text-gray-400 py-1 px-2 font-normal">
+            Effect
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -336,24 +339,35 @@
               {{ if and $td.Score (ne $td.Score "0") }}
               <span class="text-green-300">{{$td.Score}}</span>
               {{ end }}
-              <span class="{{ if eq $td.Status "reviewed" }}text-teal-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-purple-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
-              {{ if $td.Summary }}
-              <span class="text-gray-500">({{$td.Summary}})</span>
-              {{ end }}
-            </a>
+            <span class="{{ if eq $td.Status "reviewed" }}text-teal-400{{ else if eq $td.Status "review" }}text-orange-400{{ else if eq $td.Status "register" }}text-purple-400{{ else if eq $td.Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">
+            {{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "review" }}Feedback{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoked" }}Dropped{{ else }}Pending{{ end }}
+            </span>
+            {{ if $td.Summary }}
+            <span class="text-gray-500">({{$td.Summary}})</span>
             {{ end }}
-          </td>
+          </a>
           {{ end }}
-        </tr>
-      {{ else }}
-        <tr>
-          <td class="py-2 text-gray-400" colspan="99">
-            No users found.
-          </td>
-        </tr>
+        </td>
         {{ end }}
-      </tbody>
-    </table>
-  </div>
+        <td class="py-1 px-2 text-center">
+          {{ if ne $user.TotalEffect 0 }}
+        <span class="{{ if gt $user.TotalEffect 0 }}text-green-400{{ else }}text-red-400{{ end }} font-mono">
+          {{ if gt $user.TotalEffect 0 }}+{{ end }}{{ $user.TotalEffect }}
+        </span>
+      {{ else }}
+        <span class="text-gray-600">0</span>
+        {{ end }}
+      </td>
+    </tr>
+  {{ else }}
+    <tr>
+      <td class="py-2 text-gray-400" colspan="99">
+        No users found.
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+</div>
 </section>
 {{end}}
