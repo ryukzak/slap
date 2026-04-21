@@ -73,6 +73,54 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var relevantRules []config.ScoreRule
+	ruleApplies := make(map[string]bool)
+	totalEffect := 0
+
+	if dbUser.IsStudent {
+		// Функция для получения времени проверки задания
+		getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
+			records, err := DB.ListTaskRecords(profileUserID, taskID)
+			if err != nil {
+				return nil, err
+			}
+			for _, record := range records {
+				if record.Status == storage.ReviewedTaskRecord {
+					return &record.CreatedAt, nil
+				}
+			}
+			return nil, nil
+		}
+
+		// Собираем правила, которые относятся к задачам студента
+		for _, rule := range AppConfig.ScoreRules {
+			// Проверяем, есть ли у студента хотя бы одно задание из правила
+			hasTask := false
+			for _, taskID := range rule.TaskIDs {
+				for _, studentTask := range AppConfig.Tasks {
+					if studentTask.ID == taskID {
+						hasTask = true
+						break
+					}
+				}
+				if hasTask {
+					break
+				}
+			}
+
+			if hasTask {
+				relevantRules = append(relevantRules, rule)
+				applies, err := AppConfig.RuleApplies(rule, getCheckedTime)
+				if err == nil && applies {
+					ruleApplies[rule.Name] = true
+					totalEffect += rule.Effect
+				} else {
+					ruleApplies[rule.Name] = false
+				}
+			}
+		}
+	}
+
 	showPast := r.URL.Query().Get("showPast") == "true"
 	now := time.Now()
 
@@ -93,6 +141,9 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		DefaultDateTime:          getTomorrowNoon(),
 		TZName:                   PrimaryTZName,
 		DefaultLessonDescription: AppConfig.DefaultLessonDescription,
+		ScoreRules:               relevantRules,
+		RuleApplies:              ruleApplies,
+		TotalEffect:              totalEffect,
 	}
 
 	// Load lessons for all users
@@ -575,7 +626,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 		if !u.IsStudent {
 			continue
 		}
-		row := []string{string(u.ID), u.Username}
+		row := []string{u.ID, u.Username}
 		for _, task := range AppConfig.Tasks {
 			records, err := DB.ListTaskRecords(u.ID, task.ID)
 			if err != nil {

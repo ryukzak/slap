@@ -106,5 +106,66 @@
 </p>
 {{ end }}
 </section>
+{{ if .ScoreRules }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2 flex justify-between items-center">
+    <span>// score rules</span>
+    {{ if ne .TotalEffect 0 }}
+    <span class="text-sm {{ if gt .TotalEffect 0 }}text-green-400{{ else }}text-red-400{{ end }}">
+      total effect: {{ if gt .TotalEffect 0 }}+{{ end }}{{ .TotalEffect }} points
+    </span>
+    {{ end }}
+  </div>
+  <div class="bg-gray-800 rounded border border-gray-700 overflow-hidden">
+    <table class="w-full text-xs">
+      <thead>
+      <tr class="bg-gray-900 text-gray-400">
+        <th class="text-left py-2 px-3">Rule</th>
+        <th class="text-left py-2 px-3">Condition</th>
+        <th class="text-left py-2 px-3">Effect</th>
+        <th class="text-left py-2 px-3">Status</th>
+      </tr>
+      </thead>
+      <tbody>
+      {{ range .ScoreRules }}
+      {{ $applies := index $.RuleApplies .Name }}
+      <tr class="border-t border-gray-700">
+        <td class="py-2 px-3 font-mono text-gray-300">{{ .Name }}</td>
+        <td class="py-2 px-3 text-gray-500 text-xs">
+          {{ if .Condition.CheckedAfter }}
+          {{ if .Condition.CheckedBefore }}
+          after {{ formatDateTime .Condition.CheckedAfter }}<br/>before {{ formatDateTime .Condition.CheckedBefore }}
+          {{ else }}
+          after {{ formatDateTime .Condition.CheckedAfter }}
+          {{ end }}
+          {{ else if .Condition.CheckedBefore }}
+          {{ if gt .Condition.MinCheckedBefore 0 }}
+          min {{ .Condition.MinCheckedBefore }} checked before {{ formatDateTime .Condition.CheckedBefore }}
+          {{ else }}
+          checked before {{ formatDateTime .Condition.CheckedBefore }}
+          {{ end }}
+          {{ else }}
+          always
+          {{ end }}
+        </td>
+        <td class="py-2 px-3">
+            <span class="{{ if lt .Effect 0 }}text-red-400{{ else if gt .Effect 0 }}text-green-400{{ else }}text-gray-400{{ end }} font-mono">
+              {{ if gt .Effect 0 }}+{{ end }}{{ .Effect }}
+            </span>
+        </td>
+        <td class="py-2 px-3">
+          {{ if $applies }}
+          <span class="text-green-400">✓ applied</span>
+          {{ else }}
+          <span class="text-gray-500">— not applied</span>
+          {{ end }}
+        </td>
+      </tr>
+      {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{ end }}
 {{ end }}
 {{end}}

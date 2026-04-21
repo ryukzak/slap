@@ -124,7 +124,7 @@ func (c *Config) CalculateScoreEffects(getCheckedTime func(taskID storage.TaskID
 	totalEffect := 0
 
 	for _, rule := range c.ScoreRules {
-		applies, err := c.ruleApplies(rule, getCheckedTime)
+		applies, err := c.RuleApplies(rule, getCheckedTime)
 		if err != nil {
 			return 0, fmt.Errorf("error checking rule %s: %w", rule.Name, err)
 		}
@@ -136,8 +136,8 @@ func (c *Config) CalculateScoreEffects(getCheckedTime func(taskID storage.TaskID
 	return totalEffect, nil
 }
 
-// ruleApplies checks if a rule applies to a student
-func (c *Config) ruleApplies(rule ScoreRule, getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (bool, error) {
+// RuleApplies checks if a rule applies to a student
+func (c *Config) RuleApplies(rule ScoreRule, getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (bool, error) {
 	checkedCount := 0
 	var checkedTimes []time.Time
 

@@ -31,6 +31,9 @@ type User struct {
 	DefaultDateTime          time.Time
 	TZName                   string
 	DefaultLessonDescription string
+	ScoreRules               []config.ScoreRule
+	RuleApplies              map[string]bool
+	TotalEffect              int
 }
 
 var JwtAuth *auth.JWTConfig

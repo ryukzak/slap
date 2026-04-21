@@ -1,5 +1,5 @@
-{{define "title"}}{{.Title}} - Task Details{{end}}
-{{define "header"}}
+{{ define "title"}}{{.Title}} - Task Details{{ end }}
+{{ define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-gray-300 hover:text-white" href="/user/{{.StudentID}}">//&nbsp;{{ if eq .StudentID .SessionUserID }}me:&nbsp;{{ else }}student:&nbsp;{{ end }}{{.StudentName}}</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
@@ -8,15 +8,15 @@
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span class="text-gray-300">score:&nbsp;{{.Score}}</span>
 {{ end }}
-{{end}}
-{{define "footer_nav"}}
+{{ end }}
+{{ define "footer_nav"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
-{{end}}
-{{define "content"}}
+{{ end }}
+{{ define "content"}}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
-  {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
+    {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
   </div>
   <form class="space-y-2"
         action="/user/{{.StudentID}}/task/{{.ID}}/journal"
@@ -45,7 +45,9 @@
     <span class="flex items-center space-x-1">
       {{ if .Score }}<span class="text-green-300">{{.Score}}</span>{{ end }}
       {{ with .LatestRecord }}
-      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400
+        {{ else if eq .Status "register" }}text-yellow-400
+        {{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
       {{ end }}
       {{ if $.JournalSummary }}<span class="text-gray-600">({{$.JournalSummary}})</span>{{ end }}
     </span>
@@ -57,7 +59,8 @@
       <div class="text-xs flex items-center justify-between mb-1">
         <div class="flex items-center space-x-2">
           <span class="text-gray-600">#{{ sub $total $i }}</span>
-          <span class="{{ if ne $record.EntryAuthorID $record.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$record.EntryAuthorName}}</span>
+          <span
+            class="{{ if ne $record.EntryAuthorID $record.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$record.EntryAuthorName}}</span>
           <span class="text-gray-500">{{ formatDateTime $record.CreatedAt }}</span>
         </div>
         {{ if eq $record.Status "submit" }}
@@ -77,7 +80,7 @@
         {{ markdown $record.Content }}
       </div>
     </li>
-  {{ else }}
+    {{ else }}
     <li class="text-xs text-gray-400">
       No records for this task yet.
     </li>
@@ -91,8 +94,8 @@
   </div>
   {{ if and (eq .Status "submit") (eq .EntryAuthorID $.SessionUserID) }}
   <form>
-    <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />
-    <input type="hidden" name="studentID" value="{{.StudentID}}" />
+    <input type="hidden" name="taskRecordID" value="{{.TaskID}}"/>
+    <input type="hidden" name="studentID" value="{{.StudentID}}"/>
     <div class="max-h-60 overflow-y-auto"
          hx-get="/api/lessons?register=1&task_id={{.TaskID}}&student_id={{.StudentID}}"
          hx-trigger="load"
@@ -110,17 +113,18 @@
         {{ if $.RegisteredLesson }}
         <a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 min-w-0"
            href="/lesson/{{$.RegisteredLesson.ID}}">
-          <span class="flex-shrink-0">{{formatDateTime $.RegisteredLesson.DateTime}}</span>
+          <span class="flex-shrink-0">{{ formatDateTime $.RegisteredLesson.DateTime}}</span>
           <span class="text-gray-500 flex-shrink-0">@{{$.RegisteredLesson.TeacherName}}</span>
-          <span class="text-gray-400 truncate">{{getTitle $.RegisteredLesson.Description}}</span>
-          <span class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}]</span>
+          <span class="text-gray-400 truncate">{{ getTitle $.RegisteredLesson.Description}}</span>
+          <span
+            class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}]</span>
         </a>
-      {{ else }}
+        {{ else }}
         <a class="text-yellow-400 hover:text-yellow-300"
            href="/lesson/{{.LessonID}}">{{.LessonAt.Format "2006-01-02 15:04"}}</a>
         {{ end }}
         <form action="/api/lesson/{{.LessonID}}/unregister" method="post">
-          <input type="hidden" name="taskID" value="{{.TaskID}}" />
+          <input type="hidden" name="taskID" value="{{.TaskID}}"/>
           <button class="text-red-400 hover:text-red-300 text-xs" type="submit">
             [revoke]
           </button>
@@ -128,7 +132,7 @@
       </div>
     </li>
   </ul>
-{{ else }}
+  {{ else }}
   <p class="text-gray-500 text-xs">
     Only student can register own submitted task to the lesson.
   </p>
@@ -143,75 +147,4 @@
     {{ markdown .Description }}
   </div>
 </section>
-{{ if .Deadlines }}
-<section class="mb-8">
-  <div class="text-xs text-gray-500 mb-2">
-    // task deadlines
-  </div>
-  <ul class="space-y-1">
-    {{ range .Deadlines }}
-    {{ $isOverdue := ($.CurrentTime).After .Date }}
-    {{ $submittedOnTime := false }}
-    {{ if $.LatestRecord }}
-    {{ $submittedOnTime = not ($.LatestRecord.CreatedAt.After .Date) }}
-    {{ end }}
-    <li class="text-xs border-b border-gray-800 py-2">
-      <div class="flex justify-between">
-      <span class="font-mono {{ if or $isOverdue (not $submittedOnTime) }}text-gray-300{{ else }}text-gray-600{{ end }} {{ if $isOverdue }}line-through{{ end }}">
-        {{ formatDateTime .Date }}
-      </span>
-    <span class="{{ if $isOverdue }}text-red-400{{ else if $submittedOnTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
-    Penalty: {{ if $submittedOnTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
-    </span>
-  </div>
-  <div class="text-gray-500 text-xs mt-1">
-    {{ if $submittedOnTime }}
-    <span class="text-green-400">✓ Submitted on time</span>
-    {{ else if $isOverdue }}
-    <span class="text-red-400">✗ Deadline missed</span>
-  {{ else }}
-    <span class="text-yellow-400">⏳ Pending</span>
-    {{ end }}
-  </div>
-</li>
 {{ end }}
-</ul>
-</section>
-{{ end }}
-{{ if .TaskGroup }}
-<section class="mb-8">
-  <div class="text-xs text-gray-500 mb-2 flex justify-between">
-    <span>// group deadlines - {{ .TaskGroup.GroupID }}</span>
-    <span class="text-gray-600">submitted: {{ .CompletedCount }}/{{ len .TaskGroup.TasksIDs }}</span>
-  </div>
-  <ul class="space-y-1">
-    {{ range .TaskGroup.Deadlines }}
-    {{ $isOverdue := ($.CurrentTime).After .Date }}
-    {{ $isCompleted := ge $.CompletedCount .RequiredTasks }}
-    {{ $metInTime := and $isCompleted (not $isOverdue) }}
-    {{ $metLate := and $isCompleted $isOverdue }}
-    <li class="text-xs border-b border-gray-800 py-2">
-      <div class="flex justify-between">
-      <span class="font-mono {{ if $metInTime }}text-gray-600{{ else if $metLate }}text-gray-300 line-through{{ else if $isOverdue }}text-gray-300 line-through{{ else }}text-gray-300{{ end }}">
-        {{ formatDateTime .Date }}
-      </span>
-    <span class="{{ if $isOverdue }}text-red-400{{ else if $metInTime }}text-gray-600{{ else }}text-yellow-400{{ end }}">
-    Penalty: {{ if $metInTime }}Not applied{{ else }}-{{ .Penalty }} point(s){{ end }}
-    </span>
-  </div>
-  <div class="text-gray-500 text-xs mt-1">
-    Required {{ .RequiredTasks }} submitted record(s)
-    {{ if $metInTime }}
-    <span class="text-green-400">✓ Submitted on time</span>
-    {{ else if $metLate }}
-    <span class="text-red-400">✗ Deadline missed</span>
-  {{ else }}
-    <span class="text-yellow-400">⚠️ Not met</span>
-    {{ end }}
-  </div>
-</li>
-{{ end }}
-</ul>
-</section>
-{{ end }}
-{{end}}
