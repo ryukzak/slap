@@ -162,28 +162,28 @@
         <td class="py-2 px-3 text-gray-500 text-xs">
           {{ if .Condition.CheckedAfter }}
           {{ if .Condition.CheckedBefore }}
-          <div class="grid grid-cols-[40px_1fr] gap-x-4 gap-y-1">
+          <div class="grid grid-cols-[65px_1fr] gap-x-4 gap-y-1">
             <span class="text-blue-400">after</span>
             <span>{{ formatDateTime .Condition.CheckedAfter }}</span>
             <span class="text-blue-400">before</span>
             <span>{{ formatDateTime .Condition.CheckedBefore }}</span>
           </div>
         {{ else }}
-          <div class="grid grid-cols-[40px_1fr] gap-x-4 gap-y-1">
+          <div class="grid grid-cols-[65px_1fr] gap-x-4 gap-y-1">
             <span class="text-blue-400">after</span>
             <span>{{ formatDateTime .Condition.CheckedAfter }}</span>
           </div>
           {{ end }}
           {{ else if .Condition.CheckedBefore }}
           {{ if gt .Condition.MinCheckedBefore 0 }}
-          <div class="grid grid-cols-[40px_1fr] gap-x-4 gap-y-1">
-            <span class="text-purple-400">min</span>
+          <div class="grid grid-cols-[65px_1fr] gap-x-4 gap-y-1">
+            <span class="text-purple-400 whitespace-nowrap">less than</span>
             <span class="text-purple-400 font-mono">{{ .Condition.MinCheckedBefore }}</span>
             <span class="text-blue-400">before</span>
             <span>{{ formatDateTime .Condition.CheckedBefore }}</span>
           </div>
         {{ else }}
-          <div class="grid grid-cols-[40px_1fr] gap-x-4 gap-y-1">
+          <div class="grid grid-cols-[65px_1fr] gap-x-4 gap-y-1">
             <span class="text-blue-400">before</span>
             <span>{{ formatDateTime .Condition.CheckedBefore }}</span>
           </div>
