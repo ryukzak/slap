@@ -80,7 +80,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Инициализируем переменные ДО блока
 	var rulesWithStatus []ScoreRuleWithStatus
 	ruleApplies := make(map[string]bool)
 	totalEffect := 0
@@ -102,7 +101,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 
 		for _, rule := range AppConfig.ScoreRules {
-			// Проверяем, есть ли у студента хоть одно задание из правила
+			// Check if student has at least one task from the list
 			hasTask := false
 			for _, taskID := range rule.TaskIDs {
 				for _, studentTask := range AppConfig.Tasks {
@@ -124,7 +123,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 				ScoreRule: rule,
 			}
 
-			// Для min_checked_before
+			// Min_checked_before
 			if rule.Condition.MinCheckedBefore > 0 {
 				countBefore := 0
 				for _, taskID := range rule.TaskIDs {
@@ -135,7 +134,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 				}
 
 				if now.After(*rule.Condition.CheckedBefore) {
-					// Дедлайн наступил
+					// Deadline has arrived
 					if countBefore < rule.Condition.MinCheckedBefore {
 						ruleWithStatus.Status = "applied"
 						ruleWithStatus.StatusColor = "red"
@@ -149,7 +148,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 						ruleApplies[rule.Name] = false
 					}
 				} else {
-					// Дедлайн не наступил
 					if countBefore >= rule.Condition.MinCheckedBefore {
 						ruleWithStatus.Status = "not_applied"
 						ruleWithStatus.StatusColor = "gray"
@@ -163,7 +161,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			} else if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil {
-				// after
+				// After
 				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
 
 				if now.After(*rule.Condition.CheckedAfter) {
@@ -186,7 +184,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 					ruleApplies[rule.Name] = false
 				}
 			} else if rule.Condition.CheckedBefore != nil && rule.Condition.MinCheckedBefore == 0 {
-				// before (бонус)
+				// Before
 				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
 
 				if applies {
@@ -209,7 +207,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			} else if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore != nil {
-				// диапазон
+				// Interval
 				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
 
 				if applies {
