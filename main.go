@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -128,6 +129,15 @@ func init() {
 				return 0
 			}
 			return part * 100 / total
+		},
+		"firstLine": func(s string) string {
+			for _, line := range strings.Split(s, "\n") {
+				line = strings.TrimSpace(line)
+				if line != "" {
+					return line
+				}
+			}
+			return ""
 		},
 		"appVersion": func() string { return version },
 		"uptime": func() string {

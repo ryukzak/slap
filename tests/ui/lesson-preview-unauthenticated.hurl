@@ -45,6 +45,9 @@ body not contains "[delete]"
 body not contains "[logout]"
 body not contains "// registered tasks"
 body not contains "// edit description"
+body contains "og:title"
+body contains "og:description"
+body contains "Preview test lesson description"
 
 # Step 3: Authenticated user sees full lesson page
 GET {{base_url}}/lesson/{{lesson_id}}

@@ -1,4 +1,6 @@
 {{define "title"}}Lesson - {{ formatDateTime .Lesson.DateTime }}{{end}}
+{{define "og_title"}}Lesson · @{{.Lesson.TeacherName}} · {{ formatDateTime .Lesson.DateTime }}{{end}}
+{{define "og_description"}}{{firstLine .Lesson.Description}}{{end}}
 {{define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span>//&nbsp;@{{.Lesson.TeacherName}}</span>
