@@ -43,7 +43,6 @@ type Task struct {
 	WaitingPeriod *time.Duration `yaml:"waiting_period,omitempty"`
 }
 
-// IsTeacher checks if the given user ID is in the teacher list
 func (c *Config) IsTeacher(userID string) bool {
 	for _, id := range c.TeacherIDs {
 		if id == userID {
