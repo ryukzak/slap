@@ -61,15 +61,15 @@ func (d *DB) GetCompletedTasksCountInGroup(userID string, taskIDs []TaskID) (int
 	completed := 0
 	for _, taskID := range taskIDs {
 		records, err := d.ListTaskRecords(userID, taskID)
-		if err != nil {
+		if err != nil || len(records) == 0 {
 			continue
 		}
 
-		for _, record := range records {
-			if record.Status == ReviewedTaskRecord {
-				completed++
-				break
-			}
+		// Get the most recent record (first in list because ListTaskRecords returns newest first)
+		latestStatus := records[0].Status
+
+		if latestStatus == ReviewedTaskRecord {
+			completed++
 		}
 	}
 	return completed, nil
