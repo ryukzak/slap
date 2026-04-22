@@ -98,10 +98,10 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			return nil, nil
 		}
 
-		now := time.Now()
+		evaluator := NewEvaluator(AppConfig)
 
 		for _, rule := range AppConfig.ScoreRules {
-			// Check if student has at least one task from the list
+			// Check if student has at least one task
 			hasTask := false
 			for _, taskID := range rule.TaskIDs {
 				for _, studentTask := range AppConfig.Tasks {
@@ -114,117 +114,23 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 			}
-
 			if !hasTask {
 				continue
 			}
 
-			ruleWithStatus := ScoreRuleWithStatus{
-				ScoreRule: rule,
+			eval, _ := evaluator.EvaluateForStudent(rule, getCheckedTime)
+
+			rulesWithStatus = append(rulesWithStatus, ScoreRuleWithStatus{
+				ScoreRule:   rule,
+				Status:      eval.Status(),
+				StatusColor: eval.Color(),
+				EffectColor: eval.Color(),
+			})
+
+			ruleApplies[rule.Name] = eval.Applies
+			if eval.Applies {
+				totalEffect += rule.Effect
 			}
-
-			// Min_checked_before
-			if rule.Condition.MinCheckedBefore > 0 {
-				countBefore := 0
-				for _, taskID := range rule.TaskIDs {
-					checkedTime, _ := getCheckedTime(taskID)
-					if checkedTime != nil && checkedTime.Before(*rule.Condition.CheckedBefore) {
-						countBefore++
-					}
-				}
-
-				if now.After(*rule.Condition.CheckedBefore) {
-					// Deadline has arrived
-					if countBefore < rule.Condition.MinCheckedBefore {
-						ruleWithStatus.Status = "applied"
-						ruleWithStatus.StatusColor = "red"
-						ruleWithStatus.EffectColor = "red"
-						ruleApplies[rule.Name] = true
-						totalEffect += rule.Effect
-					} else {
-						ruleWithStatus.Status = "not_applied"
-						ruleWithStatus.StatusColor = "green"
-						ruleWithStatus.EffectColor = "green"
-						ruleApplies[rule.Name] = false
-					}
-				} else {
-					if countBefore >= rule.Condition.MinCheckedBefore {
-						ruleWithStatus.Status = "not_applied"
-						ruleWithStatus.StatusColor = "gray"
-						ruleWithStatus.EffectColor = "gray"
-						ruleApplies[rule.Name] = false
-					} else {
-						ruleWithStatus.Status = "active"
-						ruleWithStatus.StatusColor = "yellow"
-						ruleWithStatus.EffectColor = "yellow"
-						ruleApplies[rule.Name] = false
-					}
-				}
-			} else if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil {
-				// After
-				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
-
-				if now.After(*rule.Condition.CheckedAfter) {
-					if applies {
-						ruleWithStatus.Status = "applied"
-						ruleWithStatus.StatusColor = "red"
-						ruleWithStatus.EffectColor = "red"
-						ruleApplies[rule.Name] = true
-						totalEffect += rule.Effect
-					} else {
-						ruleWithStatus.Status = "not_applied"
-						ruleWithStatus.StatusColor = "gray"
-						ruleWithStatus.EffectColor = "gray"
-						ruleApplies[rule.Name] = false
-					}
-				} else {
-					ruleWithStatus.Status = "active"
-					ruleWithStatus.StatusColor = "yellow"
-					ruleWithStatus.EffectColor = "yellow"
-					ruleApplies[rule.Name] = false
-				}
-			} else if rule.Condition.CheckedBefore != nil && rule.Condition.MinCheckedBefore == 0 {
-				// Before
-				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
-
-				if applies {
-					ruleWithStatus.Status = "applied"
-					ruleWithStatus.StatusColor = "green"
-					ruleWithStatus.EffectColor = "green"
-					ruleApplies[rule.Name] = true
-					totalEffect += rule.Effect
-				} else {
-					if now.After(*rule.Condition.CheckedBefore) {
-						ruleWithStatus.Status = "not_applied"
-						ruleWithStatus.StatusColor = "gray"
-						ruleWithStatus.EffectColor = "gray"
-						ruleApplies[rule.Name] = false
-					} else {
-						ruleWithStatus.Status = "active"
-						ruleWithStatus.StatusColor = "yellow"
-						ruleWithStatus.EffectColor = "yellow"
-						ruleApplies[rule.Name] = false
-					}
-				}
-			} else if rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore != nil {
-				// Interval
-				applies, _ := AppConfig.RuleApplies(rule, getCheckedTime)
-
-				if applies {
-					ruleWithStatus.Status = "applied"
-					ruleWithStatus.StatusColor = "red"
-					ruleWithStatus.EffectColor = "red"
-					ruleApplies[rule.Name] = true
-					totalEffect += rule.Effect
-				} else {
-					ruleWithStatus.Status = "not_applied"
-					ruleWithStatus.StatusColor = "gray"
-					ruleWithStatus.EffectColor = "gray"
-					ruleApplies[rule.Name] = false
-				}
-			}
-
-			rulesWithStatus = append(rulesWithStatus, ruleWithStatus)
 		}
 	}
 
