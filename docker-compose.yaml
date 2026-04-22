@@ -8,7 +8,6 @@ services:
       - ./conf:/app/conf:ro
     environment:
       - SLAP_JWT_SECRET=test
-      - SLAP_CONF=conf/config-test.yaml
 
 volumes:
   slap-data:
