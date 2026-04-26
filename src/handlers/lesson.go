@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"slices"
+
 	"github.com/gorilla/mux"
 	"github.com/ryukzak/slap/src/analytics"
 	"github.com/ryukzak/slap/src/storage"
@@ -153,7 +155,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			TaskDescription: taskDescription,
 			PreviousRecords: reviewedByKey[key],
 			ReviewRecords:   reviewRecords,
-			JournalRecords:  allForTask,
+			JournalRecords:  reverseSlice(allForTask),
 			JournalSummary:  strings.Join(summaryParts, " "),
 		})
 	}
@@ -195,15 +197,10 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 }
 
 func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
-	user := userSession(w, r)
-	if user == nil {
-		return
-	}
-
 	vars := mux.Vars(r)
 	lessonID := vars["lessonID"]
-	showRevoked := r.URL.Query().Get("showRevoked") == "true"
-	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
+
+	user := optionalUserSession(r)
 
 	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
 	if err != nil {
@@ -211,6 +208,18 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Lesson not found", http.StatusNotFound)
 		return
 	}
+
+	if user == nil {
+		renderPage(w, "templates/lesson_preview.html", struct {
+			Lesson *storage.Lesson
+		}{
+			Lesson: lesson,
+		})
+		return
+	}
+
+	showRevoked := r.URL.Query().Get("showRevoked") == "true"
+	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
 
 	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked, sortMode)
 	if err != nil {
@@ -558,4 +567,10 @@ func UnregisterFromLessonHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("action=unregister_from_lesson user=%s lesson=%s task=%s", user.ID, lessonID, taskID)
 	analytics.Track(user.ID, "lesson_unregistered", map[string]any{"lesson_id": lessonID, "task_id": taskID})
 	http.Redirect(w, r, "/user/"+user.ID+"/task/"+taskID, http.StatusSeeOther)
+}
+
+func reverseSlice(s []storage.TaskRecord) []storage.TaskRecord {
+	c := slices.Clone(s)
+	slices.Reverse(c)
+	return c
 }

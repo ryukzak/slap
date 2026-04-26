@@ -158,11 +158,11 @@
          href="?showRevoked=true&sort={{.SortMode}}">[show all]</a>
       {{ end }}
       <span class="text-gray-600">|</span>
-      {{ if eq (printf "%s" .SortMode) "date" }}
-      date
+      {{ if eq (printf "%s" .SortMode) "submit-ord" }}
+      submit-ord
     {{ else }}
       <a class="text-blue-400 hover:text-blue-300"
-         href="?showRevoked={{.ShowRevoked}}&sort=date">date</a>
+         href="?showRevoked={{.ShowRevoked}}&sort=submit-ord">submit-ord</a>
       {{ end }}
       {{ if eq (printf "%s" .SortMode) "task-mix" }}
       task-mix

@@ -4,7 +4,7 @@ package handlers
 type SortMode string
 
 const (
-	SortByDate       SortMode = "date"
+	SortBySubmitOrd  SortMode = "submit-ord"
 	SortByTaskMix    SortMode = "task-mix"
 	SortByStudentMix SortMode = "student-mix"
 )
@@ -15,6 +15,6 @@ func ParseSortMode(s string) SortMode {
 	case SortByTaskMix, SortByStudentMix:
 		return SortMode(s)
 	default:
-		return SortByDate
+		return SortBySubmitOrd
 	}
 }

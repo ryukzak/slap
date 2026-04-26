@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="SLAP - Student Lesson Attempt Platform" />
     <meta name="keywords" content="slap, student, lab, activity" />
+    <meta property="og:title" content="{{block "og_title" .}}SLAP{{end}}" />
+    <meta property="og:description"
+          content="{{block "og_description" .}}Student Lesson Attempt Platform{{end}}" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <title>{{block "title" .}}SLAP{{end}}</title>
     <script src="/static/js/htmx.min.js"></script>

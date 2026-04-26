@@ -111,6 +111,8 @@ run_test tests/ui/users-total-effect-column.hurl \
     --variable "student_id=${TIMESTAMP}18" \
     --variable "teacher_id=${TEACHER_ID}"
 
+run_test tests/ui/lesson-preview-unauthenticated.hurl
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

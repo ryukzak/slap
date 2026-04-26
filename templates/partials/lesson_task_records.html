@@ -23,7 +23,7 @@
         {{$record.TaskTitle}}
       </div>
       <div class="text-xs text-gray-400 flex-shrink-0 sm:ml-4 pl-1 sm:pl-0">
-        {{ formatDateTime $record.LessonAt }}
+      {{ if not $record.RegisteredAt.IsZero }}{{ formatDateTime $record.RegisteredAt }}{{ else }}{{ formatDateTime $record.CreatedAt }}{{ end }}
       </div>
     </summary>
     <div class="px-4 pb-4 pt-2">
@@ -38,7 +38,7 @@
           <li class="border-b border-gray-800 py-1">
             <div class="text-xs flex items-center justify-between mb-1">
               <div class="flex items-center space-x-2">
-                <span class="text-gray-600">#{{ sub $total $i }}</span>
+                <span class="text-gray-600">#{{ add $i 1 }}</span>
                 <span class="{{ if ne $jr.EntryAuthorID $jr.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$jr.EntryAuthorName}}</span>
                 <span class="text-gray-500">{{ formatDateTime $jr.CreatedAt }}</span>
               </div>
@@ -85,13 +85,15 @@
     {{ end }}
     <div class="p-3 bg-gray-800 rounded">
       <div class="text-xs text-gray-400 mb-2">
-        Submitted Record:
+        // task submission
       </div>
       <div class="text-xs markdown">
         {{ markdown $record.Content }}
       </div>
       <div class="text-xs text-gray-500 mt-2">
-        Submitted: {{ formatDateTime $record.CreatedAt }}
+      submitted: {{ if $record.CreatedAt.IsZero }}-{{ else }}{{ formatDateTime $record.CreatedAt }}{{ end }}
+        <br />
+      registered: {{ if $record.RegisteredAt.IsZero }}-{{ else }}{{ formatDateTime $record.RegisteredAt }}{{ end }}
       </div>
     </div>
     {{ if $record.ReviewRecords }}

@@ -31,6 +31,7 @@ type TaskRecord struct {
 	Content         string           `json:"content"`
 	Status          TaskRecordStatus `json:"state"`
 	CreatedAt       time.Time        `json:"created_at"`
+	RegisteredAt    time.Time        `json:"registered_at"`
 	EntryAuthorName string           `json:"entry_author_name"`
 	LessonAt        time.Time        `json:"lesson_at"`
 	LessonID        LessonID         `json:"lesson_id"`
@@ -239,6 +240,7 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 			return fmt.Errorf("unexpected task state for registration on lesson: %s", lastTaskRecord.Status)
 		}
 		lastTaskRecord.Status = RegisterTaskRecord
+		lastTaskRecord.RegisteredAt = time.Now()
 
 		lesson.EnrolledTasks = append(lesson.EnrolledTasks, EnrolledTask{
 			TaskID:         taskID,

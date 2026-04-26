@@ -35,20 +35,26 @@ func setAuthCookie(w http.ResponseWriter, tokenString string) {
 	})
 }
 
-func userSession(w http.ResponseWriter, r *http.Request) *auth.UserClaims {
+func optionalUserSession(r *http.Request) *auth.UserClaims {
 	cookie, err := r.Cookie("user_data")
 	if err != nil {
-		renderAuthRequired(w)
 		return nil
 	}
 
 	userClaim, err := JwtAuth.ExtractUserInfoWithRoles(cookie.Value)
 	if err != nil {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
 		return nil
 	}
 
 	return userClaim
+}
+
+func userSession(w http.ResponseWriter, r *http.Request) *auth.UserClaims {
+	user := optionalUserSession(r)
+	if user == nil {
+		renderAuthRequired(w)
+	}
+	return user
 }
 
 func teacherSession(w http.ResponseWriter, r *http.Request) *auth.UserClaims {
