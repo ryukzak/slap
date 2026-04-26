@@ -273,13 +273,18 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			TaskData: make(map[storage.TaskID]UserTaskSummary),
 		}
 		if u.IsStudent {
+
+			allRecords, err := DB.GetAllTaskRecordsForUser(u.ID)
+			if err != nil {
+				log.Printf("Error fetching task records for user %s: %v", u.ID, err)
+				row.TotalEffect = 0
+				rows = append(rows, row)
+				continue
+			}
+
 			for _, task := range AppConfig.Tasks {
-				records, err := DB.ListTaskRecords(u.ID, task.ID)
-				if err != nil {
-					log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
-					continue
-				}
-				if len(records) == 0 {
+				records, ok := allRecords[task.ID]
+				if !ok || len(records) == 0 {
 					continue
 				}
 				// Prefer "reviewed" status so the table shows "Checked" when the
@@ -338,7 +343,11 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				row.TaskData[task.ID] = summary
 			}
 
-			row.TotalEffect = calculateStudentTotalEffect(u.ID)
+			if err != nil {
+				row.TotalEffect = 0
+			} else {
+				row.TotalEffect = calculateStudentTotalEffectWithRecords(allRecords)
+			}
 		}
 		rows = append(rows, row)
 	}
@@ -630,10 +639,26 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		row := []string{u.ID, u.Username}
+
+		allRecords, err := DB.GetAllTaskRecordsForUser(u.ID)
+		if err != nil {
+			log.Printf("Error loading records for user %s: %v", u.ID, err)
+
+			// Fall back to empty
+			for range AppConfig.Tasks {
+				row = append(row, "")
+			}
+			row = append(row, "0")
+			if err := cw.Write(row); err != nil {
+				log.Printf("Error writing CSV row: %v", err)
+			}
+
+			continue
+		}
+
 		for _, task := range AppConfig.Tasks {
-			records, err := DB.ListTaskRecords(u.ID, task.ID)
-			if err != nil {
-				log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
+			records, ok := allRecords[task.ID]
+			if !ok {
 				row = append(row, "")
 				continue
 			}
@@ -645,10 +670,13 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 				}
+
 			}
 			row = append(row, score)
 		}
-		row = append(row, fmt.Sprintf("%d", calculateStudentTotalEffect(u.ID)))
+
+		totalEffect := calculateStudentTotalEffectWithRecords(allRecords)
+		row = append(row, fmt.Sprintf("%d", totalEffect))
 
 		if err := cw.Write(row); err != nil {
 			log.Printf("Error writing CSV row: %v", err)
@@ -659,12 +687,12 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	cw.Flush()
 }
 
-// calculateStudentTotalEffect calculates total effect of all score rules for a student
-func calculateStudentTotalEffect(studentID string) int {
+// calculateStudentTotalEffectWithRecords calculates total effect using preloaded records
+func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]storage.TaskRecord) int {
 	getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
-		records, err := DB.ListTaskRecords(studentID, taskID)
-		if err != nil {
-			return nil, err
+		records, ok := allRecords[taskID]
+		if !ok {
+			return nil, nil
 		}
 		for _, record := range records {
 			if record.Status == storage.ReviewedTaskRecord {
