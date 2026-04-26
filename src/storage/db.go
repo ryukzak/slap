@@ -55,22 +55,3 @@ func NewDB(dbPath string, bucketName string) (*DB, error) {
 func (d *DB) Close() error {
 	return d.db.Close()
 }
-
-// GetCompletedTasksCountInGroup returns number of reviewed tasks in a group for a user
-func (d *DB) GetCompletedTasksCountInGroup(userID string, taskIDs []TaskID) (int, error) {
-	completed := 0
-	for _, taskID := range taskIDs {
-		records, err := d.ListTaskRecords(userID, taskID)
-		if err != nil || len(records) == 0 {
-			continue
-		}
-
-		// Get the most recent record (first in list because ListTaskRecords returns newest first)
-		latestStatus := records[0].Status
-
-		if latestStatus == ReviewedTaskRecord {
-			completed++
-		}
-	}
-	return completed, nil
-}
