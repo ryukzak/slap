@@ -81,7 +81,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var rulesWithStatus []ScoreRuleWithStatus
-	ruleApplies := make(map[string]bool)
 	totalEffect := 0
 
 	if dbUser.IsStudent {
@@ -101,23 +100,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		evaluator := NewEvaluator(AppConfig)
 
 		for _, rule := range AppConfig.ScoreRules {
-			// Check if student has at least one task
-			hasTask := false
-			for _, taskID := range rule.TaskIDs {
-				for _, studentTask := range AppConfig.Tasks {
-					if studentTask.ID == taskID {
-						hasTask = true
-						break
-					}
-				}
-				if hasTask {
-					break
-				}
-			}
-			if !hasTask {
-				continue
-			}
-
 			eval, _ := evaluator.EvaluateForStudent(rule, getCheckedTime)
 
 			rulesWithStatus = append(rulesWithStatus, ScoreRuleWithStatus{
@@ -127,7 +109,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 				EffectColor: eval.Color(),
 			})
 
-			ruleApplies[rule.Name] = eval.Applies
 			if eval.Applies {
 				totalEffect += rule.Effect
 			}
@@ -160,7 +141,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		TZName:                   PrimaryTZName,
 		DefaultLessonDescription: AppConfig.DefaultLessonDescription,
 		ScoreRules:               rulesWithStatus,
-		RuleApplies:              ruleApplies,
 		TotalEffect:              totalEffect,
 		TaskTitles:               taskTitles,
 	}
@@ -358,25 +338,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				row.TaskData[task.ID] = summary
 			}
 
-			// Calculate total effect for this student
-			getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
-				records, err := DB.ListTaskRecords(u.ID, taskID)
-				if err != nil {
-					return nil, err
-				}
-				for _, record := range records {
-					if record.Status == storage.ReviewedTaskRecord {
-						return &record.CreatedAt, nil
-					}
-				}
-				return nil, nil
-			}
-
-			totalEffect, err := AppConfig.CalculateTotalEffect(getCheckedTime)
-			if err != nil {
-				totalEffect = 0
-			}
-			row.TotalEffect = totalEffect
+			row.TotalEffect = calculateStudentTotalEffect(u.ID)
 		}
 		rows = append(rows, row)
 	}
@@ -686,25 +648,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			row = append(row, score)
 		}
-
-		getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
-			records, err := DB.ListTaskRecords(u.ID, taskID)
-			if err != nil {
-				return nil, err
-			}
-			for _, record := range records {
-				if record.Status == storage.ReviewedTaskRecord {
-					return &record.CreatedAt, nil
-				}
-			}
-			return nil, nil
-		}
-
-		totalEffect, err := AppConfig.CalculateTotalEffect(getCheckedTime)
-		if err != nil {
-			totalEffect = 0
-		}
-		row = append(row, fmt.Sprintf("%d", totalEffect))
+		row = append(row, fmt.Sprintf("%d", calculateStudentTotalEffect(u.ID)))
 
 		if err := cw.Write(row); err != nil {
 			log.Printf("Error writing CSV row: %v", err)
@@ -713,6 +657,32 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cw.Flush()
+}
+
+// calculateStudentTotalEffect calculates total effect of all score rules for a student
+func calculateStudentTotalEffect(studentID string) int {
+	getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
+		records, err := DB.ListTaskRecords(studentID, taskID)
+		if err != nil {
+			return nil, err
+		}
+		for _, record := range records {
+			if record.Status == storage.ReviewedTaskRecord {
+				return &record.CreatedAt, nil
+			}
+		}
+		return nil, nil
+	}
+
+	evaluator := NewEvaluator(AppConfig)
+	total := 0
+	for _, rule := range AppConfig.ScoreRules {
+		eval, _ := evaluator.EvaluateForStudent(rule, getCheckedTime)
+		if eval.Applies {
+			total += rule.Effect
+		}
+	}
+	return total
 }
 
 // getTomorrowNoon returns tomorrow's date at 12:00 PM in PrimaryLoc
