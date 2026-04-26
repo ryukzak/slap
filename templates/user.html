@@ -142,7 +142,6 @@
     </thead>
     <tbody>
       {{ range .ScoreRules }}
-      {{ $applies := index $.RuleApplies .Name }}
       {{ $isAfter := .Condition.CheckedAfter }}
       {{ $isBefore := .Condition.CheckedBefore }}
       {{ $isMin := gt .Condition.MinCheckedBefore 0 }}
