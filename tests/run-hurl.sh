@@ -85,6 +85,9 @@ run_test tests/reset-request-flow.hurl \
     --variable "student_id=${TIMESTAMP}14" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/score-rules.hurl \
+    --variable "student_id=${TIMESTAMP}16"
+
 run_test tests/ui/user-list-student-row.hurl \
     --variable "student_id=${TIMESTAMP}10"
 
