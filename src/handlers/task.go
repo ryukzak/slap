@@ -32,7 +32,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task := AppConfig.GetTask(storage.TaskID(taskID))
+	task := AppConfig.GetTask(taskID)
 	if task == nil {
 		http.Error(w, "Task not found", http.StatusNotFound)
 		return
@@ -63,7 +63,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		UserID:        user.ID,
 		StudentID:     userIDFromURL,
 		SessionUserID: user.ID,
-		TaskID:        storage.TaskID(taskID),
+		TaskID:        taskID,
 		IsTeacher:     user.IsTeacher,
 	}
 
@@ -71,7 +71,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		model.StudentName = userData.Username
 	}
 
-	rawRecords, err := DB.ListTaskRecords(userIDFromURL, storage.TaskID(taskID))
+	rawRecords, err := DB.ListTaskRecords(userIDFromURL, taskID)
 	if err != nil {
 		log.Printf("Error retrieving task records: %v", err)
 	}
@@ -160,7 +160,7 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := &storage.TaskRecord{
-		TaskID:          storage.TaskID(taskID),
+		TaskID:          taskID,
 		StudentID:       userIDFromURL,
 		Content:         content,
 		CreatedAt:       time.Now(),

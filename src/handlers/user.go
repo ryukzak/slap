@@ -18,6 +18,13 @@ import (
 
 const stallThreshold = 4 // lessons skipped before marking as stalled
 
+type ScoreRuleWithStatus struct {
+	config.ScoreRule
+	Status      string // "active", "applied", "not_applied"
+	StatusColor string // "yellow", "red", "green", "gray"
+	EffectColor string // "yellow", "red", "green", "gray"
+}
+
 // UserInfoHandler displays the user information and available tasks
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := userSession(w, r)
@@ -73,8 +80,49 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var rulesWithStatus []ScoreRuleWithStatus
+	totalEffect := 0
+
+	if dbUser.IsStudent {
+		getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
+			records, err := DB.ListTaskRecords(profileUserID, taskID)
+			if err != nil {
+				return nil, err
+			}
+			for _, record := range records {
+				if record.Status == storage.ReviewedTaskRecord {
+					return &record.CreatedAt, nil
+				}
+			}
+			return nil, nil
+		}
+
+		evaluator := NewEvaluator(AppConfig)
+		now := time.Now()
+
+		for _, rule := range AppConfig.ScoreRules {
+			eval, _ := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
+
+			rulesWithStatus = append(rulesWithStatus, ScoreRuleWithStatus{
+				ScoreRule:   rule,
+				Status:      eval.Status(),
+				StatusColor: eval.Color(),
+				EffectColor: eval.Color(),
+			})
+
+			if eval.Applies {
+				totalEffect += rule.Effect
+			}
+		}
+	}
+
 	showPast := r.URL.Query().Get("showPast") == "true"
 	now := time.Now()
+
+	taskTitles := make(map[storage.TaskID]string)
+	for _, task := range AppConfig.Tasks {
+		taskTitles[task.ID] = task.Title
+	}
 
 	user = User{
 		Username:                 dbUser.Username,
@@ -93,6 +141,9 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		DefaultDateTime:          getTomorrowNoon(),
 		TZName:                   PrimaryTZName,
 		DefaultLessonDescription: AppConfig.DefaultLessonDescription,
+		ScoreRules:               rulesWithStatus,
+		TotalEffect:              totalEffect,
+		TaskTitles:               taskTitles,
 	}
 
 	// Load lessons for all users
@@ -161,7 +212,8 @@ type UserTaskSummary struct {
 
 type UserTableRow struct {
 	storage.UserData
-	TaskData map[storage.TaskID]UserTaskSummary
+	TaskData    map[storage.TaskID]UserTaskSummary
+	TotalEffect int
 }
 
 type TimelineLesson struct {
@@ -222,13 +274,18 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			TaskData: make(map[storage.TaskID]UserTaskSummary),
 		}
 		if u.IsStudent {
+
+			allRecords, err := DB.GetAllTaskRecordsForUser(u.ID)
+			if err != nil {
+				log.Printf("Error fetching task records for user %s: %v", u.ID, err)
+				row.TotalEffect = 0
+				rows = append(rows, row)
+				continue
+			}
+
 			for _, task := range AppConfig.Tasks {
-				records, err := DB.ListTaskRecords(u.ID, task.ID)
-				if err != nil {
-					log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
-					continue
-				}
-				if len(records) == 0 {
+				records, ok := allRecords[task.ID]
+				if !ok || len(records) == 0 {
 					continue
 				}
 				// Prefer "reviewed" status so the table shows "Checked" when the
@@ -286,6 +343,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				summary.Summary = strings.Join(parts, "\u00a0")
 				row.TaskData[task.ID] = summary
 			}
+
+			row.TotalEffect = calculateStudentTotalEffectWithRecords(allRecords)
 		}
 		rows = append(rows, row)
 	}
@@ -566,6 +625,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	for _, task := range AppConfig.Tasks {
 		header = append(header, "Score "+task.Title)
 	}
+	header = append(header, "Bonus/Penalty")
 	if err := cw.Write(header); err != nil {
 		log.Printf("Error writing CSV header: %v", err)
 		return
@@ -575,11 +635,27 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 		if !u.IsStudent {
 			continue
 		}
-		row := []string{string(u.ID), u.Username}
+		row := []string{u.ID, u.Username}
+
+		allRecords, err := DB.GetAllTaskRecordsForUser(u.ID)
+		if err != nil {
+			log.Printf("Error loading records for user %s: %v", u.ID, err)
+
+			// Fall back to empty
+			for range AppConfig.Tasks {
+				row = append(row, "")
+			}
+			row = append(row, "0")
+			if err := cw.Write(row); err != nil {
+				log.Printf("Error writing CSV row: %v", err)
+			}
+
+			continue
+		}
+
 		for _, task := range AppConfig.Tasks {
-			records, err := DB.ListTaskRecords(u.ID, task.ID)
-			if err != nil {
-				log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
+			records, ok := allRecords[task.ID]
+			if !ok {
 				row = append(row, "")
 				continue
 			}
@@ -591,9 +667,14 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 				}
+
 			}
 			row = append(row, score)
 		}
+
+		totalEffect := calculateStudentTotalEffectWithRecords(allRecords)
+		row = append(row, fmt.Sprintf("%d", totalEffect))
+
 		if err := cw.Write(row); err != nil {
 			log.Printf("Error writing CSV row: %v", err)
 			return
@@ -601,6 +682,33 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cw.Flush()
+}
+
+// calculateStudentTotalEffectWithRecords calculates total effect using preloaded records
+func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]storage.TaskRecord) int {
+	getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
+		records, ok := allRecords[taskID]
+		if !ok {
+			return nil, nil
+		}
+		for _, record := range records {
+			if record.Status == storage.ReviewedTaskRecord {
+				return &record.CreatedAt, nil
+			}
+		}
+		return nil, nil
+	}
+
+	evaluator := NewEvaluator(AppConfig)
+	now := time.Now()
+	total := 0
+	for _, rule := range AppConfig.ScoreRules {
+		eval, _ := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
+		if eval.Applies {
+			total += rule.Effect
+		}
+	}
+	return total
 }
 
 // getTomorrowNoon returns tomorrow's date at 12:00 PM in PrimaryLoc

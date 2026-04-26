@@ -1,5 +1,5 @@
-{{define "title"}}{{.Title}} - Task Details{{end}}
-{{define "header"}}
+{{ define "title"}}{{.Title}} - Task Details{{ end }}
+{{ define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-gray-300 hover:text-white" href="/user/{{.StudentID}}">//&nbsp;{{ if eq .StudentID .SessionUserID }}me:&nbsp;{{ else }}student:&nbsp;{{ end }}{{.StudentName}}</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
@@ -8,12 +8,12 @@
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span class="text-gray-300">score:&nbsp;{{.Score}}</span>
 {{ end }}
-{{end}}
-{{define "footer_nav"}}
+{{ end }}
+{{ define "footer_nav"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
-{{end}}
-{{define "content"}}
+{{ end }}
+{{ define "content"}}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
   {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
@@ -45,7 +45,7 @@
     <span class="flex items-center space-x-1">
       {{ if .Score }}<span class="text-green-300">{{.Score}}</span>{{ end }}
       {{ with .LatestRecord }}
-      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400 {{ else if eq .Status "register" }}text-yellow-400 {{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
       {{ end }}
       {{ if $.JournalSummary }}<span class="text-gray-600">({{$.JournalSummary}})</span>{{ end }}
     </span>
@@ -110,9 +110,9 @@
         {{ if $.RegisteredLesson }}
         <a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 min-w-0"
            href="/lesson/{{$.RegisteredLesson.ID}}">
-          <span class="flex-shrink-0">{{formatDateTime $.RegisteredLesson.DateTime}}</span>
+          <span class="flex-shrink-0">{{ formatDateTime $.RegisteredLesson.DateTime}}</span>
           <span class="text-gray-500 flex-shrink-0">@{{$.RegisteredLesson.TeacherName}}</span>
-          <span class="text-gray-400 truncate">{{getTitle $.RegisteredLesson.Description}}</span>
+          <span class="text-gray-400 truncate">{{ getTitle $.RegisteredLesson.Description}}</span>
           <span class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}]</span>
         </a>
       {{ else }}
@@ -143,4 +143,4 @@
     {{ markdown .Description }}
   </div>
 </section>
-{{end}}
+{{ end }}
