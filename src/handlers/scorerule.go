@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/ryukzak/slap/src/config"
@@ -34,8 +35,9 @@ func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, now time.Time, get
 	for _, taskID := range rule.TaskIDs {
 		t, err := getCheckedTime(taskID)
 		if err == nil {
-			checkedTimes[taskID] = t
+			return Evaluation{}, fmt.Errorf("failed to get checked time for task %s: %w", taskID, err)
 		}
+		checkedTimes[taskID] = t
 	}
 
 	// Min checked before

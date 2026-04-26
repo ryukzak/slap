@@ -56,21 +56,15 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		JournalSummary   string
 		IsTeacher        bool
 		RegisteredLesson *storage.Lesson
-		CurrentTime      time.Time
-		CompletedCount   int
 	}
 
-	var completedCount int
-
 	model := TaskViewModel{
-		Task:           *task,
-		UserID:         user.ID,
-		StudentID:      userIDFromURL,
-		SessionUserID:  user.ID,
-		TaskID:         taskID,
-		IsTeacher:      user.IsTeacher,
-		CurrentTime:    time.Now(),
-		CompletedCount: completedCount,
+		Task:          *task,
+		UserID:        user.ID,
+		StudentID:     userIDFromURL,
+		SessionUserID: user.ID,
+		TaskID:        taskID,
+		IsTeacher:     user.IsTeacher,
 	}
 
 	if userData != nil {

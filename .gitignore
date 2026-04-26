@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+.env
 conf/config-test.yaml
 tmp/*
 slap

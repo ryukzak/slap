@@ -32,7 +32,6 @@ type User struct {
 	TZName                   string
 	DefaultLessonDescription string
 	ScoreRules               []ScoreRuleWithStatus
-	RuleApplies              map[string]bool
 	TotalEffect              int
 	TaskTitles               map[storage.TaskID]string
 }

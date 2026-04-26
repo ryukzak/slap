@@ -7,7 +7,7 @@ services:
       - slap-data:/app/tmp
       - ./conf:/app/conf:ro
     environment:
-      - SLAP_JWT_SECRET=test
+      - SLAP_JWT_SECRET=${SLAP_JWT_SECRET}
 
 volumes:
   slap-data:
