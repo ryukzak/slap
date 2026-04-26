@@ -22,13 +22,12 @@ func NewEvaluator(cfg *config.Config) *Evaluator {
 	return &Evaluator{config: cfg}
 }
 
-func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (Evaluation, error) {
+// EvaluateForStudent evaluates a rule at a specific point in time
+func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, now time.Time, getCheckedTime func(taskID storage.TaskID) (*time.Time, error)) (Evaluation, error) {
 	eval := Evaluation{
 		Rule:    rule,
 		Applies: false,
 	}
-
-	now := time.Now()
 
 	// Collect checked times
 	checkedTimes := make(map[storage.TaskID]*time.Time)

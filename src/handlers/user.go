@@ -98,9 +98,10 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		evaluator := NewEvaluator(AppConfig)
+		now := time.Now()
 
 		for _, rule := range AppConfig.ScoreRules {
-			eval, _ := evaluator.EvaluateForStudent(rule, getCheckedTime)
+			eval, _ := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
 
 			rulesWithStatus = append(rulesWithStatus, ScoreRuleWithStatus{
 				ScoreRule:   rule,
@@ -343,11 +344,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				row.TaskData[task.ID] = summary
 			}
 
-			if err != nil {
-				row.TotalEffect = 0
-			} else {
-				row.TotalEffect = calculateStudentTotalEffectWithRecords(allRecords)
-			}
+			row.TotalEffect = calculateStudentTotalEffectWithRecords(allRecords)
 		}
 		rows = append(rows, row)
 	}
@@ -703,9 +700,10 @@ func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]stor
 	}
 
 	evaluator := NewEvaluator(AppConfig)
+	now := time.Now()
 	total := 0
 	for _, rule := range AppConfig.ScoreRules {
-		eval, _ := evaluator.EvaluateForStudent(rule, getCheckedTime)
+		eval, _ := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
 		if eval.Applies {
 			total += rule.Effect
 		}
