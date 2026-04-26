@@ -34,7 +34,7 @@ func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, now time.Time, get
 	checkedTimes := make(map[storage.TaskID]*time.Time)
 	for _, taskID := range rule.TaskIDs {
 		t, err := getCheckedTime(taskID)
-		if err == nil {
+		if err != nil {
 			return Evaluation{}, fmt.Errorf("failed to get checked time for task %s: %w", taskID, err)
 		}
 		checkedTimes[taskID] = t
