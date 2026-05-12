@@ -164,6 +164,12 @@
       <a class="text-blue-400 hover:text-blue-300"
          href="?showRevoked={{.ShowRevoked}}&sort=submit-ord">submit-ord</a>
       {{ end }}
+      {{ if eq (printf "%s" .SortMode) "register-ord" }}
+      register-ord
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300"
+         href="?showRevoked={{.ShowRevoked}}&sort=register-ord">register-ord</a>
+      {{ end }}
       {{ if eq (printf "%s" .SortMode) "task-mix" }}
       task-mix
     {{ else }}

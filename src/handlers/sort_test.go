@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ func TestParseSortMode_Valid(t *testing.T) {
 		want  SortMode
 	}{
 		{"submit-ord", SortBySubmitOrd},
+		{"register-ord", SortByRegisterOrd},
 		{"task-mix", SortByTaskMix},
 		{"student-mix", SortByStudentMix},
 	}
@@ -57,6 +59,12 @@ func makeRecords(regs []reg) []TaskRecordWithInfo {
 
 func applySortMode(records []TaskRecordWithInfo, mode SortMode) []TaskRecordWithInfo {
 	switch mode {
+	case SortByRegisterOrd:
+		out := append([]TaskRecordWithInfo(nil), records...)
+		sort.SliceStable(out, func(i, j int) bool {
+			return registeredAtOrCreated(out[i]).Before(registeredAtOrCreated(out[j]))
+		})
+		return out
 	case SortByTaskMix:
 		return util.InterleaveByKey(records, func(r TaskRecordWithInfo) string { return string(r.TaskID) })
 	case SortByStudentMix:
@@ -142,4 +150,47 @@ func TestSortModes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSortByRegisterOrd(t *testing.T) {
+	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	mk := func(student, task string, createdMin, registeredMin int) TaskRecordWithInfo {
+		r := TaskRecordWithInfo{
+			TaskRecord: storage.TaskRecord{
+				TaskID:    storage.TaskID(task),
+				StudentID: storage.UserID(student),
+				CreatedAt: base.Add(time.Duration(createdMin) * time.Minute),
+			},
+		}
+		if registeredMin >= 0 {
+			r.RegisteredAt = base.Add(time.Duration(registeredMin) * time.Minute)
+		}
+		return r
+	}
+
+	t.Run("orders by RegisteredAt regardless of CreatedAt", func(t *testing.T) {
+		input := []TaskRecordWithInfo{
+			mk("Alice", "T1", 1, 30), // submitted early, registered late
+			mk("Bob", "T2", 2, 10),   // submitted mid, registered first
+			mk("Carol", "T3", 3, 20), // submitted late, registered mid
+		}
+		got := formatSequence(applySortMode(input, SortByRegisterOrd))
+		want := "Bob:T2 Carol:T3 Alice:T1"
+		if got != want {
+			t.Errorf("expected %q, got %q", want, got)
+		}
+	})
+
+	t.Run("falls back to CreatedAt when RegisteredAt is zero", func(t *testing.T) {
+		input := []TaskRecordWithInfo{
+			mk("Alice", "T1", 5, -1), // no RegisteredAt -> uses CreatedAt=5
+			mk("Bob", "T2", 1, 10),   // RegisteredAt=10
+			mk("Carol", "T3", 9, 2),  // RegisteredAt=2
+		}
+		got := formatSequence(applySortMode(input, SortByRegisterOrd))
+		want := "Carol:T3 Alice:T1 Bob:T2"
+		if got != want {
+			t.Errorf("expected %q, got %q", want, got)
+		}
+	})
 }
