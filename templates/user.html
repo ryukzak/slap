@@ -8,6 +8,8 @@
 {{ if .SessionIsTeacher }}
 <a class="text-blue-400 hover:text-blue-300" href="/users">[students]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/teachers">[teachers]</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
 {{ end }}
 {{ if eq .ID .SessionUserID }}
 <a class="text-blue-400 hover:text-blue-300"
