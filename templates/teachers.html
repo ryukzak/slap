@@ -22,10 +22,18 @@
           teacher
         </th>
         <th class="text-right text-gray-400 py-1 px-2 font-normal">
-          lessons
+          {{ if eq (printf "%s" .SortMode) "lessons" }}
+          <span class="text-gray-200">lessons&nbsp;↓</span>
+        {{ else }}
+          <a class="text-blue-400 hover:text-blue-300" href="?sort=lessons">lessons</a>
+          {{ end }}
         </th>
         <th class="text-right text-gray-400 py-1 px-2 font-normal">
-          reviews
+          {{ if eq (printf "%s" .SortMode) "reviews" }}
+          <span class="text-gray-200">reviews&nbsp;↓</span>
+        {{ else }}
+          <a class="text-blue-400 hover:text-blue-300" href="?sort=reviews">reviews</a>
+          {{ end }}
         </th>
         <th class="text-right text-gray-400 py-1 px-2 font-normal">
           queued

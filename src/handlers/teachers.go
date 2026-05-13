@@ -19,6 +19,22 @@ type TeacherRow struct {
 	NextLesson *time.Time
 }
 
+type TeacherSortMode string
+
+const (
+	TeacherSortByLessons TeacherSortMode = "lessons"
+	TeacherSortByReviews TeacherSortMode = "reviews"
+)
+
+func ParseTeacherSortMode(s string) TeacherSortMode {
+	switch TeacherSortMode(s) {
+	case TeacherSortByReviews:
+		return TeacherSortByReviews
+	default:
+		return TeacherSortByLessons
+	}
+}
+
 func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := teacherSession(w, r)
 	if sessionUser == nil {
@@ -100,21 +116,36 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 	for _, t := range teachers {
 		rows = append(rows, t)
 	}
+
+	sortMode := ParseTeacherSortMode(r.URL.Query().Get("sort"))
 	sort.Slice(rows, func(i, j int) bool {
-		if rows[i].Lessons != rows[j].Lessons {
-			return rows[i].Lessons > rows[j].Lessons
+		a, b := rows[i], rows[j]
+		switch sortMode {
+		case TeacherSortByReviews:
+			if a.Reviews != b.Reviews {
+				return a.Reviews > b.Reviews
+			}
+			if a.Lessons != b.Lessons {
+				return a.Lessons > b.Lessons
+			}
+		default:
+			if a.Lessons != b.Lessons {
+				return a.Lessons > b.Lessons
+			}
+			if a.Reviews != b.Reviews {
+				return a.Reviews > b.Reviews
+			}
 		}
-		if rows[i].Reviews != rows[j].Reviews {
-			return rows[i].Reviews > rows[j].Reviews
-		}
-		return rows[i].Username < rows[j].Username
+		return a.Username < b.Username
 	})
 
 	renderPage(w, "templates/teachers.html", struct {
 		SessionUserID string
 		Teachers      []*TeacherRow
+		SortMode      TeacherSortMode
 	}{
 		SessionUserID: sessionUser.ID,
 		Teachers:      rows,
+		SortMode:      sortMode,
 	})
 }
