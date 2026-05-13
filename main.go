@@ -140,6 +140,7 @@ func init() {
 			return ""
 		},
 		"appVersion": func() string { return version },
+		"nbsp":       func(s string) string { return strings.ReplaceAll(s, " ", " ") },
 		"uptime": func() string {
 			d := time.Since(handlers.StartTime)
 			h := int(d.Hours())

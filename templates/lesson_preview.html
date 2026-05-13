@@ -3,7 +3,7 @@
 {{define "og_description"}}{{firstLine .Lesson.Description}}{{end}}
 {{define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
-<span>//&nbsp;@{{.Lesson.TeacherName}}</span>
+<span>//&nbsp;@{{ nbsp .Lesson.TeacherName }}</span>
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span>//&nbsp;lesson:&nbsp;{{ formatDateTime .Lesson.DateTime }}</span>
 {{end}}

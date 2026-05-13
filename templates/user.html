@@ -1,7 +1,7 @@
 {{define "title"}}User Profile{{end}}
 {{define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
-<span>//&nbsp;{{ if eq .ID .SessionUserID }}me:&nbsp;{{ else if .SessionIsTeacher }}student:&nbsp;{{ end }}{{.Username}}</span>
+<span>//&nbsp;{{ if eq .ID .SessionUserID }}me:&nbsp;{{ else if .SessionIsTeacher }}student:&nbsp;{{ end }}{{ nbsp .Username }}</span>
 {{end}}
 {{define "footer_nav"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
