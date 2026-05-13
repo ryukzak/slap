@@ -9,7 +9,11 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
-var policy = bluemonday.UGCPolicy()
+var policy = func() *bluemonday.Policy {
+	p := bluemonday.UGCPolicy()
+	p.AddTargetBlankToFullyQualifiedLinks(true)
+	return p
+}()
 
 func RenderMarkdown(input string) template.HTML {
 	extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock | parser.Autolink
