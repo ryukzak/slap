@@ -93,6 +93,12 @@ func LoadConfig(filePath string) (*Config, error) {
 		}
 	}
 
+	// Check all tasks are exist
+	taskExists := make(map[storage.TaskID]bool)
+	for _, task := range config.Tasks {
+		taskExists[task.ID] = true
+	}
+
 	// Validate score rules
 	for i, rule := range config.ScoreRules {
 		if rule.Name == "" {
@@ -102,12 +108,60 @@ func LoadConfig(filePath string) (*Config, error) {
 			return nil, fmt.Errorf("score rule %s has no task_ids", rule.Name)
 		}
 
-		// Check all tasks are exist
-		taskExists := make(map[storage.TaskID]bool)
-		for _, task := range config.Tasks {
-			taskExists[task.ID] = true
+		hasMin := rule.Condition.MinCheckedBefore > 0
+		hasAfter := rule.Condition.CheckedAfter != nil
+		hasBefore := rule.Condition.CheckedBefore != nil
+
+		// Count conditions
+		condCount := 0
+		if hasMin {
+			condCount++
+		}
+		if hasAfter {
+			condCount++
+		}
+		if hasBefore {
+			condCount++
 		}
 
+		// No conditions
+		if condCount == 0 {
+			return nil, fmt.Errorf("score rule %s: at least one condition is required", rule.Name)
+		}
+
+		// More than 2 conditions
+		if condCount > 2 {
+			return nil, fmt.Errorf("score rule %s: too many conditions (max 2)", rule.Name)
+		}
+
+		// Only allowed two-condition pattern is after+before
+		if condCount == 2 && !(hasAfter && hasBefore) {
+			return nil, fmt.Errorf("score rule %s: invalid combination of conditions (only after+before allowed)", rule.Name)
+		}
+
+		// Specific checks for min
+		if hasMin {
+			if !hasBefore {
+				return nil, fmt.Errorf("score rule %s: min_checked_before requires checked_before", rule.Name)
+			}
+			if hasAfter {
+				return nil, fmt.Errorf("score rule %s: cannot combine min_checked_before with checked_after", rule.Name)
+			}
+		}
+
+		// Interval validity
+		if hasAfter && hasBefore {
+			if rule.Condition.CheckedAfter.After(*rule.Condition.CheckedBefore) {
+				return nil, fmt.Errorf("score rule %s: checked_after must be before checked_before", rule.Name)
+			}
+		}
+
+		// Validate effect non-zero
+		if rule.Effect == 0 {
+			return nil, fmt.Errorf("score rule %s: effect cannot be zero", rule.Name)
+		}
+
+		// Validate all task IDs exist
 		for _, taskID := range rule.TaskIDs {
 			if !taskExists[taskID] {
 				return nil, fmt.Errorf("score rule %s references non-existent task: %s", rule.Name, taskID)
