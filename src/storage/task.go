@@ -241,7 +241,7 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 		if err != nil {
 			return err
 		}
-		if lastTaskRecord.Status != SubmitTaskRecord && lastTaskRecord.Status != RevokedTaskRecord {			
+		if lastTaskRecord.Status != SubmitTaskRecord && lastTaskRecord.Status != RevokedTaskRecord {
 			return fmt.Errorf("unexpected task state for registration on lesson: %s", lastTaskRecord.Status)
 		}
 		lastTaskRecord.Status = RegisterTaskRecord
@@ -289,10 +289,7 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 			if err != nil {
 				return err
 			}
-			taskRecord.Status = SubmitTaskRecord   
-			taskRecord.LessonID = ""   
-			taskRecord.LessonAt = time.Time{}   
-			taskRecord.RegisteredAt = time.Time{}
+			taskRecord.Status = SubmitTaskRecord
 			if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
 				return err
 			}
@@ -338,11 +335,8 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 		if taskRecord.Status != RegisterTaskRecord {
 			return fmt.Errorf("task record is not in register state")
 		}
-		
-		taskRecord.Status = SubmitTaskRecord  
-		taskRecord.LessonID = ""  
-		taskRecord.LessonAt = time.Time{}  
-		taskRecord.RegisteredAt = time.Time{}
+
+		taskRecord.Status = SubmitTaskRecord
 		if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
 			return err
 		}
