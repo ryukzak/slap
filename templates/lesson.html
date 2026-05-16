@@ -1,7 +1,7 @@
 {{define "title"}}Lesson - {{ formatDateTime .Lesson.DateTime }}{{end}}
 {{define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
-<span>//&nbsp;@{{.Lesson.TeacherName}}</span>
+<span class="whitespace-nowrap">//&nbsp;@{{.Lesson.TeacherName}}</span>
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span>//&nbsp;lesson:&nbsp;{{ formatDateTime .Lesson.DateTime }}</span>
 {{end}}
@@ -163,6 +163,12 @@
     {{ else }}
       <a class="text-blue-400 hover:text-blue-300"
          href="?showRevoked={{.ShowRevoked}}&sort=submit-ord">submit-ord</a>
+      {{ end }}
+      {{ if eq (printf "%s" .SortMode) "register-ord" }}
+      register-ord
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300"
+         href="?showRevoked={{.ShowRevoked}}&sort=register-ord">register-ord</a>
       {{ end }}
       {{ if eq (printf "%s" .SortMode) "task-mix" }}
       task-mix

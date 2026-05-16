@@ -141,10 +141,7 @@ func init() {
 		},
 		"appVersion": func() string { return version },
 		"uptime": func() string {
-			d := time.Since(handlers.StartTime)
-			h := int(d.Hours())
-			m := int(d.Minutes()) % 60
-			return fmt.Sprintf("%dh%02dm", h, m)
+			return util.FormatUptime(time.Since(handlers.StartTime))
 		},
 	}
 
@@ -225,6 +222,7 @@ func main() {
 	// User and task routes with specific path prefixes
 	r.HandleFunc("/users", handlers.UserListHandler).Methods("GET")
 	r.HandleFunc("/users/csv", handlers.UserListCSVHandler).Methods("GET")
+	r.HandleFunc("/teachers", handlers.TeacherListHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}", handlers.UserInfoHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/task/{taskID}", handlers.TaskDetailHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/task/{taskID}/journal", handlers.AddTaskRecordHandler).Methods("POST")

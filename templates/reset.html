@@ -1,7 +1,8 @@
 {{define "title"}}Reset Password{{end}}
 {{define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
-<a class="text-gray-300 hover:text-white" href="/user/{{.UserID}}">//&nbsp;{{.Username}}</a>
+<a class="text-gray-300 hover:text-white whitespace-nowrap"
+   href="/user/{{.UserID}}">//&nbsp;{{.Username}}</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span>//&nbsp;reset&nbsp;password</span>
 {{end}}

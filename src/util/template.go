@@ -57,6 +57,22 @@ func GetRestText(s string, maxLen int) string {
 	return string(runes[maxLen:])
 }
 
+// FormatUptime renders a duration as "Hh%02dm" when under a day, and prepends
+// "Xd" once the duration reaches 24h (e.g. "2d5h12m").
+func FormatUptime(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+	days := int(d / (24 * time.Hour))
+	rem := d - time.Duration(days)*24*time.Hour
+	h := int(rem.Hours())
+	m := int(rem.Minutes()) % 60
+	if days > 0 {
+		return fmt.Sprintf("%dd%dh%02dm", days, h, m)
+	}
+	return fmt.Sprintf("%dh%02dm", h, m)
+}
+
 func FormatDateTime(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location) func(time.Time) string {
 	return func(t time.Time) string {
 		return fmt.Sprintf("%s\u00a0%s(%s)/%s(%s)",

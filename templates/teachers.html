@@ -1,0 +1,80 @@
+{{define "title"}}Teachers - SLAP{{end}}
+{{define "header"}}
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span>//&nbsp;teachers</span>
+{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/users">[students]</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}
+{{define "content"}}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // teachers ({{ len .Teachers }})
+  </div>
+  {{ if .Teachers }}
+  <table class="w-full text-xs border-collapse">
+    <thead>
+      <tr class="border-b border-gray-700">
+        <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+          teacher
+        </th>
+        <th class="text-right text-gray-400 py-1 px-2 font-normal">
+          {{ if eq (printf "%s" .SortMode) "lessons" }}
+          <span class="text-gray-200">lessons&nbsp;↓</span>
+        {{ else }}
+          <a class="text-blue-400 hover:text-blue-300" href="?sort=lessons">lessons</a>
+          {{ end }}
+        </th>
+        <th class="text-right text-gray-400 py-1 px-2 font-normal">
+          {{ if eq (printf "%s" .SortMode) "reviews" }}
+          <span class="text-gray-200">reviews&nbsp;↓</span>
+        {{ else }}
+          <a class="text-blue-400 hover:text-blue-300" href="?sort=reviews">reviews</a>
+          {{ end }}
+        </th>
+        <th class="text-right text-gray-400 py-1 px-2 font-normal">
+          queued
+        </th>
+        <th class="text-left text-gray-400 py-1 px-2 font-normal">
+          last lesson
+        </th>
+        <th class="text-left text-gray-400 py-1 pl-2 font-normal">
+          next lesson
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Teachers }}
+      <tr class="border-b border-gray-800">
+        <td class="py-1 pr-4">
+          <a class="text-blue-400 hover:text-blue-300" href="/user/{{.ID}}">@{{.Username}}</a>
+        </td>
+      <td class="py-1 px-2 text-right {{ if .Lessons }}text-gray-300{{ else }}text-gray-700{{ end }}">
+        {{.Lessons}}
+      </td>
+    <td class="py-1 px-2 text-right {{ if .Reviews }}text-green-400{{ else }}text-gray-700{{ end }}">
+      {{.Reviews}}
+    </td>
+  <td class="py-1 px-2 text-right {{ if .Queued }}text-yellow-400{{ else }}text-gray-700{{ end }}">
+    {{.Queued}}
+  </td>
+  <td class="py-1 px-2 text-gray-400">
+    {{ with .LastLesson }}{{ formatDateTime . }}{{ else }}<span class="text-gray-700">—</span>{{ end }}
+  </td>
+  <td class="py-1 pl-2 text-gray-400">
+    {{ with .NextLesson }}{{ formatDateTime . }}{{ else }}<span class="text-gray-700">—</span>{{ end }}
+  </td>
+</tr>
+{{ end }}
+</tbody>
+</table>
+{{ else }}
+<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded">
+  No teachers yet.
+</p>
+{{ end }}
+</section>
+{{end}}

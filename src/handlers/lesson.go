@@ -187,6 +187,10 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 	}
 
 	switch sortMode {
+	case SortByRegisterOrd:
+		sort.SliceStable(visible, func(i, j int) bool {
+			return registeredAtOrCreated(visible[i]).Before(registeredAtOrCreated(visible[j]))
+		})
 	case SortByTaskMix:
 		visible = util.InterleaveByKey(visible, func(r TaskRecordWithInfo) string { return string(r.TaskID) })
 	case SortByStudentMix:
@@ -573,4 +577,11 @@ func reverseSlice(s []storage.TaskRecord) []storage.TaskRecord {
 	c := slices.Clone(s)
 	slices.Reverse(c)
 	return c
+}
+
+func registeredAtOrCreated(r TaskRecordWithInfo) time.Time {
+	if !r.RegisteredAt.IsZero() {
+		return r.RegisteredAt
+	}
+	return r.CreatedAt
 }
