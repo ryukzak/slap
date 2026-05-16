@@ -257,6 +257,7 @@ func (d *DB) ListLessonPreviousTaskRecords(lesson *Lesson) ([]*TaskRecord, error
 			if err != nil {
 				return err
 			}
+			taskRecord.Status = enrolledTask.Status
 			result = append(result, taskRecord)
 		}
 		return nil
