@@ -101,7 +101,12 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		now := time.Now()
 
 		for _, rule := range AppConfig.ScoreRules {
-			eval, _ := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
+			eval, err := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
+			if err != nil {
+				log.Printf("Error evaluating rule %s for user %s: %v", rule.Name, profileUserID, err)
+				http.Error(w, "Failed to evaluate score rules", http.StatusInternalServerError)
+				return
+			}
 
 			rulesWithStatus = append(rulesWithStatus, ScoreRuleWithStatus{
 				ScoreRule:   rule,
@@ -344,7 +349,13 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				row.TaskData[task.ID] = summary
 			}
 
-			row.TotalEffect = calculateStudentTotalEffectWithRecords(allRecords)
+			totalEffect, err := calculateStudentTotalEffectWithRecords(allRecords)
+			if err != nil {
+				log.Printf("Error calculating total effect for user %s: %v", u.ID, err)
+				row.TotalEffect = 0
+			} else {
+				row.TotalEffect = totalEffect
+			}
 		}
 		rows = append(rows, row)
 	}
@@ -672,7 +683,11 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			row = append(row, score)
 		}
 
-		totalEffect := calculateStudentTotalEffectWithRecords(allRecords)
+		totalEffect, err := calculateStudentTotalEffectWithRecords(allRecords)
+		if err != nil {
+			log.Printf("Error calculating total effect for user %s: %v", u.ID, err)
+			totalEffect = 0
+		}
 		row = append(row, fmt.Sprintf("%d", totalEffect))
 
 		if err := cw.Write(row); err != nil {
@@ -685,7 +700,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // calculateStudentTotalEffectWithRecords calculates total effect using preloaded records
-func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]storage.TaskRecord) int {
+func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]storage.TaskRecord) (int, error) {
 	getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
 		records, ok := allRecords[taskID]
 		if !ok {
@@ -703,12 +718,16 @@ func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]stor
 	now := time.Now()
 	total := 0
 	for _, rule := range AppConfig.ScoreRules {
-		eval, _ := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
+		eval, err := evaluator.EvaluateForStudent(rule, now, getCheckedTime)
+		if err != nil {
+			// Propagate error — caller decides how to handle
+			return 0, fmt.Errorf("failed to evaluate rule %s: %w", rule.Name, err)
+		}
 		if eval.Applies {
 			total += rule.Effect
 		}
 	}
-	return total
+	return total, nil
 }
 
 // getTomorrowNoon returns tomorrow's date at 12:00 PM in PrimaryLoc

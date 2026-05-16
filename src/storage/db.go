@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -76,6 +77,7 @@ func (d *DB) GetAllTaskRecordsForUser(userID string) (map[TaskID][]TaskRecord, e
 		for k, v := cursor.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = cursor.Next() {
 			var record TaskRecord
 			if err := json.Unmarshal(v, &record); err != nil {
+				log.Printf("Warning: failed to unmarshal task record for key %s: %v", k, err)
 				continue
 			}
 			result[record.TaskID] = append(result[record.TaskID], record)
