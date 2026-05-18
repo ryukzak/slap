@@ -102,6 +102,12 @@ run_test tests/ui/lesson-student-queue-visibility.hurl \
 
 run_test tests/ui/lesson-preview-unauthenticated.hurl
 
+run_test tests/ui/reregistration-after-revoke.hurl \
+    --variable "student_id=${TIMESTAMP}16"
+
+run_test tests/ui/submit-collapses-pending.hurl \
+    --variable "student_id=${TIMESTAMP}17"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
