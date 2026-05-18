@@ -97,6 +97,11 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 						}
 					}
 				}
+			} else if existingRecord.Status == SubmitTaskRecord {
+				existingRecord.Status = RevokedTaskRecord
+				if err := setValue(b, key, existingRecord); err != nil {
+					return err
+				}
 			}
 
 		}
@@ -236,7 +241,7 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 		if err != nil {
 			return err
 		}
-		if lastTaskRecord.Status != SubmitTaskRecord {
+		if lastTaskRecord.Status != SubmitTaskRecord && lastTaskRecord.Status != RevokedTaskRecord {
 			return fmt.Errorf("unexpected task state for registration on lesson: %s", lastTaskRecord.Status)
 		}
 		lastTaskRecord.Status = RegisterTaskRecord
@@ -284,7 +289,7 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 			if err != nil {
 				return err
 			}
-			taskRecord.Status = RevokedTaskRecord
+			taskRecord.Status = SubmitTaskRecord
 			if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
 				return err
 			}
@@ -331,7 +336,7 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 			return fmt.Errorf("task record is not in register state")
 		}
 
-		taskRecord.Status = RevokedTaskRecord
+		taskRecord.Status = SubmitTaskRecord
 		if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
 			return err
 		}
