@@ -40,9 +40,9 @@ func TestSaveAndGetUser(t *testing.T) {
 		Username: "testuser",
 	}
 
-	err := db.SaveUser(user)
+	err := db.CreateUser(user)
 	if err != nil {
-		t.Fatalf("Failed to save user: %v", err)
+		t.Fatalf("Failed to create user: %v", err)
 	}
 
 	retrieved, err := db.GetUser("123")
@@ -95,10 +95,10 @@ func TestEmptyIDValidation(t *testing.T) {
 	db, tempDir := setupTestDB(t)
 	defer cleanupTestDB(db, tempDir)
 
-	// Test saving with empty ID
-	err := db.SaveUser(&UserData{Username: "noID"})
+	// Test creating with empty ID
+	err := db.CreateUser(&UserData{Username: "noID"})
 	if err == nil {
-		t.Error("Expected error when saving user with empty ID")
+		t.Error("Expected error when creating user with empty ID")
 	}
 
 	// Test updating an existing user's username
@@ -106,9 +106,9 @@ func TestEmptyIDValidation(t *testing.T) {
 		ID:       "update_test",
 		Username: "original_name",
 	}
-	err = db.SaveUser(user)
+	err = db.CreateUser(user)
 	if err != nil {
-		t.Fatalf("Failed to save initial user: %v", err)
+		t.Fatalf("Failed to create initial user: %v", err)
 	}
 
 	// Update username
@@ -116,7 +116,7 @@ func TestEmptyIDValidation(t *testing.T) {
 		ID:       "update_test",
 		Username: "updated_name",
 	}
-	err = db.SaveUser(updatedUser)
+	err = db.UpdateUser(updatedUser)
 	if err != nil {
 		t.Fatalf("Failed to update user: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestUserRoleFlags(t *testing.T) {
 	db, tempDir := setupTestDB(t)
 	defer cleanupTestDB(db, tempDir)
 
-	// Test saving user with role flags
+	// Test creating user with role flags
 	user := &UserData{
 		ID:        "teacher1",
 		Username:  "teacheruser",
@@ -150,9 +150,9 @@ func TestUserRoleFlags(t *testing.T) {
 		IsTeacher: true,
 	}
 
-	err := db.SaveUser(user)
+	err := db.CreateUser(user)
 	if err != nil {
-		t.Fatalf("Failed to save user: %v", err)
+		t.Fatalf("Failed to create user: %v", err)
 	}
 
 	// Retrieve and verify
@@ -170,7 +170,7 @@ func TestUserRoleFlags(t *testing.T) {
 
 	// Test updating role flags
 	user.IsStudent = true
-	err = db.SaveUser(user)
+	err = db.UpdateUser(user)
 	if err != nil {
 		t.Fatalf("Failed to update user: %v", err)
 	}

@@ -12,9 +12,9 @@ func setupLessonFlowDB(t *testing.T) (*DB, string, *UserData, *UserData, TaskID,
 	db, tempDir := setupTestDB(t)
 
 	teacher := &UserData{ID: "teacher", Username: "Teacher", IsTeacher: true}
-	assert.NoError(t, db.SaveUser(teacher))
+	assert.NoError(t, db.CreateUser(teacher))
 	student := &UserData{ID: "student", Username: "Student", IsStudent: true}
-	assert.NoError(t, db.SaveUser(student))
+	assert.NoError(t, db.CreateUser(student))
 
 	lesson := &Lesson{
 		DateTime:    time.Now().Add(24 * time.Hour),
@@ -152,7 +152,7 @@ func TestLessonFlow(t *testing.T) {
 		IsTeacher: true,
 		IsStudent: false,
 	}
-	assert.NoError(t, db.SaveUser(teacher))
+	assert.NoError(t, db.CreateUser(teacher))
 
 	student := &UserData{
 		ID:        studentID,
@@ -160,7 +160,7 @@ func TestLessonFlow(t *testing.T) {
 		IsTeacher: false,
 		IsStudent: true,
 	}
-	assert.NoError(t, db.SaveUser(student))
+	assert.NoError(t, db.CreateUser(student))
 
 	// Create lesson
 	lesson := &Lesson{
