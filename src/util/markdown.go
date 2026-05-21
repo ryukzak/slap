@@ -22,7 +22,7 @@ func RenderMarkdown(input string) template.HTML {
 	doc := p.Parse([]byte(input))
 
 	opts := html.RendererOptions{
-		Flags:          html.CommonFlags,
+		Flags:          html.CommonFlags | html.SkipImages | html.SkipHTML,
 		RenderNodeHook: nil,
 	}
 	renderer := html.NewRenderer(opts)
