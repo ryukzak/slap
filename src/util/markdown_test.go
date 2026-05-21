@@ -27,3 +27,17 @@ func TestRenderMarkdown_RelativeLinkStaysInSameTab(t *testing.T) {
 		t.Errorf("did not expect target=\"_blank\" on relative link, got: %s", got)
 	}
 }
+
+func TestRenderMarkdown_ImagesAreStripped(t *testing.T) {
+	got := string(RenderMarkdown("see my cool image ![cool image](/logout)"))
+	if strings.Contains(got, `src="/logout"`) {
+		t.Fatalf("expected image removed, got: %s", got)
+	}
+}
+
+func TestRenderMarkdown_HtmlImagesAreStripped(t *testing.T) {
+	got := string(RenderMarkdown("see my cool image <img alt=\"cool image\" src=\"/logout\"</img>"))
+	if strings.Contains(got, `src="/logout"`) {
+		t.Fatalf("expected image removed, got: %s", got)
+	}
+}
