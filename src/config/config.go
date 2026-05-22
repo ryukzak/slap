@@ -134,18 +134,22 @@ func LoadConfig(filePath string) (*Config, error) {
 			return nil, fmt.Errorf("score rule %s: too many conditions (max 2)", rule.Name)
 		}
 
-		// Only allowed two-condition pattern is after+before
-		if condCount == 2 && (!hasAfter || !hasBefore) {
-			return nil, fmt.Errorf("score rule %s: invalid combination of conditions (only after+before allowed)", rule.Name)
-		}
-
-		// Specific checks for min
-		if hasMin {
-			if !hasBefore {
-				return nil, fmt.Errorf("score rule %s: min_checked_before requires checked_before", rule.Name)
+		// Determine allowed combinations
+		switch condCount {
+		case 1:
+			// allowed single conditions: after, before, min+before (min requires before)
+			allowed := (hasAfter && !hasBefore && !hasMin) ||
+				(hasBefore && !hasAfter && !hasMin) ||
+				(hasMin && hasBefore && !hasAfter)
+			if !allowed {
+				return nil, fmt.Errorf("score rule %s: invalid single condition (allowed: after, before, min+before)", rule.Name)
 			}
-			if hasAfter {
-				return nil, fmt.Errorf("score rule %s: cannot combine min_checked_before with checked_after", rule.Name)
+		case 2:
+			// allowed two-condition combinations: after+before, min+before
+			allowed := (hasAfter && hasBefore && !hasMin) ||
+				(hasMin && hasBefore && !hasAfter)
+			if !allowed {
+				return nil, fmt.Errorf("score rule %s: invalid two-condition combination (allowed: after+before, min+before)", rule.Name)
 			}
 		}
 
