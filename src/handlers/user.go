@@ -560,7 +560,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", "attachment; filename=\"students.csv\"")
 
 	cw := csv.NewWriter(w)
-	cw.Comma = '|'
+	cw.Comma = ','
 
 	header := []string{"ID", "Name"}
 	for _, task := range AppConfig.Tasks {
