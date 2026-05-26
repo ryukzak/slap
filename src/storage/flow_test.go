@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	bolt "go.etcd.io/bbolt"
 )
 
 func setupLessonFlowDB(t *testing.T) (*DB, string, *UserData, *UserData, TaskID, LessonID) {
@@ -105,6 +106,35 @@ func TestResubmitAfterCheckVisible(t *testing.T) {
 	assert.Len(t, prev, 1)
 	assert.Equal(t, ReviewedTaskRecord, prev[0].Status)
 	assert.Equal(t, "first attempt", prev[0].Content)
+}
+
+// TestReadTolerateCorruptIndex reproduces issue #45: a task index key holds a
+// JSON object (e.g. from a key collision with a colon-containing task ID)
+// instead of the expected []string. Display reads must degrade to "no records"
+// rather than failing the whole request, which previously 500'd the profile
+// page via the score-rule evaluation path.
+func TestReadTolerateCorruptIndex(t *testing.T) {
+	db, tempDir := setupTestDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	userID := "409529"
+	taskID := TaskID("ac:2026:scheme")
+	indexKey := "tasks:" + userID + ":" + taskID
+
+	// Write a JSON object where a []string index is expected.
+	err := db.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(db.bucketName)
+		return b.Put([]byte(indexKey), []byte(`{"id":"409529","journals":{}}`))
+	})
+	assert.NoError(t, err)
+
+	records, err := db.ListTaskRecords(userID, taskID)
+	assert.NoError(t, err, "ListTaskRecords must not error on a corrupt index")
+	assert.Empty(t, records)
+
+	status, err := db.LatestTaskStatus(userID, taskID)
+	assert.NoError(t, err, "LatestTaskStatus must not error on a corrupt index")
+	assert.Equal(t, TaskRecordStatus(""), status)
 }
 
 func TestIsRegistrationOpen(t *testing.T) {

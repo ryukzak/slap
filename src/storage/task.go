@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"time"
 
@@ -118,9 +119,15 @@ func (d *DB) ListTaskRecords(userID string, taskID TaskID) ([]TaskRecord, error)
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 
-		taskRecordKeys, err := getIndex(b, "tasks:"+userID+":"+taskID)
+		indexKey := "tasks:" + userID + ":" + taskID
+		taskRecordKeys, err := getIndex(b, indexKey)
 		if err != nil {
-			return err
+			// A corrupt or colliding index (e.g. a struct stored under a
+			// colon-containing task ID, see issue #45) must not break the
+			// whole read — degrade to "no records" so the profile page renders.
+			// Log the raw stored value to help diagnose the corruption source.
+			log.Printf("Warning: unreadable task index %q, treating as empty: %v (raw value: %s)", indexKey, err, b.Get([]byte(indexKey)))
+			return nil
 		}
 
 		taskRecords := make([]TaskRecord, len(taskRecordKeys))
@@ -153,9 +160,11 @@ func (d *DB) LatestTaskStatus(userID string, taskID TaskID) (TaskRecordStatus, e
 	var status TaskRecordStatus
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
-		keys, err := getIndex(b, "tasks:"+userID+":"+taskID)
+		indexKey := "tasks:" + userID + ":" + taskID
+		keys, err := getIndex(b, indexKey)
 		if err != nil {
-			return err
+			log.Printf("Warning: unreadable task index %q, treating as empty: %v (raw value: %s)", indexKey, err, b.Get([]byte(indexKey)))
+			return nil
 		}
 		if len(keys) == 0 {
 			return nil
