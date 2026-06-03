@@ -42,14 +42,18 @@ func (r *TaskRecord) RenderAt() string {
 	return r.CreatedAt.Format("2006-01-02 15:04:05")
 }
 
+// Both sorts are stable: a revoke leaves the dropped record in place and
+// appends a fresh pending record that carries the original CreatedAt (so the
+// student keeps their queue position). That makes ties on CreatedAt normal, and
+// a stable sort keeps such ties in index (append) order instead of flickering.
 func SortTaskRecordsOldestFirst(records []*TaskRecord) {
-	sort.Slice(records, func(i, j int) bool {
+	sort.SliceStable(records, func(i, j int) bool {
 		return records[i].CreatedAt.Before(records[j].CreatedAt)
 	})
 }
 
 func SortTaskRecordsNewestFirst(records []TaskRecord) {
-	sort.Slice(records, func(i, j int) bool {
+	sort.SliceStable(records, func(i, j int) bool {
 		return records[i].CreatedAt.After(records[j].CreatedAt)
 	})
 }
@@ -98,6 +102,13 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 						}
 					}
 				}
+			} else if existingRecord.Status == SubmitTaskRecord {
+				// Only the newest submission stays pending; collapse any older
+				// pending record (which is not enrolled in a lesson) to dropped.
+				existingRecord.Status = RevokedTaskRecord
+				if err := setValue(b, key, existingRecord); err != nil {
+					return err
+				}
 			}
 
 		}
@@ -108,6 +119,30 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 		}
 		return setValue(b, newRecordKey, record)
 	})
+}
+
+// appendPendingResubmission re-creates the student's submission as a fresh
+// pending record after a revoke. The dropped record is left untouched as
+// immutable history; the new record copies the content and — crucially — the
+// original CreatedAt, so the student keeps their place in the submit-ordered
+// queue instead of being pushed to the back. It must be called from within an
+// open write transaction on bucket b.
+func appendPendingResubmission(b *bolt.Bucket, revoked *TaskRecord) error {
+	indexKey := "tasks:" + revoked.StudentID + ":" + revoked.TaskID
+	newKey := "task:" + revoked.StudentID + ":" + revoked.TaskID + ":" + uuid.New().String()
+
+	resubmission := *revoked
+	resubmission.ID = newKey
+	resubmission.Status = SubmitTaskRecord
+	resubmission.RegisteredAt = time.Time{}
+	resubmission.LessonAt = time.Time{}
+	resubmission.LessonID = ""
+	// CreatedAt is intentionally kept from the revoked record to preserve queue position.
+
+	if err := appendToIndex(b, indexKey, newKey); err != nil {
+		return err
+	}
+	return setValue(b, newKey, resubmission)
 }
 
 func (d *DB) ListTaskRecords(userID string, taskID TaskID) ([]TaskRecord, error) {
@@ -297,6 +332,10 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 			if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
 				return err
 			}
+			// Return the student to the pending queue without losing their place.
+			if err := appendPendingResubmission(b, taskRecord); err != nil {
+				return err
+			}
 
 			enrolled.Status = RevokedTaskRecord
 			lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, enrolled)
@@ -342,6 +381,11 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 
 		taskRecord.Status = RevokedTaskRecord
 		if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
+			return err
+		}
+		// Re-create the submission as pending so the student can register to
+		// another lesson without resubmitting and losing their queue position.
+		if err := appendPendingResubmission(b, taskRecord); err != nil {
 			return err
 		}
 

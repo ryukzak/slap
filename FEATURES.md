@@ -54,6 +54,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - The student must have an existing `submit` record for the task they want to register.
    - Only one registration per task per lesson at a time.
    - If the student updates their task after registering, the registration is automatically revoked.
+   - Revoking (manually or automatically) keeps the dropped attempt in the task history and
+     re-creates the submission as a fresh pending record carrying the original submit time, so
+     the student can register for another lesson without resubmitting and without losing their
+     place in the submit-ordered queue.
 4. Teacher can extend the registration deadline beyond the lesson start time using the
    "extend registration" form on the lesson page. This allows late registrations after the
    lesson has already started.
