@@ -67,6 +67,138 @@ func TestRevokeByButtonVisible(t *testing.T) {
 	assert.Equal(t, lessonID, prev[0].LessonID, "LessonID should be preserved on revoked record")
 }
 
+// TestRevokeResubmitsAsPending verifies that revoking leaves the dropped record
+// intact as history and appends a fresh pending record (copied content, original
+// CreatedAt, no lesson) so the student is back in the queue without resubmitting.
+func TestRevokeResubmitsAsPending(t *testing.T) {
+	db, tempDir, _, student, taskID, lessonID := setupLessonFlowDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	addSubmit(t, db, student, taskID, "first attempt")
+	before, err := db.ListTaskRecords(student.ID, taskID)
+	assert.NoError(t, err)
+	assert.Len(t, before, 1)
+	originalID := before[0].ID
+	originalCreatedAt := before[0].CreatedAt
+
+	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
+	assert.NoError(t, db.UnregisterFromLesson(lessonID, taskID, student.ID))
+
+	records, err := db.ListTaskRecords(student.ID, taskID)
+	assert.NoError(t, err)
+	assert.Len(t, records, 2, "revoke should append a new pending record, keeping the dropped one")
+
+	// records are newest-first; locate each by status.
+	var dropped, pending *TaskRecord
+	for i := range records {
+		switch records[i].Status {
+		case RevokedTaskRecord:
+			dropped = &records[i]
+		case SubmitTaskRecord:
+			pending = &records[i]
+		}
+	}
+	assert.NotNil(t, dropped, "the original record stays Dropped")
+	assert.NotNil(t, pending, "a fresh Pending record is created")
+	assert.Equal(t, originalID, dropped.ID, "dropped record is the original, untouched")
+	assert.Equal(t, lessonID, dropped.LessonID, "dropped record keeps its lesson for faithful history")
+
+	assert.NotEqual(t, originalID, pending.ID, "resubmission is a distinct record")
+	assert.Equal(t, "first attempt", pending.Content, "content is carried over")
+	assert.True(t, pending.CreatedAt.Equal(originalCreatedAt), "queue position (CreatedAt) is preserved")
+	assert.Equal(t, LessonID(""), pending.LessonID, "resubmission is not tied to any lesson yet")
+
+	status, err := db.LatestTaskStatus(student.ID, taskID)
+	assert.NoError(t, err)
+	assert.Equal(t, SubmitTaskRecord, status, "latest record is the new pending one")
+}
+
+// TestReRegisterAfterRevokeKeepsQueuePosition verifies a student can register the
+// post-revoke pending record to a different lesson, and that the original submit
+// time follows it so they are not pushed to the back of the new queue.
+func TestReRegisterAfterRevokeKeepsQueuePosition(t *testing.T) {
+	db, tempDir, teacher, student, taskID, lessonAID := setupLessonFlowDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	// Second lesson to re-register into.
+	lessonB := &Lesson{
+		DateTime:    time.Now().Add(48 * time.Hour),
+		TeacherID:   teacher.ID,
+		TeacherName: teacher.Username,
+		Description: "second lesson",
+	}
+	assert.NoError(t, db.AddLesson(lessonB))
+	lessons, err := db.ListLessons()
+	assert.NoError(t, err)
+	var lessonBID LessonID
+	for _, l := range lessons {
+		if l.ID != string(lessonAID) {
+			lessonBID = LessonID(l.ID)
+		}
+	}
+	assert.NotEmpty(t, lessonBID)
+
+	addSubmit(t, db, student, taskID, "first attempt")
+	original, err := db.ListTaskRecords(student.ID, taskID)
+	assert.NoError(t, err)
+	originalCreatedAt := original[0].CreatedAt
+
+	assert.NoError(t, db.RegisterToLesson(lessonAID, taskID, student.ID))
+	assert.NoError(t, db.UnregisterFromLesson(lessonAID, taskID, student.ID))
+
+	// Re-register the pending resubmission to lesson B (no resubmit needed).
+	assert.NoError(t, db.RegisterToLesson(lessonBID, taskID, student.ID))
+
+	lessonB, err = db.GetLesson(lessonBID)
+	assert.NoError(t, err)
+	assert.Len(t, lessonB.EnrolledTasks, 1, "resubmission is queued on lesson B")
+
+	queued, err := db.ListLessonTaskRecords(lessonB)
+	assert.NoError(t, err)
+	assert.Len(t, queued, 1)
+	assert.Equal(t, RegisterTaskRecord, queued[0].Status)
+	assert.True(t, queued[0].CreatedAt.Equal(originalCreatedAt),
+		"submit time is preserved so queue position is not lost on re-registration")
+
+	// Lesson A still shows the drop in its history, no status override required.
+	lessonA, err := db.GetLesson(lessonAID)
+	assert.NoError(t, err)
+	prevA, err := db.ListLessonPreviousTaskRecords(lessonA)
+	assert.NoError(t, err)
+	assert.Len(t, prevA, 1)
+	assert.Equal(t, RevokedTaskRecord, prevA[0].Status)
+}
+
+// TestNewSubmissionCollapsesPending verifies that adding a genuinely new
+// submission drops the previous pending record so only the newest stays pending.
+func TestNewSubmissionCollapsesPending(t *testing.T) {
+	db, tempDir, _, student, taskID, _ := setupLessonFlowDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	addSubmit(t, db, student, taskID, "first attempt")
+	addSubmit(t, db, student, taskID, "second attempt")
+
+	records, err := db.ListTaskRecords(student.ID, taskID)
+	assert.NoError(t, err)
+	assert.Len(t, records, 2)
+
+	var pending, dropped int
+	for _, r := range records {
+		switch r.Status {
+		case SubmitTaskRecord:
+			pending++
+		case RevokedTaskRecord:
+			dropped++
+		}
+	}
+	assert.Equal(t, 1, pending, "only the newest submission stays pending")
+	assert.Equal(t, 1, dropped, "the older pending submission is collapsed to dropped")
+
+	status, err := db.LatestTaskStatus(student.ID, taskID)
+	assert.NoError(t, err)
+	assert.Equal(t, SubmitTaskRecord, status)
+}
+
 func TestResubmitAfterCheckVisible(t *testing.T) {
 	db, tempDir, teacher, student, taskID, lessonID := setupLessonFlowDB(t)
 	defer cleanupTestDB(db, tempDir)

@@ -113,6 +113,12 @@ run_test tests/ui/users-total-effect-column.hurl \
 
 run_test tests/ui/lesson-preview-unauthenticated.hurl
 
+run_test tests/ui/reregistration-after-revoke.hurl \
+    --variable "student_id=${TIMESTAMP}19"
+
+run_test tests/ui/submit-collapses-pending.hurl \
+    --variable "student_id=${TIMESTAMP}20"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
