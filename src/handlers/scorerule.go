@@ -27,24 +27,6 @@ func taskStatusLabel(s storage.TaskRecordStatus) string {
 	}
 }
 
-// latestCheckedTime returns the timestamp at which a task counts as "checked"
-// for score-rule purposes, or nil if it was never checked. See latestCheckedInfo.
-func latestCheckedTime(records []storage.TaskRecord) *time.Time {
-	at, _ := latestCheckedInfo(records)
-	return at
-}
-
-// latestCheckedInfo returns the checked time and a human-readable description of
-// the record state it was derived from (or why no checked time exists). records
-// must be newest-first, as returned by DB.ListTaskRecords.
-//
-// The usual path: a task is accepted by checking a lesson registration, which
-// produces a ReviewedTaskRecord whose CreatedAt is the student's submission
-// time. But a teacher can also score a task that was never registered to a
-// lesson — that leaves the student's submission Dropped plus a Feedback (review)
-// record carrying the score, and no ReviewedTaskRecord at all. In that case we
-// fall back to the newest student submission time: the work was checked, just
-// not through a lesson.
 func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 	if len(records) == 0 {
 		return nil, "not submitted"

@@ -89,7 +89,8 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return latestCheckedTime(records), nil
+			at, _ := latestCheckedInfo(records)
+			return at, nil
 		}
 
 		evaluator := NewEvaluator(AppConfig)
@@ -746,7 +747,8 @@ func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]stor
 		if !ok {
 			return nil, nil
 		}
-		return latestCheckedTime(records), nil
+		at, _ := latestCheckedInfo(records)
+		return at, nil
 	}
 
 	evaluator := NewEvaluator(AppConfig)
