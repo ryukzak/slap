@@ -107,6 +107,24 @@ func NewEvaluator(cfg *config.Config) *Evaluator {
 	return &Evaluator{config: cfg}
 }
 
+// checkedBefore reports whether a task's checked time exists and is before cutoff.
+func checkedBefore(t *time.Time, cutoff time.Time) bool {
+	return t != nil && t.Before(cutoff)
+}
+
+// markPasses sets Pass on each task to pred(checkedTime) and returns the number
+// that passed.
+func markPasses(tasks []TaskCheckDebug, pred func(*time.Time) bool) int {
+	n := 0
+	for i := range tasks {
+		tasks[i].Pass = pred(tasks[i].CheckedAt)
+		if tasks[i].Pass {
+			n++
+		}
+	}
+	return n
+}
+
 // EvaluateForStudent evaluates a rule at a specific point in time.
 //
 // The branch order below is significant and preserved as-is: a rule with both
@@ -137,64 +155,41 @@ func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, now time.Time, get
 		tasks = append(tasks, TaskCheckDebug{TaskID: taskID, CheckedAt: t})
 	}
 
+	c := rule.Condition
 	switch {
-	// Min checked before
-	case rule.Condition.MinCheckedBefore > 0:
+	// Penalty if fewer than N of the tasks are checked before the deadline.
+	case c.MinCheckedBefore > 0:
 		dbg.ConditionKind = "min_checked_before"
-		countBefore := 0
-		for i := range tasks {
-			pass := tasks[i].CheckedAt != nil && tasks[i].CheckedAt.Before(*rule.Condition.CheckedBefore)
-			tasks[i].Pass = pass
-			if pass {
-				countBefore++
-			}
-		}
-		eval.CountBefore = countBefore
-
-		if countBefore < rule.Condition.MinCheckedBefore {
-			eval.IsActive = !now.After(*rule.Condition.CheckedBefore)
+		eval.CountBefore = markPasses(tasks, func(t *time.Time) bool { return checkedBefore(t, *c.CheckedBefore) })
+		if eval.CountBefore < c.MinCheckedBefore {
+			eval.IsActive = !now.After(*c.CheckedBefore)
 			eval.Applies = !eval.IsActive
 		}
 
-	// After
-	case rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore == nil:
+	// Penalty if any task is checked after the deadline (i.e. not all on time).
+	// Equivalent to a min_checked_before of len(tasks) with CheckedAfter as the
+	// deadline.
+	case c.CheckedAfter != nil && c.CheckedBefore == nil:
 		dbg.ConditionKind = "after"
-		allCheckedBefore := true
-		for i := range tasks {
-			onTime := tasks[i].CheckedAt != nil && tasks[i].CheckedAt.Before(*rule.Condition.CheckedAfter)
-			tasks[i].Pass = onTime
-			if !onTime {
-				allCheckedBefore = false
-			}
-		}
-		eval.IsActive = !now.After(*rule.Condition.CheckedAfter)
-		eval.Applies = !eval.IsActive && !allCheckedBefore
+		onTime := markPasses(tasks, func(t *time.Time) bool { return checkedBefore(t, *c.CheckedAfter) })
+		eval.IsActive = !now.After(*c.CheckedAfter)
+		eval.Applies = !eval.IsActive && onTime < len(tasks)
 
-	// Before
-	case rule.Condition.CheckedBefore != nil && rule.Condition.MinCheckedBefore == 0:
+	// Bonus as soon as any task is checked before the deadline. Also handles a
+	// rule with both bounds (no min): the "interval" case below is shadowed.
+	case c.CheckedBefore != nil:
 		dbg.ConditionKind = "before"
-		hasCheckedBefore := false
-		for i := range tasks {
-			pass := tasks[i].CheckedAt != nil && tasks[i].CheckedAt.Before(*rule.Condition.CheckedBefore)
-			tasks[i].Pass = pass
-			if pass {
-				hasCheckedBefore = true
-			}
-		}
-		eval.IsActive = !now.After(*rule.Condition.CheckedBefore)
-		eval.Applies = hasCheckedBefore
+		eval.IsActive = !now.After(*c.CheckedBefore)
+		eval.Applies = markPasses(tasks, func(t *time.Time) bool { return checkedBefore(t, *c.CheckedBefore) }) > 0
 
-	// Interval
-	case rule.Condition.CheckedAfter != nil && rule.Condition.CheckedBefore != nil:
+	// Unreachable today (the "before" case above already matches both bounds).
+	// Kept to document the intended interval rule; firing it needs a routing
+	// decision first.
+	case c.CheckedAfter != nil && c.CheckedBefore != nil:
 		dbg.ConditionKind = "interval"
-		for i := range tasks {
-			t := tasks[i].CheckedAt
-			pass := t != nil && t.After(*rule.Condition.CheckedAfter) && t.Before(*rule.Condition.CheckedBefore)
-			tasks[i].Pass = pass
-			if pass {
-				eval.Applies = true
-			}
-		}
+		eval.Applies = markPasses(tasks, func(t *time.Time) bool {
+			return t != nil && t.After(*c.CheckedAfter) && t.Before(*c.CheckedBefore)
+		}) > 0
 
 	default:
 		dbg.ConditionKind = "none"
