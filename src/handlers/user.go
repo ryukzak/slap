@@ -89,12 +89,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			for _, record := range records {
-				if record.Status == storage.ReviewedTaskRecord {
-					return &record.CreatedAt, nil
-				}
-			}
-			return nil, nil
+			return latestCheckedTime(records), nil
 		}
 
 		evaluator := NewEvaluator(AppConfig)
@@ -751,12 +746,7 @@ func calculateStudentTotalEffectWithRecords(allRecords map[storage.TaskID][]stor
 		if !ok {
 			return nil, nil
 		}
-		for _, record := range records {
-			if record.Status == storage.ReviewedTaskRecord {
-				return &record.CreatedAt, nil
-			}
-		}
-		return nil, nil
+		return latestCheckedTime(records), nil
 	}
 
 	evaluator := NewEvaluator(AppConfig)

@@ -53,16 +53,15 @@ func ScoreRulesDebugHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Same checked-time source as the profile page (src/handlers/user.go): the
-	// CreatedAt of the newest accepted (Checked) record. The state label (and
-	// read) is cached so each task is loaded only once.
+	// Same checked-time source as the profile page (src/handlers/user.go). The
+	// state label (and read) is cached so each task is loaded only once.
 	stateCache := map[storage.TaskID]string{}
 	getCheckedTime := func(taskID storage.TaskID) (*time.Time, error) {
 		records, err := DB.ListTaskRecords(profileUserID, taskID)
 		if err != nil {
 			return nil, err
 		}
-		at, state := debugCheckedInfo(records)
+		at, state := latestCheckedInfo(records)
 		stateCache[taskID] = state
 		return at, nil
 	}
@@ -107,21 +106,6 @@ func ScoreRulesDebugHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// debugCheckedInfo returns the checked time (CreatedAt of the newest accepted
-// record, matching the profile page) plus a label describing the record state
-// it came from, or why none exists. records must be newest-first.
-func debugCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
-	if len(records) == 0 {
-		return nil, "not submitted"
-	}
-	for i := range records {
-		if records[i].Status == storage.ReviewedTaskRecord {
-			return &records[i].CreatedAt, "Checked"
-		}
-	}
-	return nil, "not checked (" + taskStatusLabel(records[0].Status) + ")"
-}
-
 // fmtDebugTime renders a timestamp in the primary timezone, or "<never>" for a
 // task that was never accepted.
 func fmtDebugTime(t *time.Time) string {
@@ -139,7 +123,8 @@ func renderScoreDebugText(resp ScoreRulesDebugResponse) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "score-rule debug for @%s (id %s)\n", resp.Username, resp.UserID)
 	fmt.Fprintf(&b, "now: %s  (timezone: %s)\n", fmtDebugTime(&resp.Now), resp.Timezone)
-	fmt.Fprintf(&b, "checked time = submission time (CreatedAt) of the newest accepted (Checked) record\n")
+	fmt.Fprintf(&b, "checked time = student's submission time of the accepted (Checked) work,\n")
+	fmt.Fprintf(&b, "               or, if scored without a lesson, the latest submission time\n")
 	b.WriteString(strings.Repeat("=", 72) + "\n\n")
 
 	for _, rule := range resp.Rules {

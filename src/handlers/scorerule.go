@@ -6,6 +6,7 @@ import (
 
 	"github.com/ryukzak/slap/src/config"
 	"github.com/ryukzak/slap/src/storage"
+	"github.com/ryukzak/slap/src/util"
 )
 
 // taskStatusLabel maps a stored record status to the label shown in the UI.
@@ -24,6 +25,57 @@ func taskStatusLabel(s storage.TaskRecordStatus) string {
 	default:
 		return string(s)
 	}
+}
+
+// latestCheckedTime returns the timestamp at which a task counts as "checked"
+// for score-rule purposes, or nil if it was never checked. See latestCheckedInfo.
+func latestCheckedTime(records []storage.TaskRecord) *time.Time {
+	at, _ := latestCheckedInfo(records)
+	return at
+}
+
+// latestCheckedInfo returns the checked time and a human-readable description of
+// the record state it was derived from (or why no checked time exists). records
+// must be newest-first, as returned by DB.ListTaskRecords.
+//
+// The usual path: a task is accepted by checking a lesson registration, which
+// produces a ReviewedTaskRecord whose CreatedAt is the student's submission
+// time. But a teacher can also score a task that was never registered to a
+// lesson — that leaves the student's submission Dropped plus a Feedback (review)
+// record carrying the score, and no ReviewedTaskRecord at all. In that case we
+// fall back to the newest student submission time: the work was checked, just
+// not through a lesson.
+func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
+	if len(records) == 0 {
+		return nil, "not submitted"
+	}
+
+	for i := range records {
+		if records[i].Status == storage.ReviewedTaskRecord {
+			return &records[i].CreatedAt, "Checked"
+		}
+	}
+
+	// No accepted record. If a teacher left a scored review, treat the work as
+	// checked at the time of the student's latest submission.
+	scored := false
+	for i := range records {
+		r := records[i]
+		if r.EntryAuthorID != r.StudentID && util.ExtractScore(r.Content) != "" {
+			scored = true
+			break
+		}
+	}
+	if scored {
+		for i := range records {
+			if records[i].EntryAuthorID == records[i].StudentID {
+				return &records[i].CreatedAt, "scored without lesson (submission " + taskStatusLabel(records[i].Status) + ")"
+			}
+		}
+		return nil, "scored, but no student submission found"
+	}
+
+	return nil, "not checked (" + taskStatusLabel(records[0].Status) + ")"
 }
 
 type Evaluation struct {
