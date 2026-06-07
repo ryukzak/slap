@@ -213,4 +213,43 @@
 </section>
 {{ end }}
 {{ end }}
+{{ if and .SessionIsTeacher .IsStudent }}
+<section class="mb-8">
+  <details class="group">
+    <summary class="text-xs text-gray-500 mb-2 flex items-center cursor-pointer list-none">
+      <span>// teacher notes ({{ len .Notes }})</span>
+      <span class="flex-1 mx-2 border-b border-dashed border-gray-700"></span>
+      <span class="group-open:hidden">[+]</span>
+      <span class="hidden group-open:inline">[-]</span>
+    </summary>
+    <div class="mt-2">
+      {{ range .Notes }}
+      <div class="text-xs p-3 border border-gray-800 rounded mb-1 max-w-2xl">
+        <div class="text-gray-500 mb-1">
+          @{{.AuthorName}} · {{ formatDateTime .CreatedAt }}
+        </div>
+        <div class="markdown">
+          {{ markdown .Content }}
+        </div>
+      </div>
+      {{ end }}
+      <form class="space-y-2 max-w-2xl mt-2"
+            action="/user/{{.ID}}/note"
+            method="post">
+        <textarea class="bg-gray-800 border border-gray-700 text-gray-300 text-xs w-full p-2 rounded"
+                  name="note"
+                  rows="2"
+                  required
+                  placeholder="Add a note about this student (visible to teachers only)"></textarea>
+        <div>
+          <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded"
+                  type="submit">
+            [add note]
+          </button>
+        </div>
+      </form>
+    </div>
+  </details>
+</section>
+{{ end }}
 {{ end }}

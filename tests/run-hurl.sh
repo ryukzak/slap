@@ -119,6 +119,10 @@ run_test tests/ui/reregistration-after-revoke.hurl \
 run_test tests/ui/submit-collapses-pending.hurl \
     --variable "student_id=${TIMESTAMP}20"
 
+run_test tests/ui/teacher-note.hurl \
+    --variable "student_id=${TIMESTAMP}21" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
