@@ -85,6 +85,17 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Compact status summary (e.g. `p:2 q:1 c:1`).
 5. Teacher can download the table as CSV via `[download csv]`.
 
+# Use Case: teacher notes for a student
+
+1. On a student's profile page (`/user/{id}`), a teacher sees a "teacher notes" section
+   listing every note about the student, each with its author and timestamp, plus a form
+   to add a new note.
+2. Notes are append-only and shared: any teacher can add a note, and all teachers see the
+   full list.
+3. The notes are visible to teachers only: a student never sees them on their own profile.
+4. On a lesson page, each of the student's registered task records shows only the latest
+   note's text (without author) and the total note count, visible to teachers only.
+
 # Use Case: lesson preview for unauthenticated users
 
 1. An unauthenticated user opens a lesson page link (e.g. shared via Telegram).

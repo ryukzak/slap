@@ -149,6 +149,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		ScoreRules:               rulesWithStatus,
 		TotalEffect:              totalEffect,
 		TaskTitles:               taskTitles,
+		Notes:                    dbUser.Notes,
 	}
 
 	// Load lessons for all users
@@ -169,6 +170,50 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	renderPage(w, "templates/user.html", user)
+}
+
+// AddUserNoteHandler appends a teacher's note about a user. Teacher-only;
+// any teacher may add a note, and notes are shared between teachers.
+func AddUserNoteHandler(w http.ResponseWriter, r *http.Request) {
+	sessionUser := teacherSession(w, r)
+	if sessionUser == nil {
+		return
+	}
+
+	profileUserID := mux.Vars(r)["userID"]
+	if profileUserID == "" {
+		http.Error(w, "User ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := DB.GetUser(profileUserID); err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+	content := strings.TrimSpace(r.FormValue("note"))
+	if content == "" {
+		http.Error(w, "Note cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	note := storage.UserNote{
+		Content:    content,
+		AuthorID:   sessionUser.ID,
+		AuthorName: sessionUser.Username,
+	}
+	if err := DB.AddUserNote(profileUserID, note); err != nil {
+		log.Printf("action=add_user_note teacher=%s user=%s error=%v", sessionUser.ID, profileUserID, err)
+		http.Error(w, "Failed to add note", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("action=add_user_note teacher=%s user=%s", sessionUser.ID, profileUserID)
+	http.Redirect(w, r, "/user/"+profileUserID, http.StatusSeeOther)
 }
 
 type ScoreStats struct {

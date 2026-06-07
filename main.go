@@ -226,6 +226,7 @@ func main() {
 	r.HandleFunc("/user/{userID}", handlers.UserInfoHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/task/{taskID}", handlers.TaskDetailHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/task/{taskID}/journal", handlers.AddTaskRecordHandler).Methods("POST")
+	r.HandleFunc("/user/{userID}/note", handlers.AddUserNoteHandler).Methods("POST")
 	r.HandleFunc("/user/{userID}/settings", handlers.SettingsHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}/settings/password", handlers.SettingsPasswordHandler).Methods("POST")
 	r.HandleFunc("/user/{userID}/settings/username", handlers.SettingsUsernameHandler).Methods("POST")

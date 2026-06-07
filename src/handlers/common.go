@@ -34,6 +34,7 @@ type User struct {
 	ScoreRules               []ScoreRuleWithStatus
 	TotalEffect              int
 	TaskTitles               map[storage.TaskID]string
+	Notes                    []storage.UserNote
 }
 
 var JwtAuth *auth.JWTConfig
