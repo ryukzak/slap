@@ -113,11 +113,16 @@
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2 flex justify-between items-center">
     <span>// score rules</span>
-    {{ if ne .TotalEffect 0 }}
-  <span class="text-xs {{ if gt .TotalEffect 0 }}text-green-400{{ else }}text-red-400{{ end }}">
-    total effect: {{ if gt .TotalEffect 0 }}+{{ end }}{{ .TotalEffect }} point(s)
+    <span class="flex items-center space-x-3">
+      {{ if ne .TotalEffect 0 }}
+    <span class="text-xs {{ if gt .TotalEffect 0 }}text-green-400{{ else }}text-red-400{{ end }}">
+      total effect: {{ if gt .TotalEffect 0 }}+{{ end }}{{ .TotalEffect }} point(s)
+    </span>
+    {{ end }}
+    <a class="text-blue-400 hover:text-blue-300 text-xs"
+       href="/user/{{ .ID }}/score-debug?format=text"
+       target="_blank">[debug]</a>
   </span>
-  {{ end }}
 </div>
 <div class="bg-gray-800 rounded border border-gray-700 overflow-x-auto">
   <table class="w-full text-xs">
