@@ -48,12 +48,13 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 
 # Use Case: teacher prepares queue for the lesson
 
-1. Teacher schedules a lesson with a date and time.
+1. Teacher schedules a lesson with a date, time, and student capacity limit.
 2. Teacher adds a short description of the lesson to set student expectations.
 3. Student registers for the lesson before it starts — registration is blocked once the lesson begins.
    - The student must have an existing `submit` record for the task they want to register.
    - Only one registration per task per lesson at a time.
    - If the student updates their task after registering, the registration is automatically revoked.
+   - Students can still register after the capacity limit is exceeded; they remain below the cutoff and can move up if someone above withdraws.
 4. Teacher can extend the registration deadline beyond the lesson start time using the
    "extend registration" form on the lesson page. This allows late registrations after the
    lesson has already started.

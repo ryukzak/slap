@@ -35,6 +35,7 @@ location: true
 date: 2099-12-31
 time: 14:00
 description: Queue visibility test lesson
+capacity: 1
 
 HTTP 200
 [Captures]
@@ -109,6 +110,7 @@ HTTP 200
 body contains "@AliceQueue"
 body contains "@BobQueue"
 body contains "Queued"
+body contains "capacity cutoff"
 # Student A sees own submission content
 body contains "Alice secret submission content"
 # Student A does NOT see student B's submission content
