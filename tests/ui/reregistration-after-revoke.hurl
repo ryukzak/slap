@@ -98,7 +98,10 @@ taskID: {{task_id}}
 
 HTTP 303
 
-# Scenario 1: task page keeps the Dropped record and shows a fresh Pending one
+# Scenario 1: task page keeps the Dropped record and shows a fresh Pending one.
+# The pending resubmission must be treated as the latest record, so the lesson
+# registration list is shown right away (the student keeps their queue position
+# and can re-register without submitting again).
 GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
 Cookie: user_data={{student_token}}
 
@@ -106,6 +109,18 @@ HTTP 200
 [Asserts]
 body contains "Pending"
 body contains "Dropped"
+body contains "/api/lessons?register=1"
+
+# The lesson list the task page loads (via htmx) must offer lessons to
+# register to, right after the revoke.
+GET {{base_url}}/api/lessons?register=1&task_id={{task_id}}&student_id={{student_id}}
+Cookie: user_data={{student_token}}
+
+HTTP 200
+[Asserts]
+body contains "Lesson B resubmit test"
+body contains "[register]"
+body contains "/api/lesson/{{lesson_b_id}}/register"
 
 # Scenario 2: teacher's lesson A page shows Dropped in history
 GET {{base_url}}/lesson/{{lesson_a_id}}?showRevoked=true
