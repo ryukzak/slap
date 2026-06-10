@@ -42,10 +42,13 @@ func (r *TaskRecord) RenderAt() string {
 	return r.CreatedAt.Format("2006-01-02 15:04:05")
 }
 
-// Both sorts are stable: a revoke leaves the dropped record in place and
-// appends a fresh pending record that carries the original CreatedAt (so the
-// student keeps their queue position). That makes ties on CreatedAt normal, and
-// a stable sort keeps such ties in index (append) order instead of flickering.
+// Both sorts are stable and expect records in index (append) order: a revoke
+// leaves the dropped record in place and appends a fresh pending record that
+// carries the original CreatedAt (so the student keeps their queue position).
+// That makes ties on CreatedAt normal; on a tie the later-appended record is
+// the newer one, so oldest-first keeps append order while newest-first must
+// reverse it — otherwise the dropped record would shadow the pending
+// resubmission as the latest record.
 func SortTaskRecordsOldestFirst(records []*TaskRecord) {
 	sort.SliceStable(records, func(i, j int) bool {
 		return records[i].CreatedAt.Before(records[j].CreatedAt)
@@ -53,6 +56,9 @@ func SortTaskRecordsOldestFirst(records []*TaskRecord) {
 }
 
 func SortTaskRecordsNewestFirst(records []TaskRecord) {
+	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
+		records[i], records[j] = records[j], records[i]
+	}
 	sort.SliceStable(records, func(i, j int) bool {
 		return records[i].CreatedAt.After(records[j].CreatedAt)
 	})

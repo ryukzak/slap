@@ -87,6 +87,8 @@ func TestRevokeResubmitsAsPending(t *testing.T) {
 	records, err := db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
 	assert.Len(t, records, 2, "revoke should append a new pending record, keeping the dropped one")
+	assert.Equal(t, SubmitTaskRecord, records[0].Status,
+		"the pending resubmission must sort as the newest record despite sharing CreatedAt with the dropped one")
 
 	// records are newest-first; locate each by status.
 	var dropped, pending *TaskRecord
