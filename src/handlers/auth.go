@@ -144,9 +144,9 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 		UserGroup:    "student",
 	}
 
-	if err := DB.SaveUser(userData); err != nil {
-		renderAuthPageWithError(w, "Error creating user")
-		log.Printf("Error saving user: %v", err)
+	if err := DB.CreateUser(userData); err != nil {
+		renderAuthPageWithError(w, "User already exists")
+		log.Printf("Error creating user: %v", err)
 		return
 	}
 
