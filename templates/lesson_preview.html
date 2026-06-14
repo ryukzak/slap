@@ -37,6 +37,16 @@
         {{ .Lesson.RegisteredCount }}
       </div>
       <div class="text-gray-400">
+        Capacity:
+      </div>
+      <div>
+        {{ if gt .Lesson.Capacity 0 }}
+        {{ .Lesson.Capacity }}
+      {{ else }}
+        unlimited
+        {{ end }}
+      </div>
+      <div class="text-gray-400">
         Registration:
       </div>
       <div>

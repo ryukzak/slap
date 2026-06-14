@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ func CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 	dateStr := r.FormValue("date")
 	timeStr := r.FormValue("time")
 	description := r.FormValue("description")
+	capacityStr := strings.TrimSpace(r.FormValue("capacity"))
 	if dateStr == "" || timeStr == "" || description == "" {
 		http.Error(w, "Date, time and description are required", http.StatusBadRequest)
 		return
@@ -40,11 +42,21 @@ func CreateLessonHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	capacity := 0
+	if capacityStr != "" {
+		capacity, err = strconv.Atoi(capacityStr)
+		if err != nil || capacity <= 0 {
+			http.Error(w, "Capacity must be a positive number", http.StatusBadRequest)
+			return
+		}
+	}
+
 	lesson := &storage.Lesson{
 		TeacherID:   userClaim.ID,
 		DateTime:    datetime,
 		TeacherName: userClaim.Username,
 		Description: description,
+		Capacity:    capacity,
 	}
 
 	err = DB.AddLesson(lesson)
@@ -80,6 +92,14 @@ type lessonRecordsData struct {
 	SessionIsTeacher bool
 	SessionUserID    string
 	SortMode         SortMode
+	Capacity         int
+	ShowCutoff       bool
+}
+
+func shouldShowCapacityCutoff(lesson *storage.Lesson, records []TaskRecordWithInfo, showRevoked bool) bool {
+	return lesson.Capacity > 0 &&
+		!showRevoked &&
+		len(records) > lesson.Capacity
 }
 
 func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortMode) ([]TaskRecordWithInfo, int, error) {
@@ -267,6 +287,8 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		DefaultDateTime  time.Time
 		TZName           string
 		SortMode         SortMode
+		Capacity         int
+		ShowCutoff       bool
 	}{
 		Lesson:           lesson,
 		TeacherID:        lesson.TeacherID,
@@ -278,6 +300,8 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		DefaultDateTime:  time.Now().In(PrimaryLoc).Add(15 * time.Minute),
 		TZName:           PrimaryTZName,
 		SortMode:         sortMode,
+		Capacity:         lesson.Capacity,
+		ShowCutoff:       shouldShowCapacityCutoff(lesson, visibleTaskRecords, showRevoked),
 	})
 }
 
@@ -312,6 +336,8 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 		SessionIsTeacher: user.IsTeacher,
 		SessionUserID:    user.ID,
 		SortMode:         sortMode,
+		Capacity:         lesson.Capacity,
+		ShowCutoff:       shouldShowCapacityCutoff(lesson, visibleTaskRecords, showRevoked),
 	}
 
 	t, err := BaseTemplates.Clone()

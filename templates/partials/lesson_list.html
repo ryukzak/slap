@@ -15,7 +15,7 @@
         <span class="text-gray-400 truncate min-w-0">{{getTitle .Description}}</span>
       </div>
       <div class="flex items-center space-x-2 flex-shrink-0">
-        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}{{ if gt .Capacity 0 }}/{{.Capacity}}{{ end }}]</span>
         {{ if not .IsRegistrationOpen }}
         <span class="text-gray-500 text-xs">[closed]</span>
         {{ else if $.WaitingMessage }}
@@ -42,7 +42,7 @@
         {{ if not .IsRegistrationOpen }}
         <span class="text-orange-400 text-xs">[closed]</span>
         {{ end }}
-        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}]</span>
+        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}{{ if gt .Capacity 0 }}/{{.Capacity}}{{ end }}]</span>
       </div>
     </a>
     {{end}}

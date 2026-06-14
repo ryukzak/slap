@@ -26,7 +26,7 @@
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>// lessons</span>
     <span class="flex items-center space-x-2">
-      <span class="text-gray-600">[reviewed/registered]</span>
+      <span class="text-gray-600">[reviewed/registered/capacity]</span>
       {{ if .ShowPastLessons }}
       <a class="text-blue-400 hover:text-blue-300" href="?">[ hide past]</a>
     {{ else }}
@@ -49,7 +49,7 @@
                 rows="3"
                 placeholder="Enter lesson description using Markdown">{{.DefaultLessonDescription}}</textarea>
     </div>
-    <div class="flex items-center space-x-2">
+    <div class="flex flex-wrap items-center gap-2">
       <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
              type="date"
              id="lesson-date"
@@ -63,6 +63,12 @@
              value="{{.DefaultDateTime.Format "15:04"}}"
              step="60" />
       <span class="text-xs text-gray-400">{{.TZName}}</span>
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8 w-24"
+             type="number"
+             id="lesson-capacity"
+             name="capacity"
+             min="1"
+             placeholder="limit" />
       <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-2 rounded h-8"
               type="submit">
         [add]

@@ -22,6 +22,7 @@ type Lesson struct {
 	TeacherName          string     `json:"teacher_name"`
 	Description          string     `json:"description"`
 	RegistrationDeadline *time.Time `json:"registration_deadline,omitempty"`
+	Capacity             int        `json:"capacity,omitempty"`
 }
 
 // IsRegistrationOpen returns true if students can still register.
