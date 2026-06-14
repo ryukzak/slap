@@ -34,6 +34,16 @@
       </div>
     </summary>
     <div class="px-4 pb-4 pt-2">
+      {{ if and $.SessionIsTeacher $record.LastNote }}
+      <div class="mb-2 p-3 bg-gray-900 rounded border border-gray-700">
+        <div class="text-xs text-gray-500 mb-1">
+          // teacher note ({{ $record.NoteCount }})
+        </div>
+        <div class="text-xs markdown">
+          {{ markdown $record.LastNote }}
+        </div>
+      </div>
+      {{ end }}
       {{ if and $.SessionIsTeacher $record.JournalRecords }}
       <details class="mb-2 border border-gray-700 rounded">
         <summary class="cursor-pointer list-none px-3 py-1 text-xs text-gray-500 hover:bg-gray-800 rounded">

@@ -10,6 +10,15 @@ import (
 
 type UserID = string
 
+// UserNote is a single teacher note about a user. Notes are append-only and
+// shared between teachers.
+type UserNote struct {
+	Content    string    `json:"content"`
+	AuthorID   UserID    `json:"author_id"`
+	AuthorName string    `json:"author_name"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 type UserData struct {
 	ID            UserID `json:"id"`
 	PasswordHash  []byte
@@ -20,6 +29,7 @@ type UserData struct {
 	IsTeacher     bool                    `json:"is_teacher"`
 	LessonIDs     []LessonID              `json:"lesson_ids"`
 	Journals      map[TaskID][]TaskRecord `json:"journals"`
+	Notes         []UserNote              `json:"notes,omitempty"`
 	ResetToken    string                  `json:"reset_token,omitempty"`
 	ResetTokenExp time.Time               `json:"reset_token_exp,omitempty"`
 }
@@ -189,6 +199,22 @@ func (d *DB) UpdateUsername(userID, username string) error {
 			return err
 		}
 		user.Username = username
+		return setValue(b, userID, *user)
+	})
+}
+
+// AddUserNote appends a teacher note to a user's note list.
+func (d *DB) AddUserNote(userID string, note UserNote) error {
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		user, err := getValue[UserData](b, userID)
+		if err != nil {
+			return err
+		}
+		if note.CreatedAt.IsZero() {
+			note.CreatedAt = time.Now()
+		}
+		user.Notes = append(user.Notes, note)
 		return setValue(b, userID, *user)
 	})
 }

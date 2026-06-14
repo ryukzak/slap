@@ -13,20 +13,26 @@ const DefaultWaitingPeriod = 24 * time.Hour
 
 // Config represents the application configuration
 type Config struct {
-	Tasks                    []Task   `yaml:"tasks"`
-	TeacherIDs               []string `yaml:"teacher_ids"`
-	TitleMaxLen              int      `yaml:"title_max_len"`
-	DefaultLessonDescription string   `yaml:"default_lesson_description"`
+	Tasks                    []Task      `yaml:"tasks"`
+	TeacherIDs               []string    `yaml:"teacher_ids"`
+	TitleMaxLen              int         `yaml:"title_max_len"`
+	DefaultLessonDescription string      `yaml:"default_lesson_description"`
+	ScoreRules               []ScoreRule `yaml:"score_rules"`
 }
 
-// IsTeacher checks if the given user ID is in the teacher list
-func (c *Config) IsTeacher(userID string) bool {
-	for _, id := range c.TeacherIDs {
-		if id == userID {
-			return true
-		}
-	}
-	return false
+// ScoreRule defines a rule that adds effect to student's total score
+type ScoreRule struct {
+	Name      string           `yaml:"name"`
+	TaskIDs   []storage.TaskID `yaml:"task_ids"`
+	Condition Condition        `yaml:"condition"`
+	Effect    int              `yaml:"effect"`
+}
+
+// Condition defines when the rule applies
+type Condition struct {
+	CheckedAfter     *time.Time `yaml:"checked_after,omitempty"`
+	CheckedBefore    *time.Time `yaml:"checked_before,omitempty"`
+	MinCheckedBefore int        `yaml:"min_checked_before,omitempty"`
 }
 
 // Task represents a task in the system
@@ -35,6 +41,15 @@ type Task struct {
 	Title         string         `yaml:"title"`
 	Description   string         `yaml:"description"`
 	WaitingPeriod *time.Duration `yaml:"waiting_period,omitempty"`
+}
+
+func (c *Config) IsTeacher(userID string) bool {
+	for _, id := range c.TeacherIDs {
+		if id == userID {
+			return true
+		}
+	}
+	return false
 }
 
 // GetWaitingPeriod returns the task's waiting period, defaulting to 24h.
@@ -78,7 +93,97 @@ func LoadConfig(filePath string) (*Config, error) {
 		}
 	}
 
+	// Check all tasks are exist
+	taskExists := make(map[storage.TaskID]bool)
+	for _, task := range config.Tasks {
+		taskExists[task.ID] = true
+	}
+
+	// Validate score rules
+	for i, rule := range config.ScoreRules {
+		if rule.Name == "" {
+			return nil, fmt.Errorf("score rule at index %d has an empty name", i)
+		}
+		if len(rule.TaskIDs) == 0 {
+			return nil, fmt.Errorf("score rule %s has no task_ids", rule.Name)
+		}
+
+		hasMin := rule.Condition.MinCheckedBefore > 0
+		hasAfter := rule.Condition.CheckedAfter != nil
+		hasBefore := rule.Condition.CheckedBefore != nil
+
+		// Count conditions
+		condCount := 0
+		if hasMin {
+			condCount++
+		}
+		if hasAfter {
+			condCount++
+		}
+		if hasBefore {
+			condCount++
+		}
+
+		// No conditions
+		if condCount == 0 {
+			return nil, fmt.Errorf("score rule %s: at least one condition is required", rule.Name)
+		}
+
+		// More than 2 conditions
+		if condCount > 2 {
+			return nil, fmt.Errorf("score rule %s: too many conditions (max 2)", rule.Name)
+		}
+
+		// Determine allowed combinations
+		switch condCount {
+		case 1:
+			// allowed single conditions: after, before, min+before (min requires before)
+			allowed := (hasAfter && !hasBefore && !hasMin) ||
+				(hasBefore && !hasAfter && !hasMin) ||
+				(hasMin && hasBefore && !hasAfter)
+			if !allowed {
+				return nil, fmt.Errorf("score rule %s: invalid single condition (allowed: after, before, min+before)", rule.Name)
+			}
+		case 2:
+			// allowed two-condition combinations: after+before, min+before
+			allowed := (hasAfter && hasBefore && !hasMin) ||
+				(hasMin && hasBefore && !hasAfter)
+			if !allowed {
+				return nil, fmt.Errorf("score rule %s: invalid two-condition combination (allowed: after+before, min+before)", rule.Name)
+			}
+		}
+
+		// Interval validity
+		if hasAfter && hasBefore {
+			if rule.Condition.CheckedAfter.After(*rule.Condition.CheckedBefore) {
+				return nil, fmt.Errorf("score rule %s: checked_after must be before checked_before", rule.Name)
+			}
+		}
+
+		// Validate effect non-zero
+		if rule.Effect == 0 {
+			return nil, fmt.Errorf("score rule %s: effect cannot be zero", rule.Name)
+		}
+
+		// Validate all task IDs exist
+		for _, taskID := range rule.TaskIDs {
+			if !taskExists[taskID] {
+				return nil, fmt.Errorf("score rule %s references non-existent task: %s", rule.Name, taskID)
+			}
+		}
+	}
+
 	return &config, nil
+}
+
+// GetTask returns task by ID
+func (c *Config) GetTask(taskID storage.TaskID) *Task {
+	for i := range c.Tasks {
+		if c.Tasks[i].ID == taskID {
+			return &c.Tasks[i]
+		}
+	}
+	return nil
 }
 
 // DefaultConfig returns a default configuration for development purposes
@@ -101,14 +206,6 @@ func DefaultConfig() *Config {
 				Description: "Implement a custom data structure solving a real-world problem.",
 			},
 		},
+		ScoreRules: []ScoreRule{},
 	}
-}
-
-func (c *Config) GetTask(taskID storage.TaskID) *Task {
-	for _, t := range c.Tasks {
-		if t.ID == taskID {
-			return &t
-		}
-	}
-	return nil
 }

@@ -35,7 +35,7 @@ echo "Server started (PID $SERVER_PID) on port $PORT"
 
 # Wait for server to be ready
 echo "Waiting for server..."
-for i in $(seq 1 20); do
+for _ in $(seq 1 20); do
     curl -sf "$BASE_URL/" > /dev/null 2>&1 && break
     sleep 0.5
 done
@@ -85,6 +85,9 @@ run_test tests/reset-request-flow.hurl \
     --variable "student_id=${TIMESTAMP}14" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/score-rules.hurl \
+    --variable "student_id=${TIMESTAMP}16"
+
 run_test tests/ui/user-list-student-row.hurl \
     --variable "student_id=${TIMESTAMP}10"
 
@@ -100,7 +103,29 @@ run_test tests/ui/task-markdown-rendering.hurl \
 run_test tests/ui/lesson-student-queue-visibility.hurl \
     --variable "student_id=${TIMESTAMP}15"
 
+run_test tests/ui/score-rules-student-visibility.hurl \
+    --variable "student_id=${TIMESTAMP}17" \
+    --variable "teacher_id=${TEACHER_ID}"
+
+run_test tests/ui/users-total-effect-column.hurl \
+    --variable "student_id=${TIMESTAMP}18" \
+    --variable "teacher_id=${TEACHER_ID}"
+
 run_test tests/ui/lesson-preview-unauthenticated.hurl
+
+run_test tests/ui/reregistration-after-revoke.hurl \
+    --variable "student_id=${TIMESTAMP}19"
+
+run_test tests/ui/submit-collapses-pending.hurl \
+    --variable "student_id=${TIMESTAMP}20"
+
+run_test tests/ui/teacher-note.hurl \
+    --variable "student_id=${TIMESTAMP}21" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/score-rules-debug.hurl \
+    --variable "student_id=${TIMESTAMP}22" \
+    --variable "teacher_id=$TEACHER_ID"
 
 # Stop server
 kill "$SERVER_PID" 2>/dev/null

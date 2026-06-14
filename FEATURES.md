@@ -55,6 +55,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Only one registration per task per lesson at a time.
    - If the student updates their task after registering, the registration is automatically revoked.
    - Students can still register after the capacity limit is exceeded; they remain below the cutoff and can move up if someone above withdraws.
+   - Revoking (manually or automatically) keeps the dropped attempt in the task history and
+     re-creates the submission as a fresh pending record carrying the original submit time, so
+     the student can register for another lesson without resubmitting and without losing their
+     place in the submit-ordered queue.
 4. Teacher can extend the registration deadline beyond the lesson start time using the
    "extend registration" form on the lesson page. This allows late registrations after the
    lesson has already started.
@@ -81,6 +85,17 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Score (if the teacher started a review with a number) and status badge.
    - Compact status summary (e.g. `p:2 q:1 c:1`).
 5. Teacher can download the table as CSV via `[download csv]`.
+
+# Use Case: teacher notes for a student
+
+1. On a student's profile page (`/user/{id}`), a teacher sees a "teacher notes" section
+   listing every note about the student, each with its author and timestamp, plus a form
+   to add a new note.
+2. Notes are append-only and shared: any teacher can add a note, and all teachers see the
+   full list.
+3. The notes are visible to teachers only: a student never sees them on their own profile.
+4. On a lesson page, each of the student's registered task records shows only the latest
+   note's text (without author) and the total note count, visible to teachers only.
 
 # Use Case: lesson preview for unauthenticated users
 
