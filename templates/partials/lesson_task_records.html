@@ -14,6 +14,7 @@
              data-record-id="{{$record.StudentID}}:{{$record.TaskID}}">
       <summary class="cursor-pointer list-none flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-2 rounded hover:bg-gray-800">
         <div class="flex items-center space-x-3 min-w-0">
+          <span class="text-xs text-gray-400 flex-shrink-0 w-6 text-right">#{{ add $index 1 }}</span>
           {{ if eq $record.Status "register" }}
           <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 flex-shrink-0">
             Queued

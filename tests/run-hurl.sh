@@ -100,6 +100,9 @@ run_test tests/ui/dashboard-role-sections.hurl \
 run_test tests/ui/task-markdown-rendering.hurl \
     --variable "student_id=${TIMESTAMP}13"
 
+run_test tests/ui/task-queue-position.hurl \
+    --variable "student_id=${TIMESTAMP}23"
+
 run_test tests/ui/lesson-student-queue-visibility.hurl \
     --variable "student_id=${TIMESTAMP}15"
 

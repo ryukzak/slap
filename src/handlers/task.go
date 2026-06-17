@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,6 +57,8 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		JournalSummary   string
 		IsTeacher        bool
 		RegisteredLesson *storage.Lesson
+		QueuePosition    int
+		QueueTotal       int
 	}
 
 	model := TaskViewModel{
@@ -84,6 +87,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error fetching registered lesson %s: %v", rawRecords[0].LessonID, err)
 			} else {
 				model.RegisteredLesson = lesson
+				model.QueuePosition, model.QueueTotal = queuePosition(lesson, userIDFromURL, taskID)
 			}
 		}
 	}
@@ -193,4 +197,28 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/user/"+userIDFromURL+"/task/"+taskID, http.StatusSeeOther)
+}
+
+func queuePosition(lesson *storage.Lesson, studentID storage.UserID, taskID storage.TaskID) (int, int) {
+	records, err := DB.ListLessonTaskRecords(lesson)
+	if err != nil {
+		log.Printf("Error listing lesson task records for queue position: %v", err)
+		return 0, 0
+	}
+	queue := make([]*storage.TaskRecord, 0, len(records))
+	for _, rec := range records {
+		if rec.Status == storage.RevokedTaskRecord {
+			continue
+		}
+		queue = append(queue, rec)
+	}
+	sort.SliceStable(queue, func(i, j int) bool {
+		return queue[i].CreatedAt.Before(queue[j].CreatedAt)
+	})
+	for i, rec := range queue {
+		if rec.StudentID == studentID && rec.TaskID == taskID {
+			return i + 1, len(queue)
+		}
+	}
+	return 0, len(queue)
 }

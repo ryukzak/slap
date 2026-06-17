@@ -63,6 +63,9 @@ test-hurl:
 		--variable student_id=student_$$(date +%s)13 \
 		tests/ui/task-markdown-rendering.hurl
 	hurl --test $(HURL_VARS) \
+		--variable student_id=student_$$(date +%s)23 \
+		tests/ui/task-queue-position.hurl
+	hurl --test $(HURL_VARS) \
 		--variable student_id=student_$$(date +%s)15 \
 		tests/ui/lesson-student-queue-visibility.hurl
 	hurl --test $(HURL_VARS) \

@@ -244,6 +244,12 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 	return visible, totalRecords, nil
 }
 
+type QueueEntry struct {
+	TaskTitle string
+	Position  int
+	Total     int
+}
+
 func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	lessonID := vars["lessonID"]
@@ -276,6 +282,19 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var queue []QueueEntry
+	if !user.IsTeacher {
+		for i, rec := range visibleTaskRecords {
+			if rec.StudentID == user.ID && rec.Status == storage.RegisterTaskRecord {
+				queue = append(queue, QueueEntry{
+					TaskTitle: rec.TaskTitle,
+					Position:  i + 1,
+					Total:     len(visibleTaskRecords),
+				})
+			}
+		}
+	}
+
 	renderPage(w, "templates/lesson.html", struct {
 		Lesson           *storage.Lesson
 		TeacherID        string
@@ -289,6 +308,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SortMode         SortMode
 		Capacity         int
 		ShowCutoff       bool
+		Queue            []QueueEntry
 	}{
 		Lesson:           lesson,
 		TeacherID:        lesson.TeacherID,
@@ -302,6 +322,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SortMode:         sortMode,
 		Capacity:         lesson.Capacity,
 		ShowCutoff:       shouldShowCapacityCutoff(lesson, visibleTaskRecords, showRevoked),
+		Queue:            queue,
 	})
 }
 

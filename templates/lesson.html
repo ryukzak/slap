@@ -140,6 +140,11 @@
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>
       // registered tasks ({{ len .TaskRecords }})
+      {{ if .Queue }}
+      <span class="text-gray-400 ml-2">you are
+        {{ range $i, $q := .Queue }}{{ if $i }}, {{ end }}#{{ $q.Position }} ({{ $q.TaskTitle }}){{ end }}
+      in queue</span>
+      {{ end }}
       {{ if .SessionIsTeacher }}
       <button class="text-red-400 hover:text-red-300 text-xs ml-2"
               type="button"
