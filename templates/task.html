@@ -57,7 +57,7 @@
       <div class="text-xs flex items-center justify-between mb-1">
         <div class="flex items-center space-x-2">
           <span class="text-gray-600">#{{ sub $total $i }}</span>
-          <span class="{{ if ne $record.EntryAuthorID $record.StudentID }}text-green-400{{ else }}text-blue-400{{ end }}">@{{$record.EntryAuthorName}}</span>
+          <span class="{{ if ne $record.EntryAuthorID $record.StudentID }}journal-author-teacher{{ else }}journal-author-student{{ end }}">@{{$record.EntryAuthorName}}</span>
           <span class="text-gray-500">{{ formatDateTime $record.CreatedAt }}</span>
         </div>
         {{ if eq $record.Status "submit" }}
@@ -111,7 +111,7 @@
         <a class="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 min-w-0"
            href="/lesson/{{$.RegisteredLesson.ID}}">
           <span class="flex-shrink-0">{{ formatDateTime $.RegisteredLesson.DateTime}}</span>
-          <span class="text-gray-500 flex-shrink-0">@{{$.RegisteredLesson.TeacherName}}</span>
+          <span class="lesson-teacher-name flex-shrink-0">@{{$.RegisteredLesson.TeacherName}}</span>
           <span class="text-gray-400 truncate">{{getTitle $.RegisteredLesson.Description}}</span>
           <span class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}{{ if gt $.RegisteredLesson.Capacity 0 }}/{{$.RegisteredLesson.Capacity}}{{ end }}]</span>
         </a>

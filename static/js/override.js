@@ -15,11 +15,39 @@ function toggleAccordion(header) {
   }
 }
 
+function normalizeTheme(theme) {
+  return theme === "light" ? "light" : "dark";
+}
+
+function currentTheme() {
+  return normalizeTheme(document.documentElement.getAttribute("data-theme"));
+}
+
+function storeTheme(theme) {
+  try {
+    localStorage.setItem("slap-theme", theme);
+  } catch (e) {}
+}
+
+function setTheme(theme) {
+  theme = normalizeTheme(theme);
+  document.documentElement.setAttribute("data-theme", theme);
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  storeTheme(theme);
+  document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
+    btn.textContent = theme === "dark" ? "[light]" : "[dark]";
+  });
+}
+
 document.addEventListener("click", function (e) {
   var btn = e.target.closest("[data-action]");
   if (!btn) return;
 
   var action = btn.getAttribute("data-action");
+
+  if (action === "toggle-theme") {
+    setTheme(currentTheme() === "dark" ? "light" : "dark");
+  }
 
   if (action === "delete-lesson") {
     if (!confirm("Delete this lesson?")) return;
@@ -43,6 +71,8 @@ document.addEventListener("click", function (e) {
 
 // Initialize all accordions when the DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
+  setTheme(currentTheme());
+
   const accordionHeaders = document.querySelectorAll(".accordion-header");
 
   accordionHeaders.forEach((header) => {

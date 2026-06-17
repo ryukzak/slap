@@ -30,7 +30,7 @@
         Teacher:
       </div>
       <div>
-        @{{.Lesson.TeacherName}}
+        <span class="lesson-teacher-name">@{{.Lesson.TeacherName}}</span>
       </div>
       <div class="text-gray-400">
         Date:
@@ -59,14 +59,14 @@
       </div>
       <div>
         {{ if .Lesson.IsRegistrationOpen }}
-        <span class="text-green-400">open</span>
+        <span class="lesson-registration-open">open</span>
         {{ with .Lesson.RegistrationDeadline }}
         <span class="text-gray-500">until {{ formatDateTime . }}</span>
       {{ else }}
         <span class="text-gray-500">until {{ formatDateTime .Lesson.DateTime }}</span>
         {{ end }}
       {{ else }}
-        <span class="text-red-400">closed</span>
+        <span class="lesson-registration-closed">closed</span>
         {{ with .Lesson.RegistrationDeadline }}
         <span class="text-gray-500">deadline {{ formatDateTime . }}</span>
       {{ else }}

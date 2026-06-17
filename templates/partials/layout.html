@@ -11,6 +11,19 @@
           content="{{block "og_description" .}}Student Lesson Attempt Platform{{end}}" />
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <title>{{block "title" .}}SLAP{{end}}</title>
+    <script>
+      (function () {
+        var theme = "dark";
+        try {
+          theme = localStorage.getItem("slap-theme") || theme;
+        } catch (e) {}
+        if (theme !== "light" && theme !== "dark") {
+          theme = "dark";
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.classList.toggle("dark", theme === "dark");
+      })();
+    </script>
     <script src="/static/js/htmx.min.js"></script>
     <script src="/static/js/tailwindcss.js"></script>
     <script src="/static/js/override.js"></script>
@@ -96,6 +109,13 @@
         <div class="flex items-center space-x-3 text-gray-600">
           <div hx-trigger="load" hx-get="/parts/user-line">
           </div>
+          <button type="button"
+                  class="text-blue-400 hover:text-blue-300 text-xs"
+                  data-action="toggle-theme"
+                  data-theme-toggle
+                  aria-label="Switch color theme">
+            [light]
+          </button>
           <span class="text-gray-500">·</span>
           <span>v{{appVersion}}</span>
           <span class="text-gray-500">·</span>
@@ -119,6 +139,13 @@
         <div class="flex flex-col items-end text-gray-600">
           <div hx-trigger="load" hx-get="/parts/user-line">
           </div>
+          <button type="button"
+                  class="text-blue-400 hover:text-blue-300 text-xs"
+                  data-action="toggle-theme"
+                  data-theme-toggle
+                  aria-label="Switch color theme">
+            [light]
+          </button>
           <span>v{{appVersion}}</span>
           <span class="whitespace-nowrap">up {{uptime}}</span>
           <a class="hover:text-gray-400" href="https://github.com/ryukzak/slap">[github]</a>

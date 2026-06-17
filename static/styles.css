@@ -2,6 +2,406 @@ body {
   font-family: monospace;
 }
 
+/* Theme tokens */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --slap-bg-page: #111827;
+  --slap-bg-surface: #1f2937;
+  --slap-bg-strong: #374151;
+  --slap-bg-hover: #1f2937;
+  --slap-border-muted: #1f2937;
+  --slap-border-default: #374151;
+  --slap-border-strong: #4b5563;
+  --slap-text-primary: #d1d5db;
+  --slap-text-strong: #ffffff;
+  --slap-text-secondary: #9ca3af;
+  --slap-text-muted: #6b7280;
+  --slap-text-faint: #4b5563;
+  --slap-text-disabled: #374151;
+  --slap-link: #60a5fa;
+  --slap-link-soft: #93c5fd;
+  --slap-link-muted: #bfdbfe;
+  --slap-link-hover: #93c5fd;
+  --slap-action-bg: #1e40af;
+  --slap-action-bg-hover: #1d4ed8;
+  --slap-on-action: #ffffff;
+  --slap-status-success: #4ade80;
+  --slap-status-success-soft: #86efac;
+  --slap-status-success-bg: #166534;
+  --slap-on-success-bg: #bbf7d0;
+  --slap-status-danger: #f87171;
+  --slap-status-danger-hover: #fca5a5;
+  --slap-status-danger-bg: #991b1b;
+  --slap-on-danger-bg: #fecaca;
+  --slap-status-warning: #facc15;
+  --slap-status-warning-hover: #fde047;
+  --slap-status-warning-bg: #a16207;
+  --slap-on-warning-bg: #fef08a;
+  --slap-status-feedback: #fb923c;
+  --slap-status-feedback-bg: #9a3412;
+  --slap-on-feedback-bg: #fed7aa;
+  --slap-accent-purple: #c084fc;
+  --slap-accent-purple-bg: #6b21a8;
+  --slap-on-purple-bg: #e9d5ff;
+  --slap-accent-teal: #2dd4bf;
+  --slap-accent-teal-bg: #115e59;
+  --slap-lesson-open: var(--slap-status-success);
+  --slap-lesson-closed: var(--slap-status-feedback);
+  --slap-lesson-wait: var(--slap-status-warning);
+  --slap-lesson-teacher: var(--slap-text-muted);
+  --slap-journal-teacher: var(--slap-status-success);
+  --slap-journal-student: var(--slap-link);
+  --slap-score-rule-applied-negative: var(--slap-status-danger);
+  --slap-score-rule-applied-positive: var(--slap-status-success);
+  --slap-score-rule-active: var(--slap-status-warning);
+  --slap-score-rule-idle: var(--slap-text-muted);
+  --slap-markdown-code-bg: #2d333b;
+  --slap-markdown-pre-bg: #1e2329;
+  --slap-markdown-code-text: #e6edf3;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --slap-bg-page: #f8fafc;
+  --slap-bg-surface: #ffffff;
+  --slap-bg-strong: #e2e8f0;
+  --slap-bg-hover: #e5e7eb;
+  --slap-border-muted: #e2e8f0;
+  --slap-border-default: #cbd5e1;
+  --slap-border-strong: #d1d5db;
+  --slap-text-primary: #1e293b;
+  --slap-text-strong: #0f172a;
+  --slap-text-secondary: #475569;
+  --slap-text-muted: #64748b;
+  --slap-text-faint: #94a3b8;
+  --slap-text-disabled: #cbd5e1;
+  --slap-link: #1d4ed8;
+  --slap-link-soft: #1d4ed8;
+  --slap-link-muted: #1d4ed8;
+  --slap-link-hover: #1e40af;
+  --slap-action-bg: #1e40af;
+  --slap-action-bg-hover: #1d4ed8;
+  --slap-on-action: #eff6ff;
+  --slap-status-success: #005b00;
+  --slap-status-success-soft: #004700;
+  --slap-status-success-bg: #166534;
+  --slap-on-success-bg: #f0fdf4;
+  --slap-status-danger: #b91c1c;
+  --slap-status-danger-hover: #991b1b;
+  --slap-status-danger-bg: #991b1b;
+  --slap-on-danger-bg: #fef2f2;
+  --slap-status-warning: #78350f;
+  --slap-status-warning-hover: #713f12;
+  --slap-status-warning-bg: #a16207;
+  --slap-on-warning-bg: #fefce8;
+  --slap-status-feedback: #9a3412;
+  --slap-status-feedback-bg: #c2410c;
+  --slap-on-feedback-bg: #fff7ed;
+  --slap-accent-purple: #7e22ce;
+  --slap-accent-purple-bg: #6b21a8;
+  --slap-on-purple-bg: #faf5ff;
+  --slap-accent-teal: #0f766e;
+  --slap-accent-teal-bg: #0f766e;
+  --slap-lesson-open: #005b00;
+  --slap-lesson-closed: var(--slap-status-feedback);
+  --slap-lesson-wait: var(--slap-status-warning);
+  --slap-lesson-teacher: var(--slap-text-muted);
+  --slap-journal-teacher: #005b00;
+  --slap-journal-student: var(--slap-link);
+  --slap-score-rule-applied-negative: var(--slap-status-danger);
+  --slap-score-rule-applied-positive: var(--slap-status-success);
+  --slap-score-rule-active: var(--slap-status-warning);
+  --slap-score-rule-idle: var(--slap-text-muted);
+  --slap-markdown-code-bg: #e2e8f0;
+  --slap-markdown-pre-bg: #f1f5f9;
+  --slap-markdown-code-text: var(--slap-text-strong);
+}
+
+/* Tailwind color bindings */
+html[data-theme] .bg-gray-900 {
+  background-color: var(--slap-bg-page) !important;
+}
+
+html[data-theme] .bg-gray-800 {
+  background-color: var(--slap-bg-surface) !important;
+}
+
+html[data-theme] .bg-gray-700 {
+  background-color: var(--slap-bg-strong) !important;
+}
+
+html[data-theme] .hover\:bg-gray-800:hover {
+  background-color: var(--slap-bg-hover) !important;
+}
+
+html[data-theme] .border-gray-800 {
+  border-color: var(--slap-border-muted) !important;
+}
+
+html[data-theme] .border-gray-700 {
+  border-color: var(--slap-border-default) !important;
+}
+
+html[data-theme] .border-gray-600 {
+  border-color: var(--slap-border-strong) !important;
+}
+
+html[data-theme] .text-white {
+  color: var(--slap-text-strong) !important;
+}
+
+html[data-theme] .text-gray-200,
+html[data-theme] .text-gray-300 {
+  color: var(--slap-text-primary) !important;
+}
+
+html[data-theme] .text-gray-400 {
+  color: var(--slap-text-secondary) !important;
+}
+
+html[data-theme] .text-gray-500 {
+  color: var(--slap-text-muted) !important;
+}
+
+html[data-theme] .text-gray-600 {
+  color: var(--slap-text-faint) !important;
+}
+
+html[data-theme] .text-gray-700 {
+  color: var(--slap-text-disabled) !important;
+}
+
+html[data-theme] .hover\:text-white:hover {
+  color: var(--slap-text-strong) !important;
+}
+
+html[data-theme] .hover\:text-gray-300:hover,
+html[data-theme] .hover\:text-gray-400:hover {
+  color: var(--slap-text-primary) !important;
+}
+
+html[data-theme] .text-blue-200 {
+  color: var(--slap-link-muted) !important;
+}
+
+html[data-theme] .text-blue-300 {
+  color: var(--slap-link-soft) !important;
+}
+
+html[data-theme] .text-blue-400 {
+  color: var(--slap-link) !important;
+}
+
+html[data-theme] .hover\:text-blue-300:hover {
+  color: var(--slap-link-hover) !important;
+}
+
+html[data-theme] .bg-blue-800 {
+  background-color: var(--slap-action-bg) !important;
+}
+
+html[data-theme] .bg-blue-700,
+html[data-theme] .hover\:bg-blue-700:hover {
+  background-color: var(--slap-action-bg-hover) !important;
+}
+
+html[data-theme] .border-blue-400,
+html[data-theme] .focus\:border-blue-400:focus {
+  border-color: var(--slap-link) !important;
+}
+
+html[data-theme] button.bg-blue-800,
+html[data-theme] a.bg-blue-800,
+html[data-theme] .bg-blue-800.text-blue-200 {
+  color: var(--slap-on-action) !important;
+}
+
+html[data-theme] .text-green-100,
+html[data-theme] .text-green-200 {
+  color: var(--slap-on-success-bg) !important;
+}
+
+html[data-theme] .text-green-300 {
+  color: var(--slap-status-success-soft) !important;
+}
+
+html[data-theme] .text-green-400 {
+  color: var(--slap-status-success) !important;
+}
+
+html[data-theme] .bg-green-700,
+html[data-theme] .bg-green-800,
+html[data-theme] .bg-green-900 {
+  background-color: var(--slap-status-success-bg) !important;
+}
+
+html[data-theme] .border-green-700 {
+  border-color: var(--slap-status-success) !important;
+}
+
+html[data-theme] .bg-green-700.text-green-100,
+html[data-theme] .bg-green-800.text-green-200,
+html[data-theme] .bg-green-900.text-green-100 {
+  color: var(--slap-on-success-bg) !important;
+}
+
+html[data-theme] .text-red-100,
+html[data-theme] .text-red-200 {
+  color: var(--slap-on-danger-bg) !important;
+}
+
+html[data-theme] .text-red-300 {
+  color: var(--slap-status-danger-hover) !important;
+}
+
+html[data-theme] .text-red-400 {
+  color: var(--slap-status-danger) !important;
+}
+
+html[data-theme] .hover\:text-red-300:hover {
+  color: var(--slap-status-danger-hover) !important;
+}
+
+html[data-theme] .bg-red-800,
+html[data-theme] .bg-red-900 {
+  background-color: var(--slap-status-danger-bg) !important;
+}
+
+html[data-theme] .border-red-700 {
+  border-color: var(--slap-status-danger) !important;
+}
+
+html[data-theme] .bg-red-800.text-red-200,
+html[data-theme] .bg-red-900.text-red-100 {
+  color: var(--slap-on-danger-bg) !important;
+}
+
+html[data-theme] .text-yellow-200 {
+  color: var(--slap-on-warning-bg) !important;
+}
+
+html[data-theme] .text-yellow-300 {
+  color: var(--slap-status-warning-hover) !important;
+}
+
+html[data-theme] .text-yellow-400 {
+  color: var(--slap-status-warning) !important;
+}
+
+html[data-theme] .hover\:text-yellow-300:hover {
+  color: var(--slap-status-warning-hover) !important;
+}
+
+html[data-theme] .bg-yellow-700 {
+  background-color: var(--slap-status-warning-bg) !important;
+}
+
+html[data-theme] .bg-yellow-700.text-yellow-200 {
+  color: var(--slap-on-warning-bg) !important;
+}
+
+html[data-theme] .text-orange-200 {
+  color: var(--slap-on-feedback-bg) !important;
+}
+
+html[data-theme] .text-orange-400 {
+  color: var(--slap-status-feedback) !important;
+}
+
+html[data-theme] .bg-orange-800 {
+  background-color: var(--slap-status-feedback-bg) !important;
+}
+
+html[data-theme] .bg-orange-800.text-orange-200 {
+  color: var(--slap-on-feedback-bg) !important;
+}
+
+html[data-theme] .text-purple-200 {
+  color: var(--slap-on-purple-bg) !important;
+}
+
+html[data-theme] .text-purple-400 {
+  color: var(--slap-accent-purple) !important;
+}
+
+html[data-theme] .bg-purple-800 {
+  background-color: var(--slap-accent-purple-bg) !important;
+}
+
+html[data-theme] .bg-purple-800.text-purple-200 {
+  color: var(--slap-on-purple-bg) !important;
+}
+
+html[data-theme] .text-teal-400 {
+  color: var(--slap-accent-teal) !important;
+}
+
+html[data-theme] .bg-teal-800 {
+  background-color: var(--slap-accent-teal-bg) !important;
+}
+
+/* Domain color roles */
+html[data-theme] .lesson-registration-open {
+  color: var(--slap-lesson-open) !important;
+}
+
+html[data-theme] .lesson-registration-closed {
+  color: var(--slap-lesson-closed) !important;
+}
+
+html[data-theme] .lesson-registration-wait {
+  color: var(--slap-lesson-wait) !important;
+}
+
+html[data-theme] .lesson-teacher-name {
+  color: var(--slap-lesson-teacher) !important;
+  font-weight: 400;
+}
+
+html[data-theme] .journal-author-teacher {
+  color: var(--slap-journal-teacher) !important;
+  font-weight: 400;
+}
+
+html[data-theme] .journal-author-student {
+  color: var(--slap-journal-student) !important;
+}
+
+html[data-theme] .score-rule-status {
+  font-weight: 400;
+}
+
+html[data-theme] .score-rule-status-red {
+  color: var(--slap-score-rule-applied-negative) !important;
+}
+
+html[data-theme] .score-rule-effect-red {
+  color: var(--slap-score-rule-applied-negative) !important;
+}
+
+html[data-theme] .score-rule-status-green {
+  color: var(--slap-score-rule-applied-positive) !important;
+}
+
+html[data-theme] .score-rule-effect-green {
+  color: var(--slap-score-rule-applied-positive) !important;
+}
+
+html[data-theme] .score-rule-status-yellow {
+  color: var(--slap-score-rule-active) !important;
+}
+
+html[data-theme] .score-rule-effect-yellow {
+  color: var(--slap-score-rule-active) !important;
+}
+
+html[data-theme] .score-rule-status-gray,
+html[data-theme] .score-rule-status-not_applied,
+html[data-theme] .score-rule-effect-gray {
+  color: var(--slap-score-rule-idle) !important;
+}
+
+/* Markdown */
 .markdown h1 {
   font-weight: bold;
   margin-top: 0.67em;
@@ -67,7 +467,7 @@ body {
   padding: 0.2em 0.4em;
   margin: 0;
   font-size: 85%;
-  background-color: #2d333b;
+  background-color: var(--slap-markdown-code-bg);
   border-radius: 6px;
   font-family:
     ui-monospace,
@@ -77,7 +477,7 @@ body {
     Consolas,
     Liberation Mono,
     monospace;
-  color: #e6edf3;
+  color: var(--slap-markdown-code-text);
 }
 
 .markdown pre {
@@ -85,8 +485,13 @@ body {
   overflow: auto;
   font-size: 85%;
   line-height: 1.45;
-  background-color: #1e2329;
+  background-color: var(--slap-markdown-pre-bg);
+  border: 1px solid transparent;
   border-radius: 6px;
   margin-bottom: 16px;
-  color: #e6edf3;
+  color: var(--slap-markdown-code-text);
+}
+
+html[data-theme="light"] .markdown pre {
+  border: 1px solid var(--slap-border-default);
 }
