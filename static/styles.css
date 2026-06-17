@@ -46,8 +46,11 @@ html[data-theme="dark"] {
   --slap-accent-teal: #2dd4bf;
   --slap-accent-teal-bg: #115e59;
   --slap-lesson-open: var(--slap-status-success);
-  --slap-lesson-closed: var(--slap-status-feedback);
-  --slap-lesson-wait: var(--slap-status-warning);
+  --slap-lesson-closed: var(--slap-status-danger);
+  --slap-lesson-list-closed: var(--slap-status-feedback);
+  --slap-lesson-unavailable: var(--slap-text-muted);
+  --slap-lesson-detail-teacher: var(--slap-text-primary);
+  --slap-lesson-wait: var(--slap-text-muted);
   --slap-lesson-teacher: var(--slap-text-muted);
   --slap-journal-teacher: var(--slap-status-success);
   --slap-journal-student: var(--slap-link);
@@ -104,6 +107,9 @@ html[data-theme="light"] {
   --slap-accent-teal-bg: #0f766e;
   --slap-lesson-open: #005b00;
   --slap-lesson-closed: var(--slap-status-feedback);
+  --slap-lesson-list-closed: var(--slap-status-feedback);
+  --slap-lesson-unavailable: var(--slap-text-muted);
+  --slap-lesson-detail-teacher: var(--slap-text-primary);
   --slap-lesson-wait: var(--slap-status-warning);
   --slap-lesson-teacher: var(--slap-text-muted);
   --slap-journal-teacher: #005b00;
@@ -340,6 +346,61 @@ html[data-theme] .bg-teal-800 {
   background-color: var(--slap-accent-teal-bg) !important;
 }
 
+/* Dark theme parity with the original Tailwind palette */
+html[data-theme="dark"] .text-gray-200 {
+  color: #e5e7eb !important;
+}
+
+html[data-theme="dark"] .hover\:text-gray-400:hover {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] button.bg-blue-800,
+html[data-theme="dark"] a.bg-blue-800 {
+  color: #d1d5db !important;
+}
+
+html[data-theme="dark"] .bg-blue-800.text-blue-200 {
+  color: #bfdbfe !important;
+}
+
+html[data-theme="dark"] .text-green-100 {
+  color: #dcfce7 !important;
+}
+
+html[data-theme="dark"] .bg-green-700.text-green-100,
+html[data-theme="dark"] .bg-green-900.text-green-100 {
+  color: #dcfce7 !important;
+}
+
+html[data-theme="dark"] .bg-green-700 {
+  background-color: #15803d !important;
+}
+
+html[data-theme="dark"] .bg-green-900 {
+  background-color: #14532d !important;
+}
+
+html[data-theme="dark"] .border-green-700 {
+  border-color: #15803d !important;
+}
+
+html[data-theme="dark"] .text-red-100 {
+  color: #fee2e2 !important;
+}
+
+html[data-theme="dark"] .bg-red-900.text-red-100 {
+  color: #fee2e2 !important;
+}
+
+html[data-theme="dark"] .bg-red-900 {
+  background-color: #7f1d1d !important;
+}
+
+html[data-theme="dark"] .border-red-700 {
+  border-color: #b91c1c !important;
+}
+
 /* Domain color roles */
 html[data-theme] .lesson-registration-open {
   color: var(--slap-lesson-open) !important;
@@ -349,8 +410,21 @@ html[data-theme] .lesson-registration-closed {
   color: var(--slap-lesson-closed) !important;
 }
 
+html[data-theme] .lesson-list-registration-closed {
+  color: var(--slap-lesson-list-closed) !important;
+}
+
+html[data-theme] .lesson-registration-unavailable {
+  color: var(--slap-lesson-unavailable) !important;
+}
+
 html[data-theme] .lesson-registration-wait {
   color: var(--slap-lesson-wait) !important;
+}
+
+html[data-theme] .lesson-detail-teacher-name {
+  color: var(--slap-lesson-detail-teacher) !important;
+  font-weight: 400;
 }
 
 html[data-theme] .lesson-teacher-name {
