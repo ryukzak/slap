@@ -56,6 +56,8 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		JournalSummary   string
 		IsTeacher        bool
 		RegisteredLesson *storage.Lesson
+		QueuePosition    int
+		QueueTotal       int
 	}
 
 	model := TaskViewModel{
@@ -84,6 +86,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error fetching registered lesson %s: %v", rawRecords[0].LessonID, err)
 			} else {
 				model.RegisteredLesson = lesson
+				model.QueuePosition, model.QueueTotal = queuePosition(lesson, userIDFromURL, taskID, SortBySubmitOrd)
 			}
 		}
 	}
@@ -193,4 +196,18 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/user/"+userIDFromURL+"/task/"+taskID, http.StatusSeeOther)
+}
+
+func queuePosition(lesson *storage.Lesson, studentID storage.UserID, taskID storage.TaskID, sortMode SortMode) (int, int) {
+	visible, _, err := buildLessonRecords(lesson, false, sortMode)
+	if err != nil {
+		log.Printf("Error building lesson records for queue position: %v", err)
+		return 0, 0
+	}
+	for i, rec := range visible {
+		if rec.StudentID == studentID && rec.TaskID == taskID {
+			return i + 1, len(visible)
+		}
+	}
+	return 0, len(visible)
 }

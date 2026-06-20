@@ -55,6 +55,7 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Only one registration per task per lesson at a time.
    - If the student updates their task after registering, the registration is automatically revoked.
    - Students can still register after the capacity limit is exceeded; they remain below the cutoff and can move up if someone above withdraws.
+   - On the task page, a registered (queued) student sees their position in the queue ("#N of M in queue"), based on submission time and excluding revoked records. On the lesson page, the user's own submissions are highlighted with a blue border to make them easy to spot in the queue.
    - Revoking (manually or automatically) keeps the dropped attempt in the task history and
      re-creates the submission as a fresh pending record carrying the original submit time, so
      the student can register for another lesson without resubmitting and without losing their

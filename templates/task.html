@@ -126,6 +126,11 @@
           </button>
         </form>
       </div>
+      {{ if gt $.QueuePosition 0 }}
+      <div class="text-xs text-gray-400 px-1 pb-1">
+        #{{ $.QueuePosition }} of {{ $.QueueTotal }} in queue
+      </div>
+      {{ end }}
     </li>
   </ul>
 {{ else }}
