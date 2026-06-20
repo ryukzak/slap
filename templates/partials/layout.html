@@ -111,6 +111,7 @@
         <div class="flex items-center space-x-3 text-gray-600">
           <div hx-trigger="load" hx-get="/parts/user-line">
           </div>
+          {{block "header_actions" .}}{{end}}
           <span class="text-gray-500">·</span>
           <span>v{{appVersion}}</span>
           <span class="text-gray-500">·</span>
@@ -134,6 +135,7 @@
         <div class="flex flex-col items-end text-gray-600">
           <div hx-trigger="load" hx-get="/parts/user-line">
           </div>
+          {{block "header_actions" .}}{{end}}
           <span>v{{appVersion}}</span>
           <span class="whitespace-nowrap">up {{uptime}}</span>
           <a class="hover:text-gray-400" href="https://github.com/ryukzak/slap">[github]</a>
