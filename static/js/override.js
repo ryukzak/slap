@@ -16,11 +16,29 @@ function toggleAccordion(header) {
 }
 
 function normalizeTheme(theme) {
-  return theme === "light" ? "light" : "dark";
+  if (theme === "light" || theme === "dark") return theme;
+  return null;
+}
+
+function storedTheme() {
+  try {
+    return normalizeTheme(localStorage.getItem("slap-theme"));
+  } catch (e) {
+    return null;
+  }
+}
+
+function preferredTheme() {
+  var stored = storedTheme();
+  if (stored) return stored;
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return "dark";
+  }
+  return "light";
 }
 
 function currentTheme() {
-  return normalizeTheme(document.documentElement.getAttribute("data-theme"));
+  return normalizeTheme(document.documentElement.getAttribute("data-theme")) || preferredTheme();
 }
 
 function storeTheme(theme) {
@@ -29,14 +47,15 @@ function storeTheme(theme) {
   } catch (e) {}
 }
 
-function setTheme(theme) {
-  theme = normalizeTheme(theme);
+function applyTheme(theme) {
+  theme = normalizeTheme(theme) || preferredTheme();
   document.documentElement.setAttribute("data-theme", theme);
-  document.documentElement.classList.toggle("dark", theme === "dark");
+}
+
+function setTheme(theme) {
+  theme = normalizeTheme(theme) || preferredTheme();
+  applyTheme(theme);
   storeTheme(theme);
-  document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
-    btn.textContent = theme === "dark" ? "[light]" : "[dark]";
-  });
 }
 
 document.addEventListener("click", function (e) {
@@ -71,7 +90,7 @@ document.addEventListener("click", function (e) {
 
 // Initialize all accordions when the DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
-  setTheme(currentTheme());
+  applyTheme(currentTheme());
 
   const accordionHeaders = document.querySelectorAll(".accordion-header");
 
