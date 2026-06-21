@@ -123,27 +123,37 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Save open state before htmx swaps lesson records.
+  // Save open state and textarea content before htmx swaps lesson records.
   var openRecords = {};
+  var savedTextareas = {};
   document.addEventListener("htmx:beforeSwap", function (event) {
     if (event.detail.target.id !== "lesson-task-records") return;
     openRecords = {};
+    savedTextareas = {};
     event.detail.target.querySelectorAll("details[data-record-id]").forEach(function (d) {
-      if (d.open) openRecords[d.getAttribute("data-record-id")] = true;
+      var id = d.getAttribute("data-record-id");
+      if (d.open) openRecords[id] = true;
+      var ta = d.querySelector("textarea");
+      if (ta && ta.value) savedTextareas[id] = ta.value;
     });
-    // The just-submitted record should be closed after refresh.
+    // The just-submitted record should be closed after refresh; don't restore its textarea.
     if (submittedRecordId) {
       delete openRecords[submittedRecordId];
+      delete savedTextareas[submittedRecordId];
       submittedRecordId = null;
     }
   });
 
-  // Restore open state after htmx swaps lesson records.
+  // Restore open state and textarea content after htmx swaps lesson records.
   document.addEventListener("htmx:afterSwap", function (event) {
     if (event.detail.target.id !== "lesson-task-records") return;
     event.detail.target.querySelectorAll("details[data-record-id]").forEach(function (d) {
-      if (openRecords[d.getAttribute("data-record-id")]) d.open = true;
+      var id = d.getAttribute("data-record-id");
+      if (openRecords[id]) d.open = true;
+      var ta = d.querySelector("textarea");
+      if (ta && savedTextareas[id]) ta.value = savedTextareas[id];
     });
     openRecords = {};
+    savedTextareas = {};
   });
 });
