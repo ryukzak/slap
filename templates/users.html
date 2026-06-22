@@ -314,6 +314,9 @@
           <th class="text-center text-gray-400 py-1 px-2 font-normal">
             Bonus/Penalty
           </th>
+          <th class="text-left text-gray-400 py-1 px-2 font-normal">
+            note
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -358,6 +361,14 @@
         </span>
       {{ else }}
         <span class="text-gray-600">0</span>
+        {{ end }}
+      </td>
+      <td class="py-1 px-2 text-gray-500 max-w-xs">
+        {{ if $user.Notes }}
+        {{ $lastIdx := sub (len $user.Notes) 1 }}
+        {{ with index $user.Notes $lastIdx }}
+        <span class="block truncate" title="@{{.AuthorName}}: {{.Content}}">{{ firstLine .Content }}</span>
+        {{ end }}
         {{ end }}
       </td>
     </tr>

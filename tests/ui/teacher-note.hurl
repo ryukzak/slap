@@ -114,15 +114,15 @@ studentID: {{student_id}}
 
 HTTP 200
 
-# Step 10: Teacher sees only the last note + count on the lesson page
+# Step 10: Teacher sees all notes on the lesson page (no author names)
 GET {{base_url}}/lesson/{{lesson_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
-body contains "teacher note (2)"
+body contains "teacher notes (2)"
 body contains "{{note_two}}"
-body not contains "{{note_one}}"
+body contains "{{note_one}}"
 
 # Step 11: Student does NOT see the notes on the lesson page
 GET {{base_url}}/lesson/{{lesson_id}}

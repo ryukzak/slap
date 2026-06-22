@@ -35,14 +35,19 @@
     </div>
   </summary>
   <div class="px-4 pb-4 pt-2">
-    {{ if and $.SessionIsTeacher $record.LastNote }}
+    {{ if and $.SessionIsTeacher $record.Notes }}
     <div class="mb-2 p-3 bg-gray-900 rounded border border-gray-700">
       <div class="text-xs text-gray-500 mb-1">
-        // teacher note ({{ $record.NoteCount }})
+        // teacher notes ({{ len $record.Notes }})
       </div>
+      {{ range $i, $note := $record.Notes }}
+      {{ if gt $i 0 }}
+      <hr class="border-gray-800 my-1" />
+      {{ end }}
       <div class="text-xs markdown">
-        {{ markdown $record.LastNote }}
+        {{ markdown $note.Content }}
       </div>
+      {{ end }}
     </div>
     {{ end }}
     {{ if and $.SessionIsTeacher $record.JournalRecords }}

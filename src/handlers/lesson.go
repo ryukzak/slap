@@ -80,8 +80,7 @@ type TaskRecordWithInfo struct {
 	ReviewRecords   []storage.TaskRecord
 	JournalRecords  []storage.TaskRecord
 	JournalSummary  string
-	LastNote        string
-	NoteCount       int
+	Notes           []storage.UserNote
 }
 
 // lessonRecordsData is the data passed to the lesson_task_records partial.
@@ -125,7 +124,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 
 	// Cache student notes so each student is looked up at most once.
 	noteCache := map[string][]storage.UserNote{}
-	lastNote := func(studentID string) (string, int) {
+	getNotes := func(studentID string) []storage.UserNote {
 		notes, ok := noteCache[studentID]
 		if !ok {
 			if u, err := DB.GetUser(studentID); err == nil {
@@ -133,10 +132,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			}
 			noteCache[studentID] = notes
 		}
-		if len(notes) == 0 {
-			return "", 0
-		}
-		return notes[len(notes)-1].Content, len(notes)
+		return notes
 	}
 
 	allRecords := []TaskRecordWithInfo{}
@@ -187,7 +183,6 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			summaryParts = append(summaryParts, fmt.Sprintf("@%s:%d", name, authorCounts[name]))
 		}
 
-		noteContent, noteCount := lastNote(taskRecord.StudentID)
 		allRecords = append(allRecords, TaskRecordWithInfo{
 			TaskRecord:      *taskRecord,
 			TaskTitle:       taskTitle,
@@ -196,8 +191,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			ReviewRecords:   reviewRecords,
 			JournalRecords:  reverseSlice(allForTask),
 			JournalSummary:  strings.Join(summaryParts, " "),
-			LastNote:        noteContent,
-			NoteCount:       noteCount,
+			Notes:           getNotes(taskRecord.StudentID),
 		})
 	}
 	for _, pr := range previousTaskRecords {
@@ -209,12 +203,10 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		if task != nil {
 			taskTitle = task.Title
 		}
-		noteContent, noteCount := lastNote(pr.StudentID)
 		allRecords = append(allRecords, TaskRecordWithInfo{
 			TaskRecord: *pr,
 			TaskTitle:  taskTitle,
-			LastNote:   noteContent,
-			NoteCount:  noteCount,
+			Notes:      getNotes(pr.StudentID),
 		})
 	}
 

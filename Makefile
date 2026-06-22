@@ -82,6 +82,9 @@ test-hurl:
 	hurl --test $(HURL_VARS) \
 		--variable student_id=student_$$(date +%s)22 \
 		tests/ui/score-rules-debug.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=student_$$(date +%s)24 \
+		tests/ui/user-list-note-column.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]
