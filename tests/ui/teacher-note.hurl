@@ -1,10 +1,11 @@
 # Teacher Note Test
 # Verifies teacher notes for a student:
 #   1. Any teacher can add notes; notes are an append-only list with author.
-#   2. The student page shows all notes (with author + count), teachers only.
-#   3. The student never sees the notes on their own page.
-#   4. The lesson page shows only the last note text (no author) plus a count,
-#      teachers only.
+#   2. The lesson page shows all notes (no author) inside a collapsible block
+#      with a total count, teachers only
+#   3. The student page shows all notes (with author) + count, teachers only.
+#   4. The student never sees the notes on their own page.
+#   
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -114,15 +115,15 @@ studentID: {{student_id}}
 
 HTTP 200
 
-# Step 10: Teacher sees only the last note + count on the lesson page
+# Step 10: Teacher sees all notes + count on the lesson page
 GET {{base_url}}/lesson/{{lesson_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
-body contains "teacher note (2)"
+body contains "teacher notes (2)"
 body contains "{{note_two}}"
-body not contains "{{note_one}}"
+body contains "{{note_one}}"
 
 # Step 11: Student does NOT see the notes on the lesson page
 GET {{base_url}}/lesson/{{lesson_id}}
