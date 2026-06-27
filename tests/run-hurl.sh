@@ -134,6 +134,10 @@ run_test tests/ui/user-list-note-column.hurl \
     --variable "student_id=${TIMESTAMP}24" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/lesson-waiting-period.hurl \
+    --variable "student_id=${TIMESTAMP}25" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

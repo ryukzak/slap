@@ -58,6 +58,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		RegisteredLesson *storage.Lesson
 		QueuePosition    int
 		QueueTotal       int
+		WaitingMessage   string
 	}
 
 	model := TaskViewModel{
@@ -91,6 +92,10 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	model.TaskRecords = rawRecords
+
+	if remaining := waitingPeriodRemaining(task, rawRecords); remaining > 0 {
+		model.WaitingMessage = formatWaitingMessage(remaining)
+	}
 
 	var pending, queued, dropped, feedback, checked int
 	for _, r := range rawRecords {
@@ -131,6 +136,36 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 	model.JournalSummary = strings.Join(parts, "\u00a0")
 
 	renderPage(w, "templates/task.html", model)
+}
+
+// waitingPeriodRemaining returns how long until the student may re-register the
+// task, based on the most recent teacher review and the task's configured
+// waiting period. Records are expected newest-first. Returns 0 when no waiting
+// period is active.
+func waitingPeriodRemaining(task *config.Task, records []storage.TaskRecord) time.Duration {
+	if task == nil {
+		return 0
+	}
+	wp := task.GetWaitingPeriod()
+	if wp <= 0 {
+		return 0
+	}
+	for _, rec := range records {
+		if rec.Status == storage.ReviewTaskRecord {
+			if elapsed := time.Since(rec.CreatedAt); elapsed < wp {
+				return wp - elapsed
+			}
+			return 0
+		}
+	}
+	return 0
+}
+
+// formatWaitingMessage renders the user-facing waiting period notice.
+func formatWaitingMessage(remaining time.Duration) string {
+	hours := int(remaining.Hours())
+	minutes := int(remaining.Minutes()) % 60
+	return fmt.Sprintf("Waiting period: %dh%dm remaining since last check", hours, minutes)
 }
 
 func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {

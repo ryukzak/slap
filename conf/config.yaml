@@ -15,6 +15,9 @@ default_lesson_description: |
 tasks:
   - id: "task1"
     title: "Lab 1"
+    # Hours that must pass since the last teacher review before a student can
+    # re-register this task for a lesson. Omit for the 24h default; 0 disables it.
+    waiting_period_hours: 24
     description: |
       # Basic Data Structures
 
