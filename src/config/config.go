@@ -37,10 +37,13 @@ type Condition struct {
 
 // Task represents a task in the system
 type Task struct {
-	ID            storage.TaskID `yaml:"id"`
-	Title         string         `yaml:"title"`
-	Description   string         `yaml:"description"`
-	WaitingPeriod *time.Duration `yaml:"waiting_period,omitempty"`
+	ID          storage.TaskID `yaml:"id"`
+	Title       string         `yaml:"title"`
+	Description string         `yaml:"description"`
+	// WaitingPeriodHours is the minimum number of hours that must pass since the
+	// last teacher review before a student may re-register the task for a lesson.
+	// When unset, DefaultWaitingPeriod applies. A value of 0 disables the check.
+	WaitingPeriodHours *int `yaml:"waiting_period_hours,omitempty"`
 }
 
 func (c *Config) IsTeacher(userID string) bool {
@@ -53,9 +56,10 @@ func (c *Config) IsTeacher(userID string) bool {
 }
 
 // GetWaitingPeriod returns the task's waiting period, defaulting to 24h.
+// A configured value of 0 hours disables the check (no threshold).
 func (t *Task) GetWaitingPeriod() time.Duration {
-	if t.WaitingPeriod != nil {
-		return *t.WaitingPeriod
+	if t.WaitingPeriodHours != nil {
+		return time.Duration(*t.WaitingPeriodHours) * time.Hour
 	}
 	return DefaultWaitingPeriod
 }
@@ -90,6 +94,9 @@ func LoadConfig(filePath string) (*Config, error) {
 		}
 		if task.Title == "" {
 			return nil, fmt.Errorf("task at index %d has an empty title", i)
+		}
+		if task.WaitingPeriodHours != nil && *task.WaitingPeriodHours < 0 {
+			return nil, fmt.Errorf("task %s has a negative waiting_period_hours (use 0 to disable)", task.ID)
 		}
 	}
 
