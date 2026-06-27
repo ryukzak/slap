@@ -89,6 +89,11 @@
   <div class="text-xs text-gray-500 mb-2">
     // register
   </div>
+  {{ if $.WaitingMessage }}
+  <p class="text-xs text-orange-400 mb-2">
+    {{ $.WaitingMessage }}
+  </p>
+  {{ end }}
   {{ if and (eq .Status "submit") (eq .EntryAuthorID $.SessionUserID) }}
   <form>
     <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />

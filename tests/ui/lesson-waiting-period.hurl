@@ -92,13 +92,20 @@ content: Second submission right after the review
 
 HTTP 303
 
-# Step 8: Register list shows the waiting-period message and [not yet] marker
-GET {{base_url}}/api/lessons?register=1&task_id={{task_id}}&student_id={{student_id}}
+# Step 8: Task page shows the waiting-period message in the register section
+GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
 body contains "Waiting period:"
+
+# Step 8b: Register list shows a [not yet] marker instead of a register button
+GET {{base_url}}/api/lessons?register=1&task_id={{task_id}}&student_id={{student_id}}
+Cookie: user_data={{student_token}}
+
+HTTP 200
+[Asserts]
 body contains "[not yet]"
 body not contains "/api/lesson/{{lesson_id}}/register"
 

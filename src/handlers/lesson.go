@@ -380,21 +380,9 @@ func RenderLessonListHandler(w http.ResponseWriter, r *http.Request) {
 		studentID := r.URL.Query().Get("student_id")
 		if taskID != "" && studentID != "" {
 			if task := AppConfig.GetTask(storage.TaskID(taskID)); task != nil {
-				wp := task.GetWaitingPeriod()
-				if wp > 0 {
-					records, err := DB.ListTaskRecords(studentID, taskID)
-					if err == nil {
-						for _, rec := range records {
-							if rec.Status == storage.ReviewTaskRecord {
-								if time.Since(rec.CreatedAt) < wp {
-									remaining := wp - time.Since(rec.CreatedAt)
-									hours := int(remaining.Hours())
-									minutes := int(remaining.Minutes()) % 60
-									waitingMessage = fmt.Sprintf("Waiting period: %dh%dm remaining since last check", hours, minutes)
-								}
-								break
-							}
-						}
+				if records, err := DB.ListTaskRecords(studentID, taskID); err == nil {
+					if remaining := waitingPeriodRemaining(task, records); remaining > 0 {
+						waitingMessage = formatWaitingMessage(remaining)
 					}
 				}
 			}

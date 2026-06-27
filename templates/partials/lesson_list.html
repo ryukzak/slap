@@ -1,8 +1,3 @@
-{{ if and .RegisterMode .WaitingMessage }}
-<p class="text-xs text-orange-400 mb-2">
-  {{.WaitingMessage}}
-</p>
-{{ end }}
 {{if .Lessons}}
 <ul class="space-y-1">
   {{range .Lessons}}

@@ -54,7 +54,9 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - The student must have an existing `submit` record for the task they want to register.
    - A per-task waiting period applies: a student cannot re-register a task until a configured
      number of hours has passed since their last teacher review of it. Set `waiting_period_hours`
-     per task in the config (defaults to 24h; `0` disables the threshold).
+     per task in the config (defaults to 24h; `0` disables the threshold). While the period is
+     active, the task page shows the remaining time in the `// register` section and the lesson
+     list marks each lesson `[not yet]` instead of offering a register button.
    - Only one registration per task per lesson at a time.
    - If the student updates their task after registering, the registration is automatically revoked.
    - Students can still register after the capacity limit is exceeded; they remain below the cutoff and can move up if someone above withdraws.
