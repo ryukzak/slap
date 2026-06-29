@@ -34,7 +34,7 @@ type UserData struct {
 	ResetTokenExp time.Time               `json:"reset_token_exp,omitempty"`
 }
 
-func (d *DB) SaveUser(userData *UserData) error {
+func (d *DB) CreateUser(userData *UserData) error {
 	if userData.ID == "" {
 		return fmt.Errorf("user ID cannot be empty")
 	}
@@ -42,79 +42,20 @@ func (d *DB) SaveUser(userData *UserData) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 
-		// Check if user exists
 		existingData := b.Get([]byte(userData.ID))
 		if existingData != nil {
-			// User exists, only update username if needed
-			var existingUser UserData
-			if err := json.Unmarshal(existingData, &existingUser); err != nil {
-				return fmt.Errorf("could not unmarshal existing user data: %w", err)
-			}
-
-			// Update username if different
-			changed := false
-			if existingUser.Username != userData.Username {
-				existingUser.Username = userData.Username
-				changed = true
-			}
-
-			// Update role flags if different
-			if existingUser.IsStudent != userData.IsStudent {
-				existingUser.IsStudent = userData.IsStudent
-				changed = true
-			}
-			if existingUser.IsTeacher != userData.IsTeacher {
-				existingUser.IsTeacher = userData.IsTeacher
-				changed = true
-			}
-
-			if existingUser.UserGroup != userData.UserGroup && userData.UserGroup != "" {
-				existingUser.UserGroup = userData.UserGroup
-				changed = true
-			}
-
-			if len(userData.PasswordHash) > 0 {
-				existingUser.PasswordHash = userData.PasswordHash
-				changed = true
-			}
-
-			// Preserve existing journals if not updating them
-			if len(userData.Journals) > 0 {
-				existingUser.Journals = userData.Journals
-				changed = true
-			}
-
-			// Preserve existing lesson IDs if not updating them
-			if len(userData.LessonIDs) > 0 {
-				existingUser.LessonIDs = userData.LessonIDs
-				changed = true
-			}
-
-			// If nothing changed, return early
-			if !changed {
-				return nil
-			}
-
-			buf, err := json.Marshal(existingUser)
-			if err != nil {
-				return fmt.Errorf("could not marshal user data: %w", err)
-			}
-
-			return b.Put([]byte(userData.ID), buf)
+			return fmt.Errorf("user already exists")
 		}
 
-		// New user, set creation time
 		now := time.Now()
 		if userData.CreatedAt.IsZero() {
 			userData.CreatedAt = now
 		}
 
-		// Initialize journals if nil
 		if userData.Journals == nil {
 			userData.Journals = make(map[TaskID][]TaskRecord)
 		}
 
-		// Initialize lesson IDs if nil
 		if userData.LessonIDs == nil {
 			userData.LessonIDs = []LessonID{}
 		}
@@ -132,6 +73,71 @@ func (d *DB) SaveUser(userData *UserData) error {
 	})
 }
 
+func (d *DB) UpdateUser(userData *UserData) error {
+	if userData.ID == "" {
+		return fmt.Errorf("user ID cannot be empty")
+	}
+
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+
+		existingData := b.Get([]byte(userData.ID))
+		if existingData == nil {
+			return fmt.Errorf("user not found")
+		}
+
+		var existingUser UserData
+		if err := json.Unmarshal(existingData, &existingUser); err != nil {
+			return fmt.Errorf("could not unmarshal existing user data: %w", err)
+		}
+
+		changed := false
+		if existingUser.Username != userData.Username {
+			existingUser.Username = userData.Username
+			changed = true
+		}
+
+		if existingUser.IsStudent != userData.IsStudent {
+			existingUser.IsStudent = userData.IsStudent
+			changed = true
+		}
+		if existingUser.IsTeacher != userData.IsTeacher {
+			existingUser.IsTeacher = userData.IsTeacher
+			changed = true
+		}
+
+		if existingUser.UserGroup != userData.UserGroup && userData.UserGroup != "" {
+			existingUser.UserGroup = userData.UserGroup
+			changed = true
+		}
+
+		if len(userData.PasswordHash) > 0 {
+			existingUser.PasswordHash = userData.PasswordHash
+			changed = true
+		}
+
+		if len(userData.Journals) > 0 {
+			existingUser.Journals = userData.Journals
+			changed = true
+		}
+
+		if len(userData.LessonIDs) > 0 {
+			existingUser.LessonIDs = userData.LessonIDs
+			changed = true
+		}
+
+		if !changed {
+			return nil
+		}
+
+		buf, err := json.Marshal(existingUser)
+		if err != nil {
+			return fmt.Errorf("could not marshal user data: %w", err)
+		}
+
+		return b.Put([]byte(userData.ID), buf)
+	})
+}
 func (d *DB) ListUsers() ([]*UserData, error) {
 	var users []*UserData
 	err := d.db.View(func(tx *bolt.Tx) error {
