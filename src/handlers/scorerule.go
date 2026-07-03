@@ -6,7 +6,6 @@ import (
 
 	"github.com/ryukzak/slap/src/config"
 	"github.com/ryukzak/slap/src/storage"
-	"github.com/ryukzak/slap/src/util"
 )
 
 // taskStatusLabel maps a stored record status to the label shown in the UI.
@@ -18,8 +17,6 @@ func taskStatusLabel(s storage.TaskRecordStatus) string {
 		return "Queued"
 	case storage.RevokedTaskRecord:
 		return "Dropped"
-	case storage.ReviewTaskRecord:
-		return "Feedback"
 	case storage.ReviewedTaskRecord:
 		return "Checked"
 	default:
@@ -32,29 +29,13 @@ func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 		return nil, "not submitted"
 	}
 
-	for i := range records {
+	// Records are newest-first; iterate oldest-first to return the earliest
+	// checked time so that scoring rules based on lesson deadlines are stable
+	// when multiple reviewed records exist for the same task.
+	for i := len(records) - 1; i >= 0; i-- {
 		if records[i].Status == storage.ReviewedTaskRecord {
 			return &records[i].CreatedAt, "Checked"
 		}
-	}
-
-	// No accepted record. If a teacher left a scored review, treat the work as
-	// checked at the time of the student's latest submission.
-	scored := false
-	for i := range records {
-		r := records[i]
-		if r.EntryAuthorID != r.StudentID && util.ExtractScore(r.Content) != "" {
-			scored = true
-			break
-		}
-	}
-	if scored {
-		for i := range records {
-			if records[i].EntryAuthorID == records[i].StudentID {
-				return &records[i].CreatedAt, "scored without lesson (submission " + taskStatusLabel(records[i].Status) + ")"
-			}
-		}
-		return nil, "scored, but no student submission found"
 	}
 
 	return nil, "not checked (" + taskStatusLabel(records[0].Status) + ")"

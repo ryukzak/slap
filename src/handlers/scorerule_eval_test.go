@@ -45,31 +45,31 @@ func TestLatestCheckedInfo(t *testing.T) {
 			wantState: "not checked (Pending)",
 		},
 		{
-			name: "accepted via lesson uses submission time",
+			name: "accepted via lesson uses earliest checked time",
 			records: []storage.TaskRecord{
-				rec(storage.ReviewTaskRecord, "teacher", "s", "8 ok", t2),
+				rec(storage.ReviewedTaskRecord, "teacher", "s", "8 ok", t2),
 				rec(storage.ReviewedTaskRecord, "s", "s", "work", t1),
 			},
 			wantAt:    &t1,
 			wantState: "Checked",
 		},
 		{
-			name: "scored without lesson falls back to latest submission",
+			name: "teacher review without lesson counts as checked",
 			records: []storage.TaskRecord{
-				rec(storage.ReviewTaskRecord, "teacher", "s", "8 good", t2),
+				rec(storage.ReviewedTaskRecord, "teacher", "s", "8 good", t2),
 				rec(storage.RevokedTaskRecord, "s", "s", "work", t1),
 			},
-			wantAt:    &t1,
-			wantState: "scored without lesson (submission Dropped)",
+			wantAt:    &t2,
+			wantState: "Checked",
 		},
 		{
-			name: "feedback without a score does not count",
+			name: "any teacher review counts as checked regardless of score",
 			records: []storage.TaskRecord{
-				rec(storage.ReviewTaskRecord, "teacher", "s", "please revise", t2),
+				rec(storage.ReviewedTaskRecord, "teacher", "s", "please revise", t2),
 				rec(storage.RevokedTaskRecord, "s", "s", "work", t1),
 			},
-			wantAt:    nil,
-			wantState: "not checked (Feedback)",
+			wantAt:    &t2,
+			wantState: "Checked",
 		},
 	}
 

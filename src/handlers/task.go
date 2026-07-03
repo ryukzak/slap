@@ -97,7 +97,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		model.WaitingMessage = formatWaitingMessage(remaining)
 	}
 
-	var pending, queued, dropped, feedback, checked int
+	var pending, queued, dropped, checked int
 	for _, r := range rawRecords {
 		if r.EntryAuthorID != r.StudentID {
 			if score := util.ExtractScore(r.Content); score != "" && model.Score == "" {
@@ -111,8 +111,6 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 			queued++
 		case storage.RevokedTaskRecord:
 			dropped++
-		case storage.ReviewTaskRecord:
-			feedback++
 		case storage.ReviewedTaskRecord:
 			checked++
 		}
@@ -123,9 +121,6 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if queued > 0 {
 		parts = append(parts, fmt.Sprintf("r:%d", queued))
-	}
-	if feedback > 0 {
-		parts = append(parts, fmt.Sprintf("f:%d", feedback))
 	}
 	if checked > 0 {
 		parts = append(parts, fmt.Sprintf("c:%d", checked))
@@ -151,7 +146,7 @@ func waitingPeriodRemaining(task *config.Task, records []storage.TaskRecord) tim
 		return 0
 	}
 	for _, rec := range records {
-		if rec.Status == storage.ReviewTaskRecord {
+		if rec.Status == storage.ReviewedTaskRecord {
 			if elapsed := time.Since(rec.CreatedAt); elapsed < wp {
 				return wp - elapsed
 			}
@@ -205,12 +200,10 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		EntryAuthorID:   user.ID,
 		EntryAuthorName: user.Username,
 	}
-	if user.IsTeacher && r.PostForm.Get("role") == "review" {
-		record.Status = storage.ReviewTaskRecord
-	} else if userIDFromURL == user.ID {
-		record.Status = storage.SubmitTaskRecord
+	if user.IsTeacher || userIDFromURL != user.ID {
+		record.Status = storage.ReviewedTaskRecord
 	} else {
-		record.Status = storage.ReviewTaskRecord
+		record.Status = storage.SubmitTaskRecord
 	}
 
 	if err := DB.AddTaskRecord(record); err != nil {

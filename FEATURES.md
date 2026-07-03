@@ -32,19 +32,19 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - This creates a task record with status `submit`.
    - A student can add multiple records over time; each is appended to the task history.
 4. Student can view the full history of their records on the task page.
-   - Records with status `review` are teacher feedback entries, shown inline below the submission they belong to.
-   - A compact summary of record counts by status is shown next to the task status (e.g. `p:2 f:1 c:1`).
+   - Records with status `reviewed` authored by the teacher are teacher feedback/check entries, shown inline below the submission they belong to.
+   - A compact summary of record counts by status is shown next to the task status (e.g. `p:2 c:1`).
 
 # Use Case: teacher checks a student task (outside of a lesson)
 
 1. Teacher opens a student's task page (via the student's profile).
 2. Teacher reads the full history of the student's records.
 3. Teacher writes feedback in the review field and submits.
-   - This creates a new record with status `review` authored by the teacher.
-   - If the student's latest record had status `register`, it is automatically transitioned to `reviewed`.
+   - This creates a new record with status `reviewed` authored by the teacher.
+   - If the student's latest record had status `register`, it is automatically transitioned to `reviewed` (Checked).
    - If the review text starts with a number, it is extracted as the score for that task.
 4. Student sees the teacher feedback on their task page, shown inline below their submission.
-5. Teacher can submit multiple feedback entries; all are shown concatenated with a separator.
+5. Teacher can submit multiple review entries; all are shown concatenated with a separator.
 
 # Use Case: teacher prepares queue for the lesson
 
@@ -86,7 +86,7 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Past days: count of teacher reviews performed that day.
    - Future days: scheduled lessons with registered/reviewed counts.
 3. **Task statistics** — per-task aggregate bars showing status distribution across all students
-   (Pending, Queued, Feedback, Checked, Dropped, no submission).
+   (Pending, Queued, Checked, Evaluated, Dropped, no submission).
 4. **Students table** — all registered users with per-task columns. Each cell shows:
    - Score (if the teacher started a review with a number) and status badge.
    - Compact status summary (e.g. `p:2 q:1 c:1`).

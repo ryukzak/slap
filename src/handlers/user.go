@@ -232,7 +232,6 @@ type TaskStats struct {
 	Pending   int
 	Queued    int
 	Dropped   int
-	Feedback  int
 	Checked   int
 	Evaluated int
 	Scores    *ScoreStats
@@ -334,7 +333,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 				summary := UserTaskSummary{Count: len(records), Status: bestStatus, WaitSince: records[0].CreatedAt}
-				var pending, queued, dropped, feedback, checked int
+				var pending, queued, dropped, checked int
 				for _, rec := range records {
 					if rec.EntryAuthorID != rec.StudentID {
 						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
@@ -354,8 +353,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						queued++
 					case storage.RevokedTaskRecord:
 						dropped++
-					case storage.ReviewTaskRecord:
-						feedback++
 					case storage.ReviewedTaskRecord:
 						checked++
 					}
@@ -366,9 +363,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				if queued > 0 {
 					parts = append(parts, fmt.Sprintf("q:%d", queued))
-				}
-				if feedback > 0 {
-					parts = append(parts, fmt.Sprintf("f:%d", feedback))
 				}
 				if checked > 0 {
 					parts = append(parts, fmt.Sprintf("c:%d", checked))
@@ -414,8 +408,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				ts.Queued++
 			case storage.RevokedTaskRecord:
 				ts.Dropped++
-			case storage.ReviewTaskRecord:
-				ts.Feedback++
 			case storage.ReviewedTaskRecord:
 				if td.Score != "" && td.Score != "0" {
 					ts.Evaluated++

@@ -108,10 +108,10 @@ HTTP 200
 [Asserts]
 body contains "Checked"
 
-# Step 10: Student dashboard shows Feedback badge for the task
+# Step 10: Student dashboard shows Checked badge for the task
 GET {{base_url}}/user/{{student_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
-body contains "Feedback"
+body contains "Checked"

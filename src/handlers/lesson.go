@@ -158,7 +158,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			for i, r := range allForTask {
 				if r.ID == taskRecord.ID {
 					for j := i - 1; j >= 0; j-- {
-						if allForTask[j].Status == storage.ReviewTaskRecord {
+						if allForTask[j].Status == storage.ReviewedTaskRecord {
 							reviewRecords = append(reviewRecords, allForTask[j])
 						} else {
 							break

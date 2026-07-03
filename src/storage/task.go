@@ -20,8 +20,12 @@ const (
 	SubmitTaskRecord   TaskRecordStatus = "submit"
 	RegisterTaskRecord TaskRecordStatus = "register"
 	RevokedTaskRecord  TaskRecordStatus = "revoked"
-	ReviewTaskRecord   TaskRecordStatus = "review"
 	ReviewedTaskRecord TaskRecordStatus = "reviewed"
+
+	// legacyReviewStatus is the old on-disk value written before review and
+	// reviewed were unified. readTaskRecord normalises it to ReviewedTaskRecord
+	// on every read so the rest of the codebase never sees it.
+	legacyReviewStatus TaskRecordStatus = "review"
 )
 
 type TaskRecord struct {
@@ -64,6 +68,19 @@ func SortTaskRecordsNewestFirst(records []TaskRecord) {
 	})
 }
 
+// readTaskRecord reads a TaskRecord from the bucket and normalises any legacy
+// "review" status to "reviewed" so callers always see the unified state.
+func readTaskRecord(b *bolt.Bucket, key string) (*TaskRecord, error) {
+	r, err := getValue[TaskRecord](b, key)
+	if err != nil {
+		return nil, err
+	}
+	if r.Status == legacyReviewStatus {
+		r.Status = ReviewedTaskRecord
+	}
+	return r, nil
+}
+
 func (d *DB) AddTaskRecord(record *TaskRecord) error {
 	if record.TaskID == "" || record.StudentID == "" || record.EntryAuthorName == "" || record.Content == "" || record.Status == "" {
 		return fmt.Errorf("task record validation error")
@@ -82,13 +99,13 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 		}
 
 		for _, key := range taskRecordKeys {
-			existingRecord, err := getValue[TaskRecord](b, key)
+			existingRecord, err := readTaskRecord(b, key)
 			if err != nil {
 				return err
 			}
 
 			if existingRecord.Status == RegisterTaskRecord {
-				if record.Status == ReviewTaskRecord {
+				if record.Status == ReviewedTaskRecord {
 					existingRecord.Status = ReviewedTaskRecord
 				} else {
 					existingRecord.Status = RevokedTaskRecord
@@ -173,7 +190,7 @@ func (d *DB) ListTaskRecords(userID string, taskID TaskID) ([]TaskRecord, error)
 
 		taskRecords := make([]TaskRecord, len(taskRecordKeys))
 		for i, key := range taskRecordKeys {
-			taskRecord, err := getValue[TaskRecord](b, key)
+			taskRecord, err := readTaskRecord(b, key)
 			if err != nil {
 				return err
 			}
@@ -210,7 +227,7 @@ func (d *DB) LatestTaskStatus(userID string, taskID TaskID) (TaskRecordStatus, e
 		if len(keys) == 0 {
 			return nil
 		}
-		record, err := getValue[TaskRecord](b, keys[len(keys)-1])
+		record, err := readTaskRecord(b, keys[len(keys)-1])
 		if err != nil {
 			return err
 		}
@@ -239,11 +256,11 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 		// Check waiting period since last teacher review
 		if len(waitingPeriod) > 0 && waitingPeriod[0] > 0 {
 			for i := len(keys) - 1; i >= 0; i-- {
-				rec, err := getValue[TaskRecord](b, keys[i])
+				rec, err := readTaskRecord(b, keys[i])
 				if err != nil {
 					return err
 				}
-				if rec.Status == ReviewTaskRecord {
+				if rec.Status == ReviewedTaskRecord {
 					if time.Since(rec.CreatedAt) < waitingPeriod[0] {
 						remaining := waitingPeriod[0] - time.Since(rec.CreatedAt)
 						hours := int(remaining.Hours())
@@ -282,7 +299,7 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 			lesson.EnrolledTasks = append(lesson.EnrolledTasks[:existingIdx], lesson.EnrolledTasks[existingIdx+1:]...)
 		}
 
-		lastTaskRecord, err := getValue[TaskRecord](b, keys[len(keys)-1])
+		lastTaskRecord, err := readTaskRecord(b, keys[len(keys)-1])
 		if err != nil {
 			return err
 		}
@@ -330,7 +347,7 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 				continue
 			}
 
-			taskRecord, err := getValue[TaskRecord](b, enrolled.TaskRecordID)
+			taskRecord, err := readTaskRecord(b, enrolled.TaskRecordID)
 			if err != nil {
 				return err
 			}
@@ -377,7 +394,7 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 			return fmt.Errorf("not registered")
 		}
 
-		taskRecord, err := getValue[TaskRecord](b, lesson.EnrolledTasks[existingIdx].TaskRecordID)
+		taskRecord, err := readTaskRecord(b, lesson.EnrolledTasks[existingIdx].TaskRecordID)
 		if err != nil {
 			return err
 		}

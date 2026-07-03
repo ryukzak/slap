@@ -221,7 +221,7 @@ func TestResubmitAfterCheckVisible(t *testing.T) {
 		EntryAuthorName: teacher.Username,
 		Content:         "looks good",
 		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+		Status:          ReviewedTaskRecord,
 	}))
 
 	// Student submits new entry and re-registers
@@ -387,7 +387,7 @@ func TestLessonFlow(t *testing.T) {
 		EntryAuthorName: teacher.Username,
 		Content:         taskID + " review",
 		CreatedAt:       time.Date(2023, 8, 15, 15, 30, 0, 0, time.UTC),
-		Status:          ReviewTaskRecord,
+		Status:          ReviewedTaskRecord,
 	}
 	assert.NoError(t, db.AddTaskRecord(reviewedTaskRecord))
 
@@ -398,9 +398,58 @@ func TestLessonFlow(t *testing.T) {
 
 	assert.Equal(t, student.ID, records[0].StudentID)
 	assert.Equal(t, teacher.ID, records[0].EntryAuthorID)
-	assert.Equal(t, ReviewTaskRecord, records[0].Status)
+	assert.Equal(t, ReviewedTaskRecord, records[0].Status)
 
 	assert.Equal(t, student.ID, records[1].StudentID)
 	assert.Equal(t, student.ID, records[1].EntryAuthorID)
 	assert.Equal(t, ReviewedTaskRecord, records[1].Status)
+}
+
+// TestLegacyReviewStatusNormalized verifies that records written with the old
+// "review" status are transparently normalised to "reviewed" on read, so that
+// existing databases require no data migration.
+func TestLegacyReviewStatusNormalized(t *testing.T) {
+	db, tempDir, teacher, student, taskID, lessonID := setupLessonFlowDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	addSubmit(t, db, student, taskID, "first attempt")
+	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
+
+	// Write a teacher record directly with the legacy "review" status, bypassing
+	// AddTaskRecord so we simulate old on-disk data.
+	err := db.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(db.bucketName)
+		legacyKey := "task:" + student.ID + ":" + taskID + ":legacy-review"
+		legacyRecord := TaskRecord{
+			ID:              legacyKey,
+			TaskID:          taskID,
+			StudentID:       student.ID,
+			EntryAuthorID:   teacher.ID,
+			EntryAuthorName: teacher.Username,
+			Content:         "legacy feedback",
+			Status:          legacyReviewStatus,
+		}
+		if err := setValue(b, legacyKey, legacyRecord); err != nil {
+			return err
+		}
+		return appendToIndex(b, "tasks:"+student.ID+":"+taskID, legacyKey)
+	})
+	assert.NoError(t, err)
+
+	records, err := db.ListTaskRecords(student.ID, taskID)
+	assert.NoError(t, err)
+
+	for _, r := range records {
+		assert.NotEqual(t, legacyReviewStatus, r.Status,
+			"legacy 'review' status must be normalised to 'reviewed' on read, got %q for record %s", r.Status, r.ID)
+	}
+
+	var legacyRecord *TaskRecord
+	for i := range records {
+		if records[i].Content == "legacy feedback" {
+			legacyRecord = &records[i]
+		}
+	}
+	assert.NotNil(t, legacyRecord, "legacy record must be present")
+	assert.Equal(t, ReviewedTaskRecord, legacyRecord.Status)
 }

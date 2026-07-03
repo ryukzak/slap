@@ -23,7 +23,7 @@ func TestWaitingPeriod_BlocksRegistrationAfterRecentReview(t *testing.T) {
 		EntryAuthorName: teacher.Username,
 		Content:         "needs work",
 		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+		Status:          ReviewedTaskRecord,
 	}))
 
 	// Student submits again
@@ -51,7 +51,7 @@ func TestWaitingPeriod_AllowsRegistrationAfterPeriodExpires(t *testing.T) {
 		EntryAuthorName: teacher.Username,
 		Content:         "needs work",
 		CreatedAt:       time.Now().Add(-25 * time.Hour),
-		Status:          ReviewTaskRecord,
+		Status:          ReviewedTaskRecord,
 	}))
 
 	// Student submits again
@@ -77,7 +77,7 @@ func TestWaitingPeriod_ZeroDurationSkipsCheck(t *testing.T) {
 		EntryAuthorName: teacher.Username,
 		Content:         "needs work",
 		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+		Status:          ReviewedTaskRecord,
 	}))
 
 	// Student submits again
@@ -103,7 +103,7 @@ func TestWaitingPeriod_NoWaitingPeriodParam(t *testing.T) {
 		EntryAuthorName: teacher.Username,
 		Content:         "needs work",
 		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+		Status:          ReviewedTaskRecord,
 	}))
 
 	// Student submits again
