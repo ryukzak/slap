@@ -120,7 +120,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		parts = append(parts, fmt.Sprintf("p:%d", pending))
 	}
 	if queued > 0 {
-		parts = append(parts, fmt.Sprintf("r:%d", queued))
+		parts = append(parts, fmt.Sprintf("q:%d", queued))
 	}
 	if checked > 0 {
 		parts = append(parts, fmt.Sprintf("c:%d", checked))
