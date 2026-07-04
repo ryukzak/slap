@@ -329,6 +329,9 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 		// records is oldest-first; the latest is the last element.
 		latest := records[len(records)-1]
 
+		if latest.Type == RegisterRecord {
+			return fmt.Errorf("already registered")
+		}
 		if latest.Type != SubmitRecord && latest.Type != RevokeRecord {
 			return fmt.Errorf("unexpected task state for registration on lesson: %s", latest.Type)
 		}

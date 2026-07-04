@@ -206,6 +206,16 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		record.Type = storage.SubmitRecord
 	}
 
+	// When a student submits new content while registered to a lesson, auto-revoke
+	// the existing registration so the lesson queue stays consistent.
+	if record.Type == storage.SubmitRecord {
+		if latest, err := DB.LatestTaskRecord(userIDFromURL, storage.TaskID(taskID)); err == nil && latest != nil && latest.Type == storage.RegisterRecord && latest.LessonID != "" {
+			if rerr := DB.UnregisterFromLesson(latest.LessonID, latest.TaskID, latest.StudentID); rerr != nil {
+				log.Printf("action=auto_revoke_lesson author=%s student=%s task=%s error=%v", user.ID, userIDFromURL, taskID, rerr)
+			}
+		}
+	}
+
 	if err := DB.AppendTaskRecord(record); err != nil {
 		log.Printf("action=add_task_record author=%s student=%s task=%s type=%s error=%v", user.ID, userIDFromURL, taskID, record.Type, err)
 		http.Error(w, "Failed to save journal record", http.StatusInternalServerError)
