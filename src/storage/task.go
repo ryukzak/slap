@@ -68,16 +68,24 @@ func SortTaskRecordsNewestFirst(records []TaskRecord) {
 	})
 }
 
+// normalizeLegacyStatus maps old on-disk status values to the current unified
+// set. Call this on every TaskRecord after unmarshalling.
+// This function is a temporary backward-compat shim and can be deleted once
+// no databases with legacy records exist.
+func normalizeLegacyStatus(r *TaskRecord) {
+	if r.Status == legacyReviewStatus {
+		r.Status = ReviewedTaskRecord
+	}
+}
+
 // readTaskRecord reads a TaskRecord from the bucket and normalises any legacy
-// "review" status to "reviewed" so callers always see the unified state.
+// status values so callers always see the unified state.
 func readTaskRecord(b *bolt.Bucket, key string) (*TaskRecord, error) {
 	r, err := getValue[TaskRecord](b, key)
 	if err != nil {
 		return nil, err
 	}
-	if r.Status == legacyReviewStatus {
-		r.Status = ReviewedTaskRecord
-	}
+	normalizeLegacyStatus(r)
 	return r, nil
 }
 

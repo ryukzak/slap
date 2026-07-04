@@ -80,6 +80,7 @@ func (d *DB) GetAllTaskRecordsForUser(userID string) (map[TaskID][]TaskRecord, e
 				log.Printf("Warning: failed to unmarshal task record for key %s: %v", k, err)
 				continue
 			}
+			normalizeLegacyStatus(&record)
 			result[record.TaskID] = append(result[record.TaskID], record)
 		}
 		return nil
