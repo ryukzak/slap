@@ -1,8 +1,7 @@
-# Submit Collapses Pending Test
-# Verifies that the older pending record is collapsed to Dropped when a student
-# adds a new submission while an older one is pending. After the second
-# submission the task page must show a Pending record (the new one) and at least
-# one Dropped (the old one).
+# Submit Stacks in Log Test
+# Verifies that when a student adds a second submission while the first is still
+# pending (not registered), both records appear as Pending in the task journal.
+# The new event-log model does not collapse old pending submissions.
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -34,7 +33,7 @@ content: First pending submission
 
 HTTP 303
 
-# Step 3: Student submits second version (first must get Dropped status)
+# Step 3: Student submits second version
 POST {{base_url}}/user/{{student_id}}/task/{{task_id}}/journal
 Cookie: user_data={{student_token}}
 [FormParams]
@@ -42,11 +41,11 @@ content: Second submission
 
 HTTP 303
 
-# Task page shows new submission as Pending and the old one as Dropped
+# Task page shows both submissions as Pending; no Dropped record appears
 GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
 body contains "Pending"
-body contains "Dropped"
+body not contains "Dropped"
