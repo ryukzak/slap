@@ -20,8 +20,8 @@
           Queued
         </span>
       {{ else }}
-      <span class="px-2 py-0.5 rounded-full text-xs flex-shrink-0 {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "review" }}bg-orange-800 text-orange-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
-      {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "review" }}Feedback{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
+      <span class="px-2 py-0.5 rounded-full text-xs flex-shrink-0 {{ if eq $record.Status "revoked" }}bg-red-800 text-red-200{{ else if eq $record.Status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+      {{ if eq $record.Status "revoked" }}Dropped{{ else if eq $record.Status "reviewed" }}Checked{{ else }}{{$record.Status}}{{ end }}
       </span>
       {{ end }}
       <span class="text-sm flex-shrink-0">@{{$record.EntryAuthorName}}</span>
@@ -71,8 +71,6 @@
             <span class="text-yellow-400">Queued</span>
             {{ else if eq $jr.Status "revoked" }}
             <span class="text-red-400">Dropped</span>
-            {{ else if eq $jr.Status "review" }}
-            <span class="text-orange-400">Feedback</span>
             {{ else if eq $jr.Status "reviewed" }}
             <span class="text-green-400">Checked</span>
             {{ end }}
