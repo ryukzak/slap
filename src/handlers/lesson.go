@@ -116,7 +116,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 	// Revoked previous records are merged into the main list.
 	reviewedByKey := map[string][]storage.TaskRecord{}
 	for _, pr := range previousTaskRecords {
-		if pr.Status == storage.ReviewedTaskRecord {
+		if pr.Type == storage.ReviewedRecord {
 			key := pr.StudentID + ":" + pr.TaskID
 			reviewedByKey[key] = append(reviewedByKey[key], *pr)
 		}
@@ -151,14 +151,14 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		if err != nil {
 			allForTask = nil
 		}
-		if taskRecord.Status == storage.ReviewedTaskRecord && allForTask != nil {
+		if taskRecord.Type == storage.ReviewedRecord && allForTask != nil {
 			// allForTask is newest-first. Find this taskRecord's index, then
 			// collect consecutive review records immediately before it (newer
 			// records) — those are the reviews belonging to this enrollment.
 			for i, r := range allForTask {
 				if r.ID == taskRecord.ID {
 					for j := i - 1; j >= 0; j-- {
-						if allForTask[j].Status == storage.ReviewTaskRecord {
+						if allForTask[j].Type == storage.ReviewedRecord {
 							reviewRecords = append(reviewRecords, allForTask[j])
 						} else {
 							break
@@ -173,10 +173,10 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		authorCounts := map[string]int{}
 		var authorOrder []string
 		for _, r := range allForTask {
-			if authorCounts[r.EntryAuthorName] == 0 {
-				authorOrder = append(authorOrder, r.EntryAuthorName)
+			if authorCounts[r.AuthorName] == 0 {
+				authorOrder = append(authorOrder, r.AuthorName)
 			}
-			authorCounts[r.EntryAuthorName]++
+			authorCounts[r.AuthorName]++
 		}
 		var summaryParts []string
 		for _, name := range authorOrder {
@@ -195,7 +195,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		})
 	}
 	for _, pr := range previousTaskRecords {
-		if pr.Status != storage.RevokedTaskRecord {
+		if pr.Type != storage.RevokeRecord {
 			continue
 		}
 		task := AppConfig.GetTask(pr.TaskID)
@@ -211,13 +211,13 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 	}
 
 	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].CreatedAt.Before(allRecords[j].CreatedAt)
+		return registeredAtOrCreated(allRecords[i]).Before(registeredAtOrCreated(allRecords[j]))
 	})
 
 	totalRecords := len(allRecords)
 	var visible []TaskRecordWithInfo
 	for _, r := range allRecords {
-		if showRevoked || r.Status != storage.RevokedTaskRecord {
+		if showRevoked || r.Type != storage.RevokeRecord {
 			visible = append(visible, r)
 		}
 	}
@@ -610,8 +610,8 @@ func reverseSlice(s []storage.TaskRecord) []storage.TaskRecord {
 }
 
 func registeredAtOrCreated(r TaskRecordWithInfo) time.Time {
-	if !r.RegisteredAt.IsZero() {
-		return r.RegisteredAt
+	if !r.SubmitAt.IsZero() {
+		return r.SubmitAt
 	}
 	return r.CreatedAt
 }

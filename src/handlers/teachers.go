@@ -73,7 +73,7 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		t.Lessons++
 		for _, e := range l.EnrolledTasks {
-			if e.Status == storage.RegisterTaskRecord {
+			if e.Status == storage.RegisterRecord {
 				t.Queued++
 			}
 		}
@@ -102,10 +102,10 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			for _, rec := range records {
-				if rec.EntryAuthorID == rec.StudentID {
+				if rec.AuthorID == rec.StudentID {
 					continue
 				}
-				if t, ok := teachers[rec.EntryAuthorID]; ok {
+				if t, ok := teachers[rec.AuthorID]; ok {
 					t.Reviews++
 				}
 			}

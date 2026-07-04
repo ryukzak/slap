@@ -2,12 +2,10 @@ package storage
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -60,9 +58,11 @@ func (d *DB) Close() error {
 	return d.db.Close()
 }
 
-// GetAllTaskRecordsForUser returns all task records for a user, organized by task ID
+// GetAllTaskRecordsForUser returns all task records for a user, organized by
+// task ID. Records within each task are sorted newest-first. Legacy records are
+// normalized via normalizeLegacyRecords.
 func (d *DB) GetAllTaskRecordsForUser(userID string) (map[TaskID][]TaskRecord, error) {
-	result := make(map[TaskID][]TaskRecord)
+	rawByTask := make(map[TaskID][]TaskRecord)
 
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
@@ -70,28 +70,29 @@ func (d *DB) GetAllTaskRecordsForUser(userID string) (map[TaskID][]TaskRecord, e
 			return nil
 		}
 
-		// Find all records with prefix "task:{userID}:"
 		prefix := []byte(fmt.Sprintf("task:%s:", userID))
 		cursor := b.Cursor()
 
-		for k, v := cursor.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = cursor.Next() {
-			var record TaskRecord
-			if err := json.Unmarshal(v, &record); err != nil {
-				log.Printf("Warning: failed to unmarshal task record for key %s: %v", k, err)
+		for k, _ := cursor.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = cursor.Next() {
+			r, err := readRecordRaw(b, string(k))
+			if err != nil {
+				log.Printf("Warning: failed to read task record for key %s: %v", k, err)
 				continue
 			}
-			result[record.TaskID] = append(result[record.TaskID], record)
+			rawByTask[r.TaskID] = append(rawByTask[r.TaskID], *r)
 		}
 		return nil
 	})
-
-	// Sort each task's records by CreatedAt (newest first)
-	for taskID, records := range result {
-		sort.Slice(records, func(i, j int) bool {
-			return records[i].CreatedAt.After(records[j].CreatedAt)
-		})
-		result[taskID] = records
+	if err != nil {
+		return nil, err
 	}
 
-	return result, err
+	result := make(map[TaskID][]TaskRecord, len(rawByTask))
+	for taskID, records := range rawByTask {
+		normalized := normalizeLegacyRecords(records) // returns oldest-first
+		SortTaskRecordsNewestFirst(normalized)
+		result[taskID] = normalized
+	}
+
+	return result, nil
 }

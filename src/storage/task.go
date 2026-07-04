@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
@@ -14,47 +15,41 @@ import (
 type TaskID = string
 type TaskRecordID = string
 
-type TaskRecordStatus string
-
+// Record type constants. These are the canonical values stored in the Type field.
 const (
-	SubmitTaskRecord   TaskRecordStatus = "submit"
-	RegisterTaskRecord TaskRecordStatus = "register"
-	RevokedTaskRecord  TaskRecordStatus = "revoked"
-	ReviewTaskRecord   TaskRecordStatus = "review"
-	ReviewedTaskRecord TaskRecordStatus = "reviewed"
+	SubmitRecord   = "submit"
+	RegisterRecord = "register"
+	RevokeRecord   = "revoke"
+	ReviewedRecord = "reviewed"
 )
 
 type TaskRecord struct {
-	ID              TaskRecordID     `json:"id"`
-	TaskID          TaskID           `json:"task_id"`
-	StudentID       UserID           `json:"student_id"`
-	EntryAuthorID   UserID           `json:"entry_author_id"`
-	Content         string           `json:"content"`
-	Status          TaskRecordStatus `json:"state"`
-	CreatedAt       time.Time        `json:"created_at"`
-	RegisteredAt    time.Time        `json:"registered_at"`
-	EntryAuthorName string           `json:"entry_author_name"`
-	LessonAt        time.Time        `json:"lesson_at"`
-	LessonID        LessonID         `json:"lesson_id"`
+	ID         string    `json:"id"`
+	TaskID     string    `json:"task_id"`
+	StudentID  string    `json:"student_id"`
+	AuthorID   string    `json:"author_id"`
+	AuthorName string    `json:"author_name"`
+	Type       string    `json:"type"`
+	Counter    int       `json:"counter"`
+	CreatedAt  time.Time `json:"created_at"`
+	SubmitAt   time.Time `json:"submit_at"`
+	Content    string    `json:"content"`
+	LessonID   string    `json:"lesson_id"`
 }
 
 func (r *TaskRecord) RenderAt() string {
 	return r.CreatedAt.Format("2006-01-02 15:04:05")
 }
 
-// Both sorts are stable and expect records in index (append) order: a revoke
-// leaves the dropped record in place and appends a fresh pending record that
-// carries the original CreatedAt (so the student keeps their queue position).
-// That makes ties on CreatedAt normal; on a tie the later-appended record is
-// the newer one, so oldest-first keeps append order while newest-first must
-// reverse it — otherwise the dropped record would shadow the pending
-// resubmission as the latest record.
+// SortTaskRecordsOldestFirst sorts a slice of TaskRecord pointers oldest-first by CreatedAt.
 func SortTaskRecordsOldestFirst(records []*TaskRecord) {
 	sort.SliceStable(records, func(i, j int) bool {
 		return records[i].CreatedAt.Before(records[j].CreatedAt)
 	})
 }
 
+// SortTaskRecordsNewestFirst reverses then stable-sorts a slice of TaskRecord
+// values newest-first by CreatedAt.
 func SortTaskRecordsNewestFirst(records []TaskRecord) {
 	for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
 		records[i], records[j] = records[j], records[i]
@@ -64,8 +59,125 @@ func SortTaskRecordsNewestFirst(records []TaskRecord) {
 	})
 }
 
-func (d *DB) AddTaskRecord(record *TaskRecord) error {
-	if record.TaskID == "" || record.StudentID == "" || record.EntryAuthorName == "" || record.Content == "" || record.Status == "" {
+// legacyTaskRecord is used only during unmarshalling to capture both old and
+// new field names. Call toTaskRecord() to obtain a TaskRecord.
+type legacyTaskRecord struct {
+	TaskRecord
+	LegacyStatus     string `json:"state"`             // old Status field (JSON tag was "state")
+	LegacyAuthorID   string `json:"entry_author_id"`   // old EntryAuthorID
+	LegacyAuthorName string `json:"entry_author_name"` // old EntryAuthorName
+}
+
+func (l *legacyTaskRecord) toTaskRecord() TaskRecord {
+	r := l.TaskRecord
+	if r.Type == "" && l.LegacyStatus != "" {
+		r.Type = l.LegacyStatus
+	}
+	if r.AuthorID == "" && l.LegacyAuthorID != "" {
+		r.AuthorID = l.LegacyAuthorID
+	}
+	if r.AuthorName == "" && l.LegacyAuthorName != "" {
+		r.AuthorName = l.LegacyAuthorName
+	}
+	return r
+}
+
+// readRecordRaw reads and unmarshals a single record from the bucket, handling
+// both legacy and current JSON field names via legacyTaskRecord.
+func readRecordRaw(b *bolt.Bucket, key string) (*TaskRecord, error) {
+	data := b.Get([]byte(key))
+	if data == nil {
+		return nil, fmt.Errorf("not found: %s", key)
+	}
+	var lr legacyTaskRecord
+	if err := json.Unmarshal(data, &lr); err != nil {
+		return nil, fmt.Errorf("could not unmarshal task record %q: %w", key, err)
+	}
+	r := lr.toTaskRecord()
+	return &r, nil
+}
+
+// normalizeLegacyRecords fills in missing SubmitAt and Counter values and maps
+// legacy Type strings to canonical names. It sorts records oldest-first and
+// returns them in that order. This is a backward-compat shim; it can be
+// removed once no databases with legacy records exist.
+func normalizeLegacyRecords(records []TaskRecord) []TaskRecord {
+	sort.SliceStable(records, func(i, j int) bool {
+		return records[i].CreatedAt.Before(records[j].CreatedAt)
+	})
+
+	var prevSubmitAt time.Time
+	counter := 0
+
+	for i := range records {
+		r := &records[i]
+
+		// Step 1: fill SubmitAt for legacy records that lack it.
+		if r.SubmitAt.IsZero() {
+			isStudentAuthored := r.AuthorID == r.StudentID
+			switch r.Type {
+			case "submit", "register", "revoked":
+				// These legacy types each represent the student's submission or a
+				// mutation of it; treat CreatedAt as the round-start time.
+				r.SubmitAt = r.CreatedAt
+			case "review", "reviewed":
+				// "review" is the old on-disk value for a teacher review (now
+				// "reviewed"). If the record is student-authored it is the original
+				// submit that was mutated to reviewed status by the old mutable model.
+				if isStudentAuthored {
+					r.SubmitAt = r.CreatedAt
+				} else {
+					r.SubmitAt = prevSubmitAt
+				}
+			default:
+				r.SubmitAt = prevSubmitAt
+			}
+		}
+
+		// Step 2: assign Counter sequentially, resetting to 1 when SubmitAt changes.
+		if !r.SubmitAt.Equal(prevSubmitAt) {
+			counter = 1
+		} else {
+			counter++
+		}
+		r.Counter = counter
+		prevSubmitAt = r.SubmitAt
+
+		// Step 3: map legacy type strings to canonical names.
+		switch r.Type {
+		case "revoked":
+			r.Type = RevokeRecord
+		case "review":
+			r.Type = ReviewedRecord
+		}
+	}
+
+	return records
+}
+
+// readAndNormalizeRecords reads all records for the given index keys, applies
+// legacy normalization, and returns them oldest-first.
+func readAndNormalizeRecords(b *bolt.Bucket, keys []string) ([]TaskRecord, error) {
+	records := make([]TaskRecord, 0, len(keys))
+	for _, key := range keys {
+		r, err := readRecordRaw(b, key)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, *r)
+	}
+	return normalizeLegacyRecords(records), nil
+}
+
+// AppendTaskRecord appends a new immutable record to the event log for a
+// student/task pair. Counter and SubmitAt are derived from the latest existing
+// record:
+//   - Type == SubmitRecord: SubmitAt = time.Now(), Counter = 1
+//   - Any other type:       SubmitAt = latest.SubmitAt, Counter = latest.Counter+1
+//
+// AuthorName, Content, Type, TaskID, and StudentID are all required.
+func (d *DB) AppendTaskRecord(record *TaskRecord) error {
+	if record.TaskID == "" || record.StudentID == "" || record.AuthorName == "" || record.Content == "" || record.Type == "" {
 		return fmt.Errorf("task record validation error")
 	}
 
@@ -81,76 +193,52 @@ func (d *DB) AddTaskRecord(record *TaskRecord) error {
 			return err
 		}
 
-		for _, key := range taskRecordKeys {
-			existingRecord, err := getValue[TaskRecord](b, key)
-			if err != nil {
-				return err
-			}
-
-			if existingRecord.Status == RegisterTaskRecord {
-				if record.Status == ReviewTaskRecord {
-					existingRecord.Status = ReviewedTaskRecord
-				} else {
-					existingRecord.Status = RevokedTaskRecord
-				}
-				if err := setValue(b, key, existingRecord); err != nil {
+		if record.Type == SubmitRecord {
+			record.SubmitAt = time.Now()
+			record.Counter = 1
+		} else {
+			if len(taskRecordKeys) > 0 {
+				existing, err := readAndNormalizeRecords(b, taskRecordKeys)
+				if err != nil {
 					return err
 				}
-				// Sync status back to the EnrolledTask in the lesson
-				if existingRecord.LessonID != "" {
-					if lesson, err := getValue[Lesson](b, existingRecord.LessonID); err == nil {
-						for i, enrolled := range lesson.EnrolledTasks {
-							if enrolled.TaskRecordID == existingRecord.ID {
-								lesson.EnrolledTasks[i].Status = existingRecord.Status
-								_ = setValue(b, existingRecord.LessonID, *lesson)
+				latest := existing[len(existing)-1]
+				record.SubmitAt = latest.SubmitAt
+				record.Counter = latest.Counter + 1
+
+				// When a teacher adds a ReviewedRecord while the student has an
+				// active lesson registration (a RegisterRecord with a LessonID),
+				// update the lesson's enrolled-task status so ReviewedCount() stays
+				// accurate without mutating any task record.
+				if record.Type == ReviewedRecord &&
+					record.AuthorID != record.StudentID &&
+					latest.LessonID != "" &&
+					latest.Type == RegisterRecord {
+					if lesson, err := getValue[Lesson](b, latest.LessonID); err == nil {
+						for j, enrolled := range lesson.EnrolledTasks {
+							if enrolled.TaskRecordID == latest.ID {
+								lesson.EnrolledTasks[j].Status = ReviewedRecord
+								_ = setValue(b, latest.LessonID, *lesson)
 								break
 							}
 						}
 					}
 				}
-			} else if existingRecord.Status == SubmitTaskRecord {
-				// Only the newest submission stays pending; collapse any older
-				// pending record (which is not enrolled in a lesson) to dropped.
-				existingRecord.Status = RevokedTaskRecord
-				if err := setValue(b, key, existingRecord); err != nil {
-					return err
-				}
+			} else {
+				record.SubmitAt = record.CreatedAt
+				record.Counter = 1
 			}
-
 		}
 
-		err = appendToIndex(b, indexKey, newRecordKey)
-		if err != nil {
+		if err := appendToIndex(b, indexKey, newRecordKey); err != nil {
 			return err
 		}
 		return setValue(b, newRecordKey, record)
 	})
 }
 
-// appendPendingResubmission re-creates the student's submission as a fresh
-// pending record after a revoke. The dropped record is left untouched as
-// immutable history; the new record copies the content and — crucially — the
-// original CreatedAt, so the student keeps their place in the submit-ordered
-// queue instead of being pushed to the back. It must be called from within an
-// open write transaction on bucket b.
-func appendPendingResubmission(b *bolt.Bucket, revoked *TaskRecord) error {
-	indexKey := "tasks:" + revoked.StudentID + ":" + revoked.TaskID
-	newKey := "task:" + revoked.StudentID + ":" + revoked.TaskID + ":" + uuid.New().String()
-
-	resubmission := *revoked
-	resubmission.ID = newKey
-	resubmission.Status = SubmitTaskRecord
-	resubmission.RegisteredAt = time.Time{}
-	resubmission.LessonAt = time.Time{}
-	resubmission.LessonID = ""
-	// CreatedAt is intentionally kept from the revoked record to preserve queue position.
-
-	if err := appendToIndex(b, indexKey, newKey); err != nil {
-		return err
-	}
-	return setValue(b, newKey, resubmission)
-}
-
+// ListTaskRecords returns all task records for a student/task pair, normalized
+// for legacy format and sorted newest-first.
 func (d *DB) ListTaskRecords(userID string, taskID TaskID) ([]TaskRecord, error) {
 	if userID == "" || taskID == "" {
 		return nil, fmt.Errorf("user ID and task ID cannot be empty")
@@ -164,22 +252,17 @@ func (d *DB) ListTaskRecords(userID string, taskID TaskID) ([]TaskRecord, error)
 		taskRecordKeys, err := getIndex(b, indexKey)
 		if err != nil {
 			// A corrupt or colliding index (e.g. a struct stored under a
-			// colon-containing task ID, see issue #45) must not break the
-			// whole read — degrade to "no records" so the profile page renders.
-			// Log the raw stored value to help diagnose the corruption source.
+			// colon-containing task ID, see issue #45) must not break the whole
+			// read — degrade to "no records" so the profile page renders.
 			log.Printf("Warning: unreadable task index %q, treating as empty: %v (raw value: %s)", indexKey, err, b.Get([]byte(indexKey)))
 			return nil
 		}
 
-		taskRecords := make([]TaskRecord, len(taskRecordKeys))
-		for i, key := range taskRecordKeys {
-			taskRecord, err := getValue[TaskRecord](b, key)
-			if err != nil {
-				return err
-			}
-			taskRecords[i] = *taskRecord
+		records, err := readAndNormalizeRecords(b, taskRecordKeys)
+		if err != nil {
+			return err
 		}
-		result = taskRecords
+		result = records
 		return nil
 	})
 
@@ -187,37 +270,40 @@ func (d *DB) ListTaskRecords(userID string, taskID TaskID) ([]TaskRecord, error)
 		return nil, err
 	}
 
+	// normalizeLegacyRecords returns oldest-first; reverse to newest-first.
 	SortTaskRecordsNewestFirst(result)
 	return result, nil
 }
 
-// LatestTaskStatus returns the status of the most recently added record for a
-// given user/task pair, or an empty string if no records exist.
-func (d *DB) LatestTaskStatus(userID string, taskID TaskID) (TaskRecordStatus, error) {
+// LatestTaskRecord returns the most recently appended record for a student/task
+// pair (after normalization), or nil if no records exist.
+func (d *DB) LatestTaskRecord(userID string, taskID TaskID) (*TaskRecord, error) {
 	if userID == "" || taskID == "" {
-		return "", fmt.Errorf("user ID and task ID cannot be empty")
+		return nil, fmt.Errorf("user ID and task ID cannot be empty")
 	}
 
-	var status TaskRecordStatus
-	err := d.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(d.bucketName)
-		indexKey := "tasks:" + userID + ":" + taskID
-		keys, err := getIndex(b, indexKey)
-		if err != nil {
-			log.Printf("Warning: unreadable task index %q, treating as empty: %v (raw value: %s)", indexKey, err, b.Get([]byte(indexKey)))
-			return nil
-		}
-		if len(keys) == 0 {
-			return nil
-		}
-		record, err := getValue[TaskRecord](b, keys[len(keys)-1])
-		if err != nil {
-			return err
-		}
-		status = record.Status
-		return nil
-	})
-	return status, err
+	records, err := d.ListTaskRecords(userID, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+	r := records[0] // newest-first; index 0 is the latest
+	return &r, nil
+}
+
+// appendRecordInTx writes a new record and appends its key to the index inside
+// an existing write transaction. Callers must set all fields including SubmitAt
+// and Counter themselves.
+func appendRecordInTx(b *bolt.Bucket, record *TaskRecord) error {
+	indexKey := "tasks:" + record.StudentID + ":" + record.TaskID
+	newKey := "task:" + record.StudentID + ":" + record.TaskID + ":" + uuid.New().String()
+	record.ID = newKey
+	if err := appendToIndex(b, indexKey, newKey); err != nil {
+		return err
+	}
+	return setValue(b, newKey, *record)
 }
 
 func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID, waitingPeriod ...time.Duration) error {
@@ -236,16 +322,23 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 			return fmt.Errorf("no task entries found for author %s and task %s", authorID, taskID)
 		}
 
-		// Check waiting period since last teacher review
+		records, err := readAndNormalizeRecords(b, keys)
+		if err != nil {
+			return err
+		}
+		// records is oldest-first; the latest is the last element.
+		latest := records[len(records)-1]
+
+		if latest.Type != SubmitRecord && latest.Type != RevokeRecord {
+			return fmt.Errorf("unexpected task state for registration on lesson: %s", latest.Type)
+		}
+
+		// Check waiting period since last teacher review.
 		if len(waitingPeriod) > 0 && waitingPeriod[0] > 0 {
-			for i := len(keys) - 1; i >= 0; i-- {
-				rec, err := getValue[TaskRecord](b, keys[i])
-				if err != nil {
-					return err
-				}
-				if rec.Status == ReviewTaskRecord {
-					if time.Since(rec.CreatedAt) < waitingPeriod[0] {
-						remaining := waitingPeriod[0] - time.Since(rec.CreatedAt)
+			for i := len(records) - 1; i >= 0; i-- {
+				if records[i].Type == ReviewedRecord {
+					if time.Since(records[i].CreatedAt) < waitingPeriod[0] {
+						remaining := waitingPeriod[0] - time.Since(records[i].CreatedAt)
 						hours := int(remaining.Hours())
 						minutes := int(remaining.Minutes()) % 60
 						return fmt.Errorf("waiting period: %dh%dm remaining since last check", hours, minutes)
@@ -264,48 +357,46 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 			return fmt.Errorf("registration is closed")
 		}
 
-		// Check for existing enrollment for same task+author
+		// Check for an existing enrollment for the same task+student.
 		existingIdx := -1
 		for i, enrolled := range lesson.EnrolledTasks {
-			if enrolled.TaskID == taskID && enrolled.AuthorID == authorID {
+			if enrolled.TaskID == taskID && enrolled.StudentID == authorID {
 				existingIdx = i
 				break
 			}
 		}
 		if existingIdx >= 0 {
-			// Duplicate: same record already registered
-			if lesson.EnrolledTasks[existingIdx].TaskRecordID == keys[len(keys)-1] {
-				return fmt.Errorf("already registered")
-			}
-			// Move old enrollment to history before replacing
+			// Move old enrollment to history before replacing.
 			lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, lesson.EnrolledTasks[existingIdx])
 			lesson.EnrolledTasks = append(lesson.EnrolledTasks[:existingIdx], lesson.EnrolledTasks[existingIdx+1:]...)
 		}
 
-		lastTaskRecord, err := getValue[TaskRecord](b, keys[len(keys)-1])
-		if err != nil {
+		// Append a new immutable RegisterRecord.
+		newRecord := TaskRecord{
+			TaskID:     taskID,
+			StudentID:  authorID,
+			AuthorID:   authorID,
+			AuthorName: latest.AuthorName,
+			Type:       RegisterRecord,
+			LessonID:   lessonID,
+			CreatedAt:  time.Now(),
+			SubmitAt:   latest.SubmitAt,
+			Counter:    latest.Counter + 1,
+			Content:    latest.Content,
+		}
+		if err := appendRecordInTx(b, &newRecord); err != nil {
 			return err
 		}
-		if lastTaskRecord.Status != SubmitTaskRecord {
-			return fmt.Errorf("unexpected task state for registration on lesson: %s", lastTaskRecord.Status)
-		}
-		lastTaskRecord.Status = RegisterTaskRecord
-		lastTaskRecord.RegisteredAt = time.Now()
 
 		lesson.EnrolledTasks = append(lesson.EnrolledTasks, EnrolledTask{
-			TaskID:         taskID,
-			AuthorID:       authorID,
-			TaskRecordID:   lastTaskRecord.ID,
-			TaskRecordDesc: lastTaskRecord.Content,
-			Status:         RegisterTaskRecord,
+			TaskID:       taskID,
+			StudentID:    authorID,
+			TaskRecordID: newRecord.ID,
+			Excerpt:      newRecord.Content,
+			Status:       RegisterRecord,
+			SubmitAt:     newRecord.SubmitAt,
 		})
-		if err := setValue(b, lessonID, *lesson); err != nil {
-			return err
-		}
-
-		lastTaskRecord.LessonAt = lesson.DateTime
-		lastTaskRecord.LessonID = lessonID
-		return setValue(b, lastTaskRecord.ID, lastTaskRecord)
+		return setValue(b, lessonID, *lesson)
 	})
 }
 
@@ -325,25 +416,34 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 
 		var remaining []EnrolledTask
 		for _, enrolled := range lesson.EnrolledTasks {
-			if enrolled.Status != RegisterTaskRecord {
+			if enrolled.Status != RegisterRecord {
 				remaining = append(remaining, enrolled)
 				continue
 			}
 
-			taskRecord, err := getValue[TaskRecord](b, enrolled.TaskRecordID)
+			// Read the RegisterRecord to copy content, AuthorName, and SubmitAt.
+			regRecord, err := readRecordRaw(b, enrolled.TaskRecordID)
 			if err != nil {
 				return err
 			}
-			taskRecord.Status = RevokedTaskRecord
-			if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
-				return err
+
+			revokeRecord := TaskRecord{
+				TaskID:     enrolled.TaskID,
+				StudentID:  enrolled.StudentID,
+				AuthorID:   enrolled.StudentID,
+				AuthorName: regRecord.AuthorName,
+				Type:       RevokeRecord,
+				LessonID:   lessonID,
+				CreatedAt:  time.Now(),
+				SubmitAt:   regRecord.SubmitAt,
+				Counter:    regRecord.Counter + 1,
+				Content:    regRecord.Content,
 			}
-			// Return the student to the pending queue without losing their place.
-			if err := appendPendingResubmission(b, taskRecord); err != nil {
+			if err := appendRecordInTx(b, &revokeRecord); err != nil {
 				return err
 			}
 
-			enrolled.Status = RevokedTaskRecord
+			enrolled.Status = RevokeRecord
 			lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, enrolled)
 			count++
 		}
@@ -368,7 +468,7 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 
 		existingIdx := -1
 		for i, enrolled := range lesson.EnrolledTasks {
-			if enrolled.TaskID == taskID && enrolled.AuthorID == authorID {
+			if enrolled.TaskID == taskID && enrolled.StudentID == authorID {
 				existingIdx = i
 				break
 			}
@@ -377,27 +477,35 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 			return fmt.Errorf("not registered")
 		}
 
-		taskRecord, err := getValue[TaskRecord](b, lesson.EnrolledTasks[existingIdx].TaskRecordID)
-		if err != nil {
-			return err
-		}
-		if taskRecord.Status != RegisterTaskRecord {
+		enrolled := lesson.EnrolledTasks[existingIdx]
+		if enrolled.Status != RegisterRecord {
 			return fmt.Errorf("task record is not in register state")
 		}
 
-		taskRecord.Status = RevokedTaskRecord
-		if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
-			return err
-		}
-		// Re-create the submission as pending so the student can register to
-		// another lesson without resubmitting and losing their queue position.
-		if err := appendPendingResubmission(b, taskRecord); err != nil {
+		// Read the RegisterRecord to copy content, AuthorName, and SubmitAt.
+		regRecord, err := readRecordRaw(b, enrolled.TaskRecordID)
+		if err != nil {
 			return err
 		}
 
-		enrolledTask := lesson.EnrolledTasks[existingIdx]
-		enrolledTask.Status = RevokedTaskRecord
-		lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, enrolledTask)
+		revokeRecord := TaskRecord{
+			TaskID:     taskID,
+			StudentID:  authorID,
+			AuthorID:   authorID,
+			AuthorName: regRecord.AuthorName,
+			Type:       RevokeRecord,
+			LessonID:   lessonID,
+			CreatedAt:  time.Now(),
+			SubmitAt:   regRecord.SubmitAt,
+			Counter:    regRecord.Counter + 1,
+			Content:    regRecord.Content,
+		}
+		if err := appendRecordInTx(b, &revokeRecord); err != nil {
+			return err
+		}
+
+		enrolled.Status = RevokeRecord
+		lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, enrolled)
 		lesson.EnrolledTasks = append(lesson.EnrolledTasks[:existingIdx], lesson.EnrolledTasks[existingIdx+1:]...)
 		return setValue(b, lessonID, *lesson)
 	})

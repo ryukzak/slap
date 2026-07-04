@@ -52,16 +52,16 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskStatuses := make(map[storage.TaskID]storage.TaskRecordStatus)
+	taskStatuses := make(map[storage.TaskID]string)
 	journals := make(map[storage.TaskID][]storage.TaskRecord)
 	for _, task := range AppConfig.Tasks {
-		status, err := DB.LatestTaskStatus(profileUserID, task.ID)
+		rec, err := DB.LatestTaskRecord(profileUserID, task.ID)
 		if err != nil {
 			log.Printf("Error fetching task status for user %s task %s: %v", profileUserID, task.ID, err)
 			continue
 		}
-		if status != "" {
-			taskStatuses[task.ID] = status
+		if rec != nil {
+			taskStatuses[task.ID] = rec.Type
 		}
 		records, err := DB.ListTaskRecords(profileUserID, task.ID)
 		if err != nil {
@@ -241,7 +241,7 @@ type TaskStats struct {
 type UserTaskSummary struct {
 	Count     int
 	Score     string
-	Status    storage.TaskRecordStatus
+	Status    string
 	Summary   string // compact status counts e.g. "p:2 r:1 c:1"
 	WaitSince time.Time
 }
@@ -324,19 +324,19 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				if !ok || len(records) == 0 {
 					continue
 				}
-				// Prefer "reviewed" status so the table shows "Checked" when the
-				// task has been reviewed, not just "Feedback".
-				bestStatus := records[0].Status
+				// Prefer "reviewed" type so the table shows "Checked" when the
+				// task has been reviewed.
+				bestStatus := records[0].Type
 				for _, rec := range records {
-					if rec.Status == storage.ReviewedTaskRecord {
-						bestStatus = storage.ReviewedTaskRecord
+					if rec.Type == storage.ReviewedRecord {
+						bestStatus = storage.ReviewedRecord
 						break
 					}
 				}
 				summary := UserTaskSummary{Count: len(records), Status: bestStatus, WaitSince: records[0].CreatedAt}
-				var pending, queued, dropped, feedback, checked int
+				var pending, queued, dropped, checked int
 				for _, rec := range records {
-					if rec.EntryAuthorID != rec.StudentID {
+					if rec.AuthorID != rec.StudentID {
 						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
 							summary.Score = score
 						}
@@ -345,18 +345,16 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						if checkedByDayTeacher[dayKey] == nil {
 							checkedByDayTeacher[dayKey] = make(map[string]int)
 						}
-						checkedByDayTeacher[dayKey][rec.EntryAuthorID]++
+						checkedByDayTeacher[dayKey][rec.AuthorID]++
 					}
-					switch rec.Status {
-					case storage.SubmitTaskRecord:
+					switch rec.Type {
+					case storage.SubmitRecord:
 						pending++
-					case storage.RegisterTaskRecord:
+					case storage.RegisterRecord:
 						queued++
-					case storage.RevokedTaskRecord:
+					case storage.RevokeRecord:
 						dropped++
-					case storage.ReviewTaskRecord:
-						feedback++
-					case storage.ReviewedTaskRecord:
+					case storage.ReviewedRecord:
 						checked++
 					}
 				}
@@ -366,9 +364,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				if queued > 0 {
 					parts = append(parts, fmt.Sprintf("q:%d", queued))
-				}
-				if feedback > 0 {
-					parts = append(parts, fmt.Sprintf("f:%d", feedback))
 				}
 				if checked > 0 {
 					parts = append(parts, fmt.Sprintf("c:%d", checked))
@@ -408,15 +403,13 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			switch td.Status {
-			case storage.SubmitTaskRecord:
+			case storage.SubmitRecord:
 				ts.Pending++
-			case storage.RegisterTaskRecord:
+			case storage.RegisterRecord:
 				ts.Queued++
-			case storage.RevokedTaskRecord:
+			case storage.RevokeRecord:
 				ts.Dropped++
-			case storage.ReviewTaskRecord:
-				ts.Feedback++
-			case storage.ReviewedTaskRecord:
+			case storage.ReviewedRecord:
 				if td.Score != "" && td.Score != "0" {
 					ts.Evaluated++
 					if v, err := strconv.Atoi(td.Score); err == nil {
@@ -484,14 +477,14 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok || td.Count == 0 {
 				continue
 			}
-			if td.Status != storage.SubmitTaskRecord && td.Status != storage.RegisterTaskRecord {
+			if td.Status != storage.SubmitRecord && td.Status != storage.RegisterRecord {
 				continue
 			}
 			wait := now.Sub(td.WaitSince)
 			wb := pendingByTask[task.ID]
 			// Count skipped lessons for stall detection.
 			isStall := false
-			if td.Status == storage.SubmitTaskRecord {
+			if td.Status == storage.SubmitRecord {
 				skipped := 0
 				for _, ld := range pastLessonDates {
 					if ld.After(td.WaitSince) {
@@ -703,7 +696,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			score := ""
 			for _, rec := range records {
-				if rec.EntryAuthorID != rec.StudentID {
+				if rec.AuthorID != rec.StudentID {
 					if s := util.ExtractScore(rec.Content); s != "" && s != "0" {
 						score = s
 						break

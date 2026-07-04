@@ -9,13 +9,13 @@ import (
 
 // rec is a small helper to build a TaskRecord with the fields latestCheckedInfo
 // looks at.
-func rec(status storage.TaskRecordStatus, author, student, content string, at time.Time) storage.TaskRecord {
+func rec(typ string, author, student, content string, at time.Time) storage.TaskRecord {
 	return storage.TaskRecord{
-		Status:        status,
-		EntryAuthorID: author,
-		StudentID:     student,
-		Content:       content,
-		CreatedAt:     at,
+		Type:      typ,
+		AuthorID:  author,
+		StudentID: student,
+		Content:   content,
+		CreatedAt: at,
 	}
 }
 
@@ -39,37 +39,27 @@ func TestLatestCheckedInfo(t *testing.T) {
 		{
 			name: "submitted but not checked",
 			records: []storage.TaskRecord{
-				rec(storage.SubmitTaskRecord, "s", "s", "work", t0),
+				rec(storage.SubmitRecord, "s", "s", "work", t0),
 			},
 			wantAt:    nil,
 			wantState: "not checked (Pending)",
 		},
 		{
-			name: "accepted via lesson uses submission time",
+			name: "reviewed by teacher",
 			records: []storage.TaskRecord{
-				rec(storage.ReviewTaskRecord, "teacher", "s", "8 ok", t2),
-				rec(storage.ReviewedTaskRecord, "s", "s", "work", t1),
+				rec(storage.ReviewedRecord, "teacher", "s", "8 ok", t2),
+				rec(storage.RegisterRecord, "s", "s", "work", t1),
 			},
-			wantAt:    &t1,
+			wantAt:    &t2,
 			wantState: "Checked",
 		},
 		{
-			name: "scored without lesson falls back to latest submission",
+			name: "registered but not yet reviewed",
 			records: []storage.TaskRecord{
-				rec(storage.ReviewTaskRecord, "teacher", "s", "8 good", t2),
-				rec(storage.RevokedTaskRecord, "s", "s", "work", t1),
-			},
-			wantAt:    &t1,
-			wantState: "scored without lesson (submission Dropped)",
-		},
-		{
-			name: "feedback without a score does not count",
-			records: []storage.TaskRecord{
-				rec(storage.ReviewTaskRecord, "teacher", "s", "please revise", t2),
-				rec(storage.RevokedTaskRecord, "s", "s", "work", t1),
+				rec(storage.RegisterRecord, "s", "s", "work", t1),
 			},
 			wantAt:    nil,
-			wantState: "not checked (Feedback)",
+			wantState: "not checked (Queued)",
 		},
 	}
 
