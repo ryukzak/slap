@@ -44,6 +44,19 @@ type EnrolledTask struct {
 	SubmitAt     time.Time      `json:"submit_at"`
 }
 
+// UnmarshalJSON normalizes the Status field so old on-disk values like
+// "revoked" and "review" are mapped to their canonical forms on every read.
+func (e *EnrolledTask) UnmarshalJSON(data []byte) error {
+	type raw EnrolledTask // break recursion
+	var r raw
+	if err := json.Unmarshal(data, &r); err != nil {
+		return err
+	}
+	*e = EnrolledTask(r)
+	e.Status = normalizeType(e.Status)
+	return nil
+}
+
 func (l *Lesson) RegisteredCount() int {
 	count := 0
 	for _, t := range l.EnrolledTasks {

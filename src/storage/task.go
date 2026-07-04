@@ -62,6 +62,19 @@ func SortTaskRecordsNewestFirst(records []TaskRecord) {
 	})
 }
 
+// normalizeType maps legacy on-disk type strings to their canonical names.
+// Safe to call on already-canonical values.
+func normalizeType(t TaskRecordType) TaskRecordType {
+	switch t {
+	case "revoked":
+		return RevokeRecord
+	case "review":
+		return ReviewedRecord
+	default:
+		return t
+	}
+}
+
 // legacyTaskRecord is used only during unmarshalling to capture both old and
 // new field names. Call toTaskRecord() to obtain a TaskRecord.
 type legacyTaskRecord struct {
@@ -82,6 +95,7 @@ func (l *legacyTaskRecord) toTaskRecord() TaskRecord {
 	if r.AuthorName == "" && l.LegacyAuthorName != "" {
 		r.AuthorName = l.LegacyAuthorName
 	}
+	r.Type = normalizeType(r.Type)
 	return r
 }
 
