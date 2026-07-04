@@ -15,26 +15,29 @@ import (
 type TaskID = string
 type TaskRecordID = string
 
+// TaskRecordType is the canonical type of a task record in the event log.
+type TaskRecordType string
+
 // Record type constants. These are the canonical values stored in the Type field.
 const (
-	SubmitRecord   = "submit"
-	RegisterRecord = "register"
-	RevokeRecord   = "revoke"
-	ReviewedRecord = "reviewed"
+	SubmitRecord   TaskRecordType = "submit"
+	RegisterRecord TaskRecordType = "register"
+	RevokeRecord   TaskRecordType = "revoke"
+	ReviewedRecord TaskRecordType = "reviewed"
 )
 
 type TaskRecord struct {
-	ID         string    `json:"id"`
-	TaskID     string    `json:"task_id"`
-	StudentID  string    `json:"student_id"`
-	AuthorID   string    `json:"author_id"`
-	AuthorName string    `json:"author_name"`
-	Type       string    `json:"type"`
-	Counter    int       `json:"counter"`
-	CreatedAt  time.Time `json:"created_at"`
-	SubmitAt   time.Time `json:"submit_at"`
-	Content    string    `json:"content"`
-	LessonID   string    `json:"lesson_id"`
+	ID         string         `json:"id"`
+	TaskID     string         `json:"task_id"`
+	StudentID  string         `json:"student_id"`
+	AuthorID   string         `json:"author_id"`
+	AuthorName string         `json:"author_name"`
+	Type       TaskRecordType `json:"type"`
+	Counter    int            `json:"counter"`
+	CreatedAt  time.Time      `json:"created_at"`
+	SubmitAt   time.Time      `json:"submit_at"`
+	Content    string         `json:"content"`
+	LessonID   string         `json:"lesson_id"`
 }
 
 func (r *TaskRecord) RenderAt() string {
@@ -71,7 +74,7 @@ type legacyTaskRecord struct {
 func (l *legacyTaskRecord) toTaskRecord() TaskRecord {
 	r := l.TaskRecord
 	if r.Type == "" && l.LegacyStatus != "" {
-		r.Type = l.LegacyStatus
+		r.Type = TaskRecordType(l.LegacyStatus) // legacy: convert plain string from old JSON
 	}
 	if r.AuthorID == "" && l.LegacyAuthorID != "" {
 		r.AuthorID = l.LegacyAuthorID

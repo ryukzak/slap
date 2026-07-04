@@ -36,12 +36,12 @@ func (l Lesson) IsRegistrationOpen() bool {
 }
 
 type EnrolledTask struct {
-	TaskRecordID string    `json:"journal_entry_id"`
-	StudentID    string    `json:"user_id"`
-	TaskID       string    `json:"task_id"`
-	Excerpt      string    `json:"description"`
-	Status       string    `json:"status"`
-	SubmitAt     time.Time `json:"submit_at"`
+	TaskRecordID string         `json:"journal_entry_id"`
+	StudentID    string         `json:"user_id"`
+	TaskID       string         `json:"task_id"`
+	Excerpt      string         `json:"description"`
+	Status       TaskRecordType `json:"status"`
+	SubmitAt     time.Time      `json:"submit_at"`
 }
 
 func (l *Lesson) RegisteredCount() int {

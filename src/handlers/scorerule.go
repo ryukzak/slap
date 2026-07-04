@@ -10,7 +10,7 @@ import (
 )
 
 // taskStatusLabel maps a stored record type to the label shown in the UI.
-func taskStatusLabel(s string) string {
+func taskStatusLabel(s storage.TaskRecordType) string {
 	switch s {
 	case storage.SubmitRecord:
 		return "Pending"
@@ -21,7 +21,7 @@ func taskStatusLabel(s string) string {
 	case storage.ReviewedRecord:
 		return "Checked"
 	default:
-		return s
+		return string(s)
 	}
 }
 

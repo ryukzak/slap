@@ -9,7 +9,7 @@ import (
 
 // rec is a small helper to build a TaskRecord with the fields latestCheckedInfo
 // looks at.
-func rec(typ string, author, student, content string, at time.Time) storage.TaskRecord {
+func rec(typ storage.TaskRecordType, author, student, content string, at time.Time) storage.TaskRecord {
 	return storage.TaskRecord{
 		Type:      typ,
 		AuthorID:  author,

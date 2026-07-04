@@ -52,7 +52,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskStatuses := make(map[storage.TaskID]string)
+	taskStatuses := make(map[storage.TaskID]storage.TaskRecordType)
 	journals := make(map[storage.TaskID][]storage.TaskRecord)
 	for _, task := range AppConfig.Tasks {
 		rec, err := DB.LatestTaskRecord(profileUserID, task.ID)
@@ -241,7 +241,7 @@ type TaskStats struct {
 type UserTaskSummary struct {
 	Count     int
 	Score     string
-	Status    string
+	Status    storage.TaskRecordType
 	Summary   string // compact status counts e.g. "p:2 r:1 c:1"
 	WaitSince time.Time
 }
