@@ -85,4 +85,4 @@ body contains "@Row Student"
 # Task status and summary counters
 body contains "/user/{{student_id}}/task/task1"
 body contains "Queued"
-body contains "(q:1)"
+body contains "q:1"

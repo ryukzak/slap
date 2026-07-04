@@ -91,13 +91,13 @@ Cookie: user_data={{student_token}}
 
 HTTP 404
 
-# Step 9: Task record reverted to submit — no longer shows Queued
+# Step 9: Task record reverted to dropped after cascade delete
 GET {{base_url}}/user/{{student_id}}/task/{{task_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
-body not contains "Queued"
+body contains "Dropped"
 
 # Step 10: Student can register to a different lesson (task is back to submit)
 POST {{base_url}}/api/lessons

@@ -92,7 +92,7 @@
     {{ $.WaitingMessage }}
   </p>
   {{ end }}
-  {{ if and (eq .Type "submit") (eq .AuthorID $.SessionUserID) }}
+  {{ if and (or (eq .Type "submit") (eq .Type "revoke")) (eq .AuthorID $.SessionUserID) }}
   <form>
     <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />
     <input type="hidden" name="studentID" value="{{.StudentID}}" />
