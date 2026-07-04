@@ -4,3 +4,4 @@
 conf/config-test.yaml
 tmp/*
 slap
+e2e/

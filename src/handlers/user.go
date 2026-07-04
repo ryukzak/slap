@@ -53,7 +53,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	taskStatuses := make(map[storage.TaskID]storage.TaskRecordStatus)
-	taskScores := make(map[storage.TaskID]string)
 	journals := make(map[storage.TaskID][]storage.TaskRecord)
 	for _, task := range AppConfig.Tasks {
 		status, err := DB.LatestTaskStatus(profileUserID, task.ID)
@@ -70,14 +69,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		journals[task.ID] = records
-		for _, r := range records {
-			if r.EntryAuthorID != r.StudentID {
-				if score := util.ExtractScore(r.Content); score != "" {
-					taskScores[task.ID] = score
-					break
-				}
-			}
-		}
 	}
 
 	var rulesWithStatus []ScoreRuleWithStatus
@@ -134,7 +125,6 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		IsTeacher:                dbUser.IsTeacher,
 		Tasks:                    AppConfig.Tasks,
 		TaskStatuses:             taskStatuses,
-		TaskScores:               taskScores,
 		Journals:                 journals,
 		Lessons:                  []*storage.Lesson{},
 		ShowPastLessons:          showPast,
@@ -714,12 +704,11 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			score := ""
 			for _, rec := range records {
 				if rec.EntryAuthorID != rec.StudentID {
-					if s := util.ExtractScore(rec.Content); s != "" {
+					if s := util.ExtractScore(rec.Content); s != "" && s != "0" {
 						score = s
 						break
 					}
 				}
-
 			}
 			row = append(row, score)
 		}
