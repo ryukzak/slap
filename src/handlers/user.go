@@ -229,13 +229,10 @@ func (w WaitBucket) TotalStall() int {
 }
 
 type TaskStats struct {
-	Pending   int
-	Queued    int
-	Dropped   int
-	Feedback  int
-	Checked   int
-	Evaluated int
-	Scores    *ScoreStats
+	Pending int // submitted (or dropped, or a stale registration), not yet checked
+	Queued  int // registered for a lesson that has not passed yet
+	Checked int // reviewed by a teacher (scored or not)
+	Scores  *ScoreStats
 }
 
 type UserTaskSummary struct {
@@ -277,6 +274,33 @@ type TimelineEntry struct {
 	IsFuture       bool
 }
 
+// effectiveTaskStatus collapses a student's record history for one task into a
+// single display state:
+//   - ReviewedRecord (Checked) if the teacher has reviewed it at all;
+//   - RegisterRecord (Queued) only while the lesson is still upcoming;
+//   - SubmitRecord  (Pending) for everything else — a plain submission, a
+//     dropped registration, or a *stale* registration whose lesson day has
+//     already passed without a review (the student registered but was never
+//     checked, so the work is effectively still pending).
+//
+// records is newest-first. startOfToday is midnight today in PrimaryLoc, so a
+// registration only counts as stale the day after its lesson.
+func effectiveTaskStatus(records []storage.TaskRecord, lessonByID map[storage.LessonID]*storage.Lesson, startOfToday time.Time) storage.TaskRecordType {
+	for _, rec := range records {
+		if rec.Type == storage.ReviewedRecord {
+			return storage.ReviewedRecord
+		}
+	}
+	latest := records[0]
+	if latest.Type == storage.RegisterRecord {
+		if l, ok := lessonByID[latest.LessonID]; ok && l.DateTime.Before(startOfToday) {
+			return storage.SubmitRecord // stale registration -> Pending
+		}
+		return storage.RegisterRecord
+	}
+	return storage.SubmitRecord
+}
+
 // UserListHandler shows all registered users with task summaries. Teacher-only.
 func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := teacherSession(w, r)
@@ -293,7 +317,19 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().In(PrimaryLoc)
 	todayKey := now.Format("2006-01-02")
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, PrimaryLoc)
 	checkedByDay := make(map[string]int)
+
+	// Lesson lookup for detecting stale registrations (registered, lesson passed,
+	// never reviewed) so they no longer count as Queued.
+	lessonByID := make(map[storage.LessonID]*storage.Lesson)
+	if allLessons, err := DB.ListLessons(); err != nil {
+		log.Printf("Error listing lessons for user stats: %v", err)
+	} else {
+		for _, l := range allLessons {
+			lessonByID[l.ID] = l
+		}
+	}
 
 	userNames := make(map[string]string) // userID -> username
 	for _, u := range users {
@@ -324,17 +360,9 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				if !ok || len(records) == 0 {
 					continue
 				}
-				// Prefer "reviewed" type so the table shows "Checked" when the
-				// task has been reviewed.
-				bestStatus := records[0].Type
-				for _, rec := range records {
-					if rec.Type == storage.ReviewedRecord {
-						bestStatus = storage.ReviewedRecord
-						break
-					}
-				}
+				bestStatus := effectiveTaskStatus(records, lessonByID, startOfToday)
 				summary := UserTaskSummary{Count: len(records), Status: bestStatus, WaitSince: records[0].CreatedAt}
-				var pending, queued, dropped, checked int
+				var pending, queued, checked int
 				for _, rec := range records {
 					if rec.AuthorID != rec.StudentID {
 						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
@@ -352,8 +380,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 						pending++
 					case storage.RegisterRecord:
 						queued++
-					case storage.RevokeRecord:
-						dropped++
 					case storage.ReviewedRecord:
 						checked++
 					}
@@ -367,9 +393,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				if checked > 0 {
 					parts = append(parts, fmt.Sprintf("c:%d", checked))
-				}
-				if dropped > 0 {
-					parts = append(parts, fmt.Sprintf("d:%d", dropped))
 				}
 				summary.Summary = strings.Join(parts, "\u00a0")
 				row.TaskData[task.ID] = summary
@@ -407,16 +430,14 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				ts.Pending++
 			case storage.RegisterRecord:
 				ts.Queued++
-			case storage.RevokeRecord:
-				ts.Dropped++
 			case storage.ReviewedRecord:
+				ts.Checked++
+				// A numeric score still feeds the min/avg/med/max summary below,
+				// but scored and unscored reviews share the Checked bucket.
 				if td.Score != "" && td.Score != "0" {
-					ts.Evaluated++
 					if v, err := strconv.Atoi(td.Score); err == nil {
 						scoreValues[task.ID] = append(scoreValues[task.ID], v)
 					}
-				} else {
-					ts.Checked++
 				}
 			}
 			taskStats[task.ID] = ts

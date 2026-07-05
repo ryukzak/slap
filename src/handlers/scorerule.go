@@ -30,9 +30,14 @@ func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 		return nil, "not submitted"
 	}
 
+	// Score rules compare against the student's submission time (SubmitAt), not
+	// the teacher's review timestamp (CreatedAt), so a late review of on-time
+	// work still counts as on-time. Every record carries the SubmitAt of the
+	// submission it belongs to, so a ReviewedRecord already points at the right
+	// submission.
 	for i := range records {
 		if records[i].Type == storage.ReviewedRecord {
-			return &records[i].CreatedAt, "Checked"
+			return &records[i].SubmitAt, "Checked"
 		}
 	}
 
@@ -49,7 +54,7 @@ func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 	if scored {
 		for i := range records {
 			if records[i].AuthorID == records[i].StudentID {
-				return &records[i].CreatedAt, "scored without lesson (submission " + taskStatusLabel(records[i].Type) + ")"
+				return &records[i].SubmitAt, "scored without lesson (submission " + taskStatusLabel(records[i].Type) + ")"
 			}
 		}
 		return nil, "scored, but no student submission found"

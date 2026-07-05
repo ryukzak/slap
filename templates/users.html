@@ -165,31 +165,13 @@
            title="Queued: {{$ts.Queued}}">
       </div>
       {{ end }}
-      {{ if $ts.Dropped }}
-      <div class="bg-red-800"
-           style="width: {{ pct $ts.Dropped $.StudentCount }}%"
-           title="Dropped: {{$ts.Dropped}}">
-      </div>
-      {{ end }}
-      {{ if $ts.Feedback }}
-      <div class="bg-orange-800"
-           style="width: {{ pct $ts.Feedback $.StudentCount }}%"
-           title="Feedback: {{$ts.Feedback}}">
-      </div>
-      {{ end }}
       {{ if $ts.Checked }}
       <div class="bg-teal-800"
            style="width: {{ pct $ts.Checked $.StudentCount }}%"
            title="Checked: {{$ts.Checked}}">
       </div>
       {{ end }}
-      {{ if $ts.Evaluated }}
-      <div class="bg-green-700"
-           style="width: {{ pct $ts.Evaluated $.StudentCount }}%"
-           title="Evaluated: {{$ts.Evaluated}}">
-      </div>
-      {{ end }}
-      {{ $sum := add (add (add (add (add $ts.Pending $ts.Queued) $ts.Dropped) $ts.Feedback) $ts.Checked) $ts.Evaluated }}
+      {{ $sum := add (add $ts.Pending $ts.Queued) $ts.Checked }}
       {{ $none := sub $.StudentCount $sum }}
       {{ if $none }}
       <div class="bg-gray-700"
@@ -201,10 +183,7 @@
     <div class="text-xs text-gray-500 mt-0.5">
       {{ if $ts.Pending }}<span class="text-blue-400">pending:{{$ts.Pending}}</span> {{ end }}
       {{ if $ts.Queued }}<span class="text-purple-400">queued:{{$ts.Queued}}</span> {{ end }}
-      {{ if $ts.Dropped }}<span class="text-red-400">dropped:{{$ts.Dropped}}</span> {{ end }}
-      {{ if $ts.Feedback }}<span class="text-orange-400">feedback:{{$ts.Feedback}}</span> {{ end }}
       {{ if $ts.Checked }}<span class="text-teal-400">checked:{{$ts.Checked}}</span> {{ end }}
-      {{ if $ts.Evaluated }}<span class="text-green-400">evaluated:{{$ts.Evaluated}}</span> {{ end }}
       {{ if $ts.Scores }}<span class="text-gray-500">(min:{{$ts.Scores.Min}}&nbsp;avg:{{printf "%.1f" $ts.Scores.Avg}}&nbsp;med:{{printf "%.1f" $ts.Scores.Median}}&nbsp;max:{{$ts.Scores.Max}})</span>{{ end }}
     </div>
   </div>
@@ -344,8 +323,8 @@
               {{ if and $td.Score (ne $td.Score "0") }}
               <span class="text-green-300">{{$td.Score}}</span>
               {{ end }}
-            <span class="{{ if eq $td.Status "reviewed" }}text-teal-400{{ else if eq $td.Status "register" }}text-purple-400{{ else if eq $td.Status "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">
-            {{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "register" }}Queued{{ else if eq $td.Status "revoke" }}Dropped{{ else }}Pending{{ end }}
+            <span class="{{ if eq $td.Status "reviewed" }}text-teal-400{{ else if eq $td.Status "register" }}text-purple-400{{ else }}text-blue-400{{ end }}">
+            {{ if eq $td.Status "reviewed" }}Checked{{ else if eq $td.Status "register" }}Queued{{ else }}Pending{{ end }}
             </span>
             {{ if $td.Summary }}
             <span class="text-gray-500">({{$td.Summary}})</span>
