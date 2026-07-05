@@ -200,7 +200,10 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		EntryAuthorID:   user.ID,
 		EntryAuthorName: user.Username,
 	}
-	if user.IsTeacher || userIDFromURL != user.ID {
+	// A record added to someone else's task is a teacher review (only teachers
+	// pass the authorization guard above); a record on your own task — including
+	// a teacher's own task — is a submission.
+	if userIDFromURL != user.ID {
 		record.Status = storage.ReviewedTaskRecord
 	} else {
 		record.Status = storage.SubmitTaskRecord

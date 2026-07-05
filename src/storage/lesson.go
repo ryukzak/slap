@@ -234,7 +234,7 @@ func (d *DB) ListLessonTaskRecords(lesson *Lesson) ([]*TaskRecord, error) {
 		b := tx.Bucket(d.bucketName)
 		for _, enrolledTask := range lesson.EnrolledTasks {
 			taskRecordID := enrolledTask.TaskRecordID
-			taskRecord, err := getValue[TaskRecord](b, taskRecordID)
+			taskRecord, err := readTaskRecord(b, taskRecordID)
 			if err != nil {
 				return err
 			}
@@ -254,7 +254,7 @@ func (d *DB) ListLessonPreviousTaskRecords(lesson *Lesson) ([]*TaskRecord, error
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 		for _, enrolledTask := range lesson.PreviousEnrolledTasks {
-			taskRecord, err := getValue[TaskRecord](b, enrolledTask.TaskRecordID)
+			taskRecord, err := readTaskRecord(b, enrolledTask.TaskRecordID)
 			if err != nil {
 				return err
 			}
