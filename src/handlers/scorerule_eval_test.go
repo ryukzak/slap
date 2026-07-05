@@ -8,14 +8,23 @@ import (
 )
 
 // rec is a small helper to build a TaskRecord with the fields latestCheckedInfo
-// looks at.
+// looks at. SubmitAt defaults to the record's own timestamp; use recAt to model
+// a record (e.g. a teacher review) whose submission time differs from when it
+// was created.
 func rec(typ storage.TaskRecordType, author, student, content string, at time.Time) storage.TaskRecord {
+	return recAt(typ, author, student, content, at, at)
+}
+
+// recAt builds a TaskRecord with independent CreatedAt (when the record was
+// written) and SubmitAt (the submission time it belongs to).
+func recAt(typ storage.TaskRecordType, author, student, content string, createdAt, submitAt time.Time) storage.TaskRecord {
 	return storage.TaskRecord{
 		Type:      typ,
 		AuthorID:  author,
 		StudentID: student,
 		Content:   content,
-		CreatedAt: at,
+		CreatedAt: createdAt,
+		SubmitAt:  submitAt,
 	}
 }
 
@@ -45,12 +54,14 @@ func TestLatestCheckedInfo(t *testing.T) {
 			wantState: "not checked (Pending)",
 		},
 		{
-			name: "reviewed by teacher",
+			// The teacher's review is written at t2 but the work was submitted at
+			// t1; scoring must use the submission time (t1), not the review time.
+			name: "reviewed by teacher uses submission time",
 			records: []storage.TaskRecord{
-				rec(storage.ReviewedRecord, "teacher", "s", "8 ok", t2),
+				recAt(storage.ReviewedRecord, "teacher", "s", "8 ok", t2, t1),
 				rec(storage.RegisterRecord, "s", "s", "work", t1),
 			},
-			wantAt:    &t2,
+			wantAt:    &t1,
 			wantState: "Checked",
 		},
 		{
