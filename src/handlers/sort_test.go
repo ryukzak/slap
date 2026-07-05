@@ -163,7 +163,7 @@ func TestSortByRegisterOrd(t *testing.T) {
 			},
 		}
 		if registeredMin >= 0 {
-			r.RegisteredAt = base.Add(time.Duration(registeredMin) * time.Minute)
+			r.SubmitAt = base.Add(time.Duration(registeredMin) * time.Minute)
 		}
 		return r
 	}

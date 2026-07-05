@@ -45,7 +45,7 @@
     <span class="flex items-center space-x-1">
       {{ if .Score }}<span class="text-green-300">{{.Score}}</span>{{ end }}
       {{ with .LatestRecord }}
-      <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "review" }}text-orange-400 {{ else if eq .Status "register" }}text-yellow-400 {{ else if eq .Status "revoked" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "review" }}Feedback{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoked" }}Dropped{{ else }}Pending{{ end }}</span>
+      <span class="{{ if eq .Type "reviewed" }}text-green-400{{ else if eq .Type "register" }}text-yellow-400 {{ else if eq .Type "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">{{ if eq .Type "reviewed" }}Checked{{ else if eq .Type "register" }}Queued{{ else if eq .Type "revoke" }}Dropped{{ else }}Pending{{ end }}</span>
       {{ end }}
       {{ if $.JournalSummary }}<span class="text-gray-600">({{$.JournalSummary}})</span>{{ end }}
     </span>
@@ -57,19 +57,17 @@
       <div class="text-xs flex items-center justify-between mb-1">
         <div class="flex items-center space-x-2">
           <span class="text-gray-600">#{{ sub $total $i }}</span>
-          <span class="{{ if ne $record.EntryAuthorID $record.StudentID }}journal-author-teacher{{ else }}journal-author-student{{ end }}">@{{$record.EntryAuthorName}}</span>
+          <span class="{{ if ne $record.AuthorID $record.StudentID }}journal-author-teacher{{ else }}journal-author-student{{ end }}">@{{$record.AuthorName}}</span>
           <span class="text-gray-500">{{ formatDateTime $record.CreatedAt }}</span>
         </div>
-        {{ if eq $record.Status "submit" }}
+        {{ if eq $record.Type "submit" }}
         <span class="text-blue-400">Pending</span>
-        {{ else if eq $record.Status "register" }}
+        {{ else if eq $record.Type "register" }}
         <a class="text-yellow-400 hover:text-yellow-300"
            href="/lesson/{{$record.LessonID}}">Queued</a>
-        {{ else if eq $record.Status "revoked" }}
+        {{ else if eq $record.Type "revoke" }}
         <span class="text-red-400">Dropped</span>
-        {{ else if eq $record.Status "review" }}
-        <span class="text-orange-400">Feedback</span>
-        {{ else if eq $record.Status "reviewed" }}
+        {{ else if eq $record.Type "reviewed" }}
         <span class="text-green-400">Checked</span>
         {{ end }}
       </div>
@@ -94,7 +92,7 @@
     {{ $.WaitingMessage }}
   </p>
   {{ end }}
-  {{ if and (eq .Status "submit") (eq .EntryAuthorID $.SessionUserID) }}
+  {{ if and (or (eq .Type "submit") (eq .Type "revoke")) (eq .AuthorID $.SessionUserID) }}
   <form>
     <input type="hidden" name="taskRecordID" value="{{.TaskID}}" />
     <input type="hidden" name="studentID" value="{{.StudentID}}" />
@@ -108,7 +106,7 @@
       </p>
     </div>
   </form>
-  {{ else if eq .Status "register" }}
+  {{ else if eq .Type "register" }}
   <ul class="space-y-1">
     <li class="border-b border-gray-800 pb-1">
       <div class="text-xs flex items-center justify-between py-1 px-1">
@@ -122,7 +120,7 @@
         </a>
       {{ else }}
         <a class="text-yellow-400 hover:text-yellow-300"
-           href="/lesson/{{.LessonID}}">{{.LessonAt.Format "2006-01-02 15:04"}}</a>
+           href="/lesson/{{.LessonID}}">lesson</a>
         {{ end }}
         <form action="/api/lesson/{{.LessonID}}/unregister" method="post">
           <input type="hidden" name="taskID" value="{{.TaskID}}" />

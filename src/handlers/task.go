@@ -81,7 +81,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(rawRecords) > 0 {
 		model.LatestRecord = &rawRecords[0]
-		if rawRecords[0].Status == storage.RegisterTaskRecord && rawRecords[0].LessonID != "" {
+		if rawRecords[0].Type == storage.RegisterRecord && rawRecords[0].LessonID != "" {
 			lesson, err := DB.GetLesson(rawRecords[0].LessonID)
 			if err != nil {
 				log.Printf("Error fetching registered lesson %s: %v", rawRecords[0].LessonID, err)
@@ -97,23 +97,21 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		model.WaitingMessage = formatWaitingMessage(remaining)
 	}
 
-	var pending, queued, dropped, feedback, checked int
+	var pending, queued, dropped, checked int
 	for _, r := range rawRecords {
-		if r.EntryAuthorID != r.StudentID {
+		if r.AuthorID != r.StudentID {
 			if score := util.ExtractScore(r.Content); score != "" && model.Score == "" {
 				model.Score = score
 			}
 		}
-		switch r.Status {
-		case storage.SubmitTaskRecord:
+		switch r.Type {
+		case storage.SubmitRecord:
 			pending++
-		case storage.RegisterTaskRecord:
+		case storage.RegisterRecord:
 			queued++
-		case storage.RevokedTaskRecord:
+		case storage.RevokeRecord:
 			dropped++
-		case storage.ReviewTaskRecord:
-			feedback++
-		case storage.ReviewedTaskRecord:
+		case storage.ReviewedRecord:
 			checked++
 		}
 	}
@@ -122,10 +120,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		parts = append(parts, fmt.Sprintf("p:%d", pending))
 	}
 	if queued > 0 {
-		parts = append(parts, fmt.Sprintf("r:%d", queued))
-	}
-	if feedback > 0 {
-		parts = append(parts, fmt.Sprintf("f:%d", feedback))
+		parts = append(parts, fmt.Sprintf("q:%d", queued))
 	}
 	if checked > 0 {
 		parts = append(parts, fmt.Sprintf("c:%d", checked))
@@ -133,7 +128,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 	if dropped > 0 {
 		parts = append(parts, fmt.Sprintf("d:%d", dropped))
 	}
-	model.JournalSummary = strings.Join(parts, "\u00a0")
+	model.JournalSummary = strings.Join(parts, " ")
 
 	renderPage(w, "templates/task.html", model)
 }
@@ -151,7 +146,7 @@ func waitingPeriodRemaining(task *config.Task, records []storage.TaskRecord) tim
 		return 0
 	}
 	for _, rec := range records {
-		if rec.Status == storage.ReviewTaskRecord {
+		if rec.Type == storage.ReviewedRecord {
 			if elapsed := time.Since(rec.CreatedAt); elapsed < wp {
 				return wp - elapsed
 			}
@@ -198,32 +193,40 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	record := &storage.TaskRecord{
-		TaskID:          taskID,
-		StudentID:       userIDFromURL,
-		Content:         content,
-		CreatedAt:       time.Now(),
-		EntryAuthorID:   user.ID,
-		EntryAuthorName: user.Username,
+		TaskID:     taskID,
+		StudentID:  userIDFromURL,
+		Content:    content,
+		CreatedAt:  time.Now(),
+		AuthorID:   user.ID,
+		AuthorName: user.Username,
 	}
-	if user.IsTeacher && r.PostForm.Get("role") == "review" {
-		record.Status = storage.ReviewTaskRecord
-	} else if userIDFromURL == user.ID {
-		record.Status = storage.SubmitTaskRecord
+	if user.IsTeacher || userIDFromURL != user.ID {
+		record.Type = storage.ReviewedRecord
 	} else {
-		record.Status = storage.ReviewTaskRecord
+		record.Type = storage.SubmitRecord
 	}
 
-	if err := DB.AddTaskRecord(record); err != nil {
-		log.Printf("action=add_task_record author=%s student=%s task=%s status=%s error=%v", user.ID, userIDFromURL, taskID, record.Status, err)
+	// When a student submits new content while registered to a lesson, auto-revoke
+	// the existing registration so the lesson queue stays consistent.
+	if record.Type == storage.SubmitRecord {
+		if latest, err := DB.LatestTaskRecord(userIDFromURL, storage.TaskID(taskID)); err == nil && latest != nil && latest.Type == storage.RegisterRecord && latest.LessonID != "" {
+			if rerr := DB.UnregisterFromLesson(latest.LessonID, latest.TaskID, latest.StudentID); rerr != nil {
+				log.Printf("action=auto_revoke_lesson author=%s student=%s task=%s error=%v", user.ID, userIDFromURL, taskID, rerr)
+			}
+		}
+	}
+
+	if err := DB.AppendTaskRecord(record); err != nil {
+		log.Printf("action=add_task_record author=%s student=%s task=%s type=%s error=%v", user.ID, userIDFromURL, taskID, record.Type, err)
 		http.Error(w, "Failed to save journal record", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("action=add_task_record author=%s student=%s task=%s status=%s", user.ID, userIDFromURL, taskID, record.Status)
+	log.Printf("action=add_task_record author=%s student=%s task=%s type=%s", user.ID, userIDFromURL, taskID, record.Type)
 	analytics.Track(user.ID, "task_record_added", map[string]any{
 		"task_id":    taskID,
 		"student_id": userIDFromURL,
-		"role":       record.Status,
+		"role":       record.Type,
 	})
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Set("HX-Trigger", "lessonRecordsRefresh")

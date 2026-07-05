@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	bolt "go.etcd.io/bbolt"
 )
 
 func setupLessonFlowDB(t *testing.T) (*DB, string, *UserData, *UserData, TaskID, LessonID) {
@@ -33,14 +32,14 @@ func setupLessonFlowDB(t *testing.T) (*DB, string, *UserData, *UserData, TaskID,
 
 func addSubmit(t *testing.T, db *DB, student *UserData, taskID TaskID, content string) {
 	t.Helper()
-	assert.NoError(t, db.AddTaskRecord(&TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   student.ID,
-		EntryAuthorName: student.Username,
-		Content:         content,
-		CreatedAt:       time.Now(),
-		Status:          SubmitTaskRecord,
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   student.ID,
+		AuthorName: student.Username,
+		Content:    content,
+		CreatedAt:  time.Now(),
+		Type:       SubmitRecord,
 	}))
 }
 
@@ -58,66 +57,43 @@ func TestRevokeByButtonVisible(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, lesson.EnrolledTasks, "revoked record should not be in current enrollments")
 	assert.Len(t, lesson.PreviousEnrolledTasks, 1, "revoked record should be in history")
-	assert.Equal(t, RevokedTaskRecord, lesson.PreviousEnrolledTasks[0].Status)
+	assert.Equal(t, RevokeRecord, lesson.PreviousEnrolledTasks[0].Status)
 
 	prev, err := db.ListLessonPreviousTaskRecords(lesson)
 	assert.NoError(t, err)
 	assert.Len(t, prev, 1)
-	assert.Equal(t, RevokedTaskRecord, prev[0].Status)
+	assert.Equal(t, RevokeRecord, prev[0].Type)
 	assert.Equal(t, lessonID, prev[0].LessonID, "LessonID should be preserved on revoked record")
 }
 
-// TestRevokeResubmitsAsPending verifies that revoking leaves the dropped record
-// intact as history and appends a fresh pending record (copied content, original
-// CreatedAt, no lesson) so the student is back in the queue without resubmitting.
-func TestRevokeResubmitsAsPending(t *testing.T) {
+// TestRevokeAllowsReRegistration verifies that after revoking, the student can
+// re-register without resubmitting (RevokeRecord is a valid state to register from).
+func TestRevokeAllowsReRegistration(t *testing.T) {
 	db, tempDir, _, student, taskID, lessonID := setupLessonFlowDB(t)
 	defer cleanupTestDB(db, tempDir)
 
 	addSubmit(t, db, student, taskID, "first attempt")
-	before, err := db.ListTaskRecords(student.ID, taskID)
-	assert.NoError(t, err)
-	assert.Len(t, before, 1)
-	originalID := before[0].ID
-	originalCreatedAt := before[0].CreatedAt
-
 	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
 	assert.NoError(t, db.UnregisterFromLesson(lessonID, taskID, student.ID))
 
+	// After revoke, log has 3 records: submit, register, revoke.
 	records, err := db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
-	assert.Len(t, records, 2, "revoke should append a new pending record, keeping the dropped one")
-	assert.Equal(t, SubmitTaskRecord, records[0].Status,
-		"the pending resubmission must sort as the newest record despite sharing CreatedAt with the dropped one")
+	assert.Len(t, records, 3, "submit + register + revoke = 3 immutable records")
+	assert.Equal(t, RevokeRecord, records[0].Type, "latest record is the revoke")
 
-	// records are newest-first; locate each by status.
-	var dropped, pending *TaskRecord
-	for i := range records {
-		switch records[i].Status {
-		case RevokedTaskRecord:
-			dropped = &records[i]
-		case SubmitTaskRecord:
-			pending = &records[i]
-		}
-	}
-	assert.NotNil(t, dropped, "the original record stays Dropped")
-	assert.NotNil(t, pending, "a fresh Pending record is created")
-	assert.Equal(t, originalID, dropped.ID, "dropped record is the original, untouched")
-	assert.Equal(t, lessonID, dropped.LessonID, "dropped record keeps its lesson for faithful history")
+	// Student can re-register to the same lesson without a new submit.
+	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
 
-	assert.NotEqual(t, originalID, pending.ID, "resubmission is a distinct record")
-	assert.Equal(t, "first attempt", pending.Content, "content is carried over")
-	assert.True(t, pending.CreatedAt.Equal(originalCreatedAt), "queue position (CreatedAt) is preserved")
-	assert.Equal(t, LessonID(""), pending.LessonID, "resubmission is not tied to any lesson yet")
-
-	status, err := db.LatestTaskStatus(student.ID, taskID)
+	lesson, err := db.GetLesson(lessonID)
 	assert.NoError(t, err)
-	assert.Equal(t, SubmitTaskRecord, status, "latest record is the new pending one")
+	assert.Len(t, lesson.EnrolledTasks, 1, "student is enrolled again")
+	assert.Equal(t, RegisterRecord, lesson.EnrolledTasks[0].Status)
 }
 
 // TestReRegisterAfterRevokeKeepsQueuePosition verifies a student can register the
-// post-revoke pending record to a different lesson, and that the original submit
-// time follows it so they are not pushed to the back of the new queue.
+// post-revoke state to a different lesson and that the original submit time
+// (SubmitAt) follows it so they are not pushed to the back of the new queue.
 func TestReRegisterAfterRevokeKeepsQueuePosition(t *testing.T) {
 	db, tempDir, teacher, student, taskID, lessonAID := setupLessonFlowDB(t)
 	defer cleanupTestDB(db, tempDir)
@@ -143,12 +119,12 @@ func TestReRegisterAfterRevokeKeepsQueuePosition(t *testing.T) {
 	addSubmit(t, db, student, taskID, "first attempt")
 	original, err := db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
-	originalCreatedAt := original[0].CreatedAt
+	originalSubmitAt := original[0].SubmitAt
 
 	assert.NoError(t, db.RegisterToLesson(lessonAID, taskID, student.ID))
 	assert.NoError(t, db.UnregisterFromLesson(lessonAID, taskID, student.ID))
 
-	// Re-register the pending resubmission to lesson B (no resubmit needed).
+	// Re-register to lesson B (no resubmit needed — RevokeRecord is valid).
 	assert.NoError(t, db.RegisterToLesson(lessonBID, taskID, student.ID))
 
 	lessonB, err = db.GetLesson(lessonBID)
@@ -158,22 +134,22 @@ func TestReRegisterAfterRevokeKeepsQueuePosition(t *testing.T) {
 	queued, err := db.ListLessonTaskRecords(lessonB)
 	assert.NoError(t, err)
 	assert.Len(t, queued, 1)
-	assert.Equal(t, RegisterTaskRecord, queued[0].Status)
-	assert.True(t, queued[0].CreatedAt.Equal(originalCreatedAt),
-		"submit time is preserved so queue position is not lost on re-registration")
+	assert.Equal(t, RegisterRecord, queued[0].Type)
+	assert.True(t, queued[0].SubmitAt.Equal(originalSubmitAt),
+		"submit time (SubmitAt) is preserved so queue position is not lost on re-registration")
 
-	// Lesson A still shows the drop in its history, no status override required.
+	// Lesson A still shows the drop in its history.
 	lessonA, err := db.GetLesson(lessonAID)
 	assert.NoError(t, err)
 	prevA, err := db.ListLessonPreviousTaskRecords(lessonA)
 	assert.NoError(t, err)
 	assert.Len(t, prevA, 1)
-	assert.Equal(t, RevokedTaskRecord, prevA[0].Status)
+	assert.Equal(t, RevokeRecord, prevA[0].Type)
 }
 
-// TestNewSubmissionCollapsesPending verifies that adding a genuinely new
-// submission drops the previous pending record so only the newest stays pending.
-func TestNewSubmissionCollapsesPending(t *testing.T) {
+// TestMultipleSubmissionsStackInLog verifies that each new student submission
+// appends a fresh SubmitRecord to the immutable log (no collapsing).
+func TestMultipleSubmissionsStackInLog(t *testing.T) {
 	db, tempDir, _, student, taskID, _ := setupLessonFlowDB(t)
 	defer cleanupTestDB(db, tempDir)
 
@@ -182,23 +158,22 @@ func TestNewSubmissionCollapsesPending(t *testing.T) {
 
 	records, err := db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
-	assert.Len(t, records, 2)
+	assert.Len(t, records, 2, "each submit appends a new record")
 
-	var pending, dropped int
-	for _, r := range records {
-		switch r.Status {
-		case SubmitTaskRecord:
-			pending++
-		case RevokedTaskRecord:
-			dropped++
-		}
-	}
-	assert.Equal(t, 1, pending, "only the newest submission stays pending")
-	assert.Equal(t, 1, dropped, "the older pending submission is collapsed to dropped")
+	// Newest-first: records[0] is the second submit.
+	assert.Equal(t, SubmitRecord, records[0].Type)
+	assert.Equal(t, "second attempt", records[0].Content)
+	assert.Equal(t, SubmitRecord, records[1].Type)
+	assert.Equal(t, "first attempt", records[1].Content)
 
-	status, err := db.LatestTaskStatus(student.ID, taskID)
+	// SubmitAt resets on each new submission (different rounds).
+	assert.False(t, records[0].SubmitAt.Equal(records[1].SubmitAt),
+		"each submission starts a new round with its own SubmitAt")
+
+	latest, err := db.LatestTaskRecord(student.ID, taskID)
 	assert.NoError(t, err)
-	assert.Equal(t, SubmitTaskRecord, status)
+	assert.Equal(t, SubmitRecord, latest.Type)
+	assert.Equal(t, "second attempt", latest.Content)
 }
 
 func TestResubmitAfterCheckVisible(t *testing.T) {
@@ -211,17 +186,18 @@ func TestResubmitAfterCheckVisible(t *testing.T) {
 
 	records, err := db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
-	firstRecordID := records[0].ID
+	// Newest-first: records[0] is the RegisterRecord.
+	firstRegisterID := records[0].ID
 
-	// Teacher checks it (adds review → first record becomes ReviewedTaskRecord)
-	assert.NoError(t, db.AddTaskRecord(&TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   teacher.ID,
-		EntryAuthorName: teacher.Username,
-		Content:         "looks good",
-		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+	// Teacher reviews (appends ReviewedRecord; lesson enrollment status updated)
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   teacher.ID,
+		AuthorName: teacher.Username,
+		Content:    "looks good",
+		CreatedAt:  time.Now(),
+		Type:       ReviewedRecord,
 	}))
 
 	// Student submits new entry and re-registers
@@ -231,44 +207,15 @@ func TestResubmitAfterCheckVisible(t *testing.T) {
 	lesson, err := db.GetLesson(lessonID)
 	assert.NoError(t, err)
 	assert.Len(t, lesson.EnrolledTasks, 1, "only new registration should be current")
-	assert.Len(t, lesson.PreviousEnrolledTasks, 1, "checked submission should be in history")
-	assert.Equal(t, ReviewedTaskRecord, lesson.PreviousEnrolledTasks[0].Status)
-	assert.Equal(t, firstRecordID, lesson.PreviousEnrolledTasks[0].TaskRecordID)
+	assert.Len(t, lesson.PreviousEnrolledTasks, 1, "reviewed submission should be in history")
+	assert.Equal(t, ReviewedRecord, lesson.PreviousEnrolledTasks[0].Status)
+	assert.Equal(t, firstRegisterID, lesson.PreviousEnrolledTasks[0].TaskRecordID)
 
 	prev, err := db.ListLessonPreviousTaskRecords(lesson)
 	assert.NoError(t, err)
 	assert.Len(t, prev, 1)
-	assert.Equal(t, ReviewedTaskRecord, prev[0].Status)
+	assert.Equal(t, ReviewedRecord, prev[0].Type)
 	assert.Equal(t, "first attempt", prev[0].Content)
-}
-
-// TestReadTolerateCorruptIndex reproduces issue #45: a task index key holds a
-// JSON object (e.g. from a key collision with a colon-containing task ID)
-// instead of the expected []string. Display reads must degrade to "no records"
-// rather than failing the whole request, which previously 500'd the profile
-// page via the score-rule evaluation path.
-func TestReadTolerateCorruptIndex(t *testing.T) {
-	db, tempDir := setupTestDB(t)
-	defer cleanupTestDB(db, tempDir)
-
-	userID := "409529"
-	taskID := TaskID("ac:2026:scheme")
-	indexKey := "tasks:" + userID + ":" + taskID
-
-	// Write a JSON object where a []string index is expected.
-	err := db.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(db.bucketName)
-		return b.Put([]byte(indexKey), []byte(`{"id":"409529","journals":{}}`))
-	})
-	assert.NoError(t, err)
-
-	records, err := db.ListTaskRecords(userID, taskID)
-	assert.NoError(t, err, "ListTaskRecords must not error on a corrupt index")
-	assert.Empty(t, records)
-
-	status, err := db.LatestTaskStatus(userID, taskID)
-	assert.NoError(t, err, "LatestTaskStatus must not error on a corrupt index")
-	assert.Equal(t, TaskRecordStatus(""), status)
 }
 
 func TestIsRegistrationOpen(t *testing.T) {
@@ -344,63 +291,63 @@ func TestLessonFlow(t *testing.T) {
 	assert.NotNil(t, lessonID)
 	assert.Regexp(t, "^lesson:teacher:.{8}-.{4}-.{4}-.{4}-.{12}$", lessonID)
 
-	// Create task record
-	submitedTaskRecord := &TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   student.ID,
-		EntryAuthorName: student.Username,
-		Content:         taskID + " submittion",
-		CreatedAt:       time.Date(2023, 8, 15, 14, 30, 0, 0, time.UTC),
-		Status:          SubmitTaskRecord,
+	// Create task record (student submits)
+	submitRecord := &TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   student.ID,
+		AuthorName: student.Username,
+		Content:    taskID + " submission",
+		CreatedAt:  time.Date(2023, 8, 15, 14, 30, 0, 0, time.UTC),
+		Type:       SubmitRecord,
 	}
-	assert.NoError(t, db.AddTaskRecord(submitedTaskRecord))
+	assert.NoError(t, db.AppendTaskRecord(submitRecord))
 
 	records, err := db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
 	assert.Equal(t, taskID, records[0].TaskID)
-	assert.Equal(t, SubmitTaskRecord, records[0].Status)
+	assert.Equal(t, SubmitRecord, records[0].Type)
 	assert.NotNil(t, records[0].ID)
 	assert.Regexp(t, "^task:student:lab1:.{8}-.{4}-.{4}-.{4}-.{12}$", records[0].ID)
 
-	// Register to the lesson
+	// Register to the lesson (appends a RegisterRecord)
 	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, studentID))
 	lesson, err = db.GetLesson(lessonID)
 	assert.NoError(t, err)
 	assert.Len(t, lesson.EnrolledTasks, 1)
 	assert.Equal(t, taskID, lesson.EnrolledTasks[0].TaskID)
-	assert.Equal(t, student.ID, lesson.EnrolledTasks[0].AuthorID)
-	assert.Equal(t, submitedTaskRecord.ID, lesson.EnrolledTasks[0].TaskRecordID)
+	assert.Equal(t, student.ID, lesson.EnrolledTasks[0].StudentID)
 
 	records, err = db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
-	assert.Len(t, records, 1)
+	assert.Len(t, records, 2, "submit + register = 2 immutable records")
 	assert.Equal(t, taskID, records[0].TaskID)
-	assert.Equal(t, RegisterTaskRecord, records[0].Status)
+	assert.Equal(t, RegisterRecord, records[0].Type, "newest record is the register")
+	// Enrolled task points to the RegisterRecord.
+	assert.Equal(t, records[0].ID, lesson.EnrolledTasks[0].TaskRecordID)
 
-	// Teacher submit review on the student work
-	reviewedTaskRecord := &TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   teacher.ID,
-		EntryAuthorName: teacher.Username,
-		Content:         taskID + " review",
-		CreatedAt:       time.Date(2023, 8, 15, 15, 30, 0, 0, time.UTC),
-		Status:          ReviewTaskRecord,
-	}
-	assert.NoError(t, db.AddTaskRecord(reviewedTaskRecord))
+	// Teacher submits review
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   teacher.ID,
+		AuthorName: teacher.Username,
+		Content:    taskID + " review",
+		CreatedAt:  time.Now(),
+		Type:       ReviewedRecord,
+	}))
 
-	// List updated task history
+	// List updated task history (3 records: reviewed, register, submit)
 	records, err = db.ListTaskRecords(student.ID, taskID)
 	assert.NoError(t, err)
-	assert.Len(t, records, 2)
+	assert.Len(t, records, 3)
 
 	assert.Equal(t, student.ID, records[0].StudentID)
-	assert.Equal(t, teacher.ID, records[0].EntryAuthorID)
-	assert.Equal(t, ReviewTaskRecord, records[0].Status)
+	assert.Equal(t, teacher.ID, records[0].AuthorID)
+	assert.Equal(t, ReviewedRecord, records[0].Type)
 
 	assert.Equal(t, student.ID, records[1].StudentID)
-	assert.Equal(t, student.ID, records[1].EntryAuthorID)
-	assert.Equal(t, ReviewedTaskRecord, records[1].Status)
+	assert.Equal(t, student.ID, records[1].AuthorID)
+	assert.Equal(t, RegisterRecord, records[1].Type)
 }

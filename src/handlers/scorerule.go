@@ -9,18 +9,16 @@ import (
 	"github.com/ryukzak/slap/src/util"
 )
 
-// taskStatusLabel maps a stored record status to the label shown in the UI.
-func taskStatusLabel(s storage.TaskRecordStatus) string {
+// taskStatusLabel maps a stored record type to the label shown in the UI.
+func taskStatusLabel(s storage.TaskRecordType) string {
 	switch s {
-	case storage.SubmitTaskRecord:
+	case storage.SubmitRecord:
 		return "Pending"
-	case storage.RegisterTaskRecord:
+	case storage.RegisterRecord:
 		return "Queued"
-	case storage.RevokedTaskRecord:
+	case storage.RevokeRecord:
 		return "Dropped"
-	case storage.ReviewTaskRecord:
-		return "Feedback"
-	case storage.ReviewedTaskRecord:
+	case storage.ReviewedRecord:
 		return "Checked"
 	default:
 		return string(s)
@@ -33,7 +31,7 @@ func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 	}
 
 	for i := range records {
-		if records[i].Status == storage.ReviewedTaskRecord {
+		if records[i].Type == storage.ReviewedRecord {
 			return &records[i].CreatedAt, "Checked"
 		}
 	}
@@ -43,21 +41,21 @@ func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 	scored := false
 	for i := range records {
 		r := records[i]
-		if r.EntryAuthorID != r.StudentID && util.ExtractScore(r.Content) != "" {
+		if r.AuthorID != r.StudentID && util.ExtractScore(r.Content) != "" {
 			scored = true
 			break
 		}
 	}
 	if scored {
 		for i := range records {
-			if records[i].EntryAuthorID == records[i].StudentID {
-				return &records[i].CreatedAt, "scored without lesson (submission " + taskStatusLabel(records[i].Status) + ")"
+			if records[i].AuthorID == records[i].StudentID {
+				return &records[i].CreatedAt, "scored without lesson (submission " + taskStatusLabel(records[i].Type) + ")"
 			}
 		}
 		return nil, "scored, but no student submission found"
 	}
 
-	return nil, "not checked (" + taskStatusLabel(records[0].Status) + ")"
+	return nil, "not checked (" + taskStatusLabel(records[0].Type) + ")"
 }
 
 type Evaluation struct {

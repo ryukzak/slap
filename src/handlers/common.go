@@ -22,7 +22,7 @@ type User struct {
 	IsTeacher                bool
 	RegisterMode             bool
 	Tasks                    []config.Task
-	TaskStatuses             map[storage.TaskID]storage.TaskRecordStatus
+	TaskStatuses             map[storage.TaskID]storage.TaskRecordType
 	Journals                 map[storage.TaskID][]storage.TaskRecord
 	Lessons                  []*storage.Lesson
 	ShowPastLessons          bool

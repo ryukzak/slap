@@ -16,14 +16,14 @@ func TestWaitingPeriod_BlocksRegistrationAfterRecentReview(t *testing.T) {
 	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
 
 	// Teacher reviews
-	assert.NoError(t, db.AddTaskRecord(&TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   teacher.ID,
-		EntryAuthorName: teacher.Username,
-		Content:         "needs work",
-		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   teacher.ID,
+		AuthorName: teacher.Username,
+		Content:    "needs work",
+		CreatedAt:  time.Now(),
+		Type:       ReviewedRecord,
 	}))
 
 	// Student submits again
@@ -44,14 +44,14 @@ func TestWaitingPeriod_AllowsRegistrationAfterPeriodExpires(t *testing.T) {
 	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
 
 	// Teacher reviews with a CreatedAt in the past (beyond waiting period)
-	assert.NoError(t, db.AddTaskRecord(&TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   teacher.ID,
-		EntryAuthorName: teacher.Username,
-		Content:         "needs work",
-		CreatedAt:       time.Now().Add(-25 * time.Hour),
-		Status:          ReviewTaskRecord,
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   teacher.ID,
+		AuthorName: teacher.Username,
+		Content:    "needs work",
+		CreatedAt:  time.Now().Add(-25 * time.Hour),
+		Type:       ReviewedRecord,
 	}))
 
 	// Student submits again
@@ -70,14 +70,14 @@ func TestWaitingPeriod_ZeroDurationSkipsCheck(t *testing.T) {
 	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
 
 	// Teacher reviews just now
-	assert.NoError(t, db.AddTaskRecord(&TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   teacher.ID,
-		EntryAuthorName: teacher.Username,
-		Content:         "needs work",
-		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   teacher.ID,
+		AuthorName: teacher.Username,
+		Content:    "needs work",
+		CreatedAt:  time.Now(),
+		Type:       ReviewedRecord,
 	}))
 
 	// Student submits again
@@ -96,14 +96,14 @@ func TestWaitingPeriod_NoWaitingPeriodParam(t *testing.T) {
 	assert.NoError(t, db.RegisterToLesson(lessonID, taskID, student.ID))
 
 	// Teacher reviews just now
-	assert.NoError(t, db.AddTaskRecord(&TaskRecord{
-		TaskID:          taskID,
-		StudentID:       student.ID,
-		EntryAuthorID:   teacher.ID,
-		EntryAuthorName: teacher.Username,
-		Content:         "needs work",
-		CreatedAt:       time.Now(),
-		Status:          ReviewTaskRecord,
+	assert.NoError(t, db.AppendTaskRecord(&TaskRecord{
+		TaskID:     taskID,
+		StudentID:  student.ID,
+		AuthorID:   teacher.ID,
+		AuthorName: teacher.Username,
+		Content:    "needs work",
+		CreatedAt:  time.Now(),
+		Type:       ReviewedRecord,
 	}))
 
 	// Student submits again

@@ -36,18 +36,31 @@ func (l Lesson) IsRegistrationOpen() bool {
 }
 
 type EnrolledTask struct {
-	TaskRecordID TaskRecordID     `json:"journal_entry_id"`
-	Status       TaskRecordStatus `json:"status"`
+	TaskRecordID string         `json:"journal_entry_id"`
+	StudentID    string         `json:"user_id"`
+	TaskID       string         `json:"task_id"`
+	Excerpt      string         `json:"description"`
+	Status       TaskRecordType `json:"status"`
+	SubmitAt     time.Time      `json:"submit_at"`
+}
 
-	AuthorID       UserID `json:"user_id"`
-	TaskID         TaskID `json:"task_id"`
-	TaskRecordDesc string `json:"description"`
+// UnmarshalJSON normalizes the Status field so old on-disk values like
+// "revoked" and "review" are mapped to their canonical forms on every read.
+func (e *EnrolledTask) UnmarshalJSON(data []byte) error {
+	type raw EnrolledTask // break recursion
+	var r raw
+	if err := json.Unmarshal(data, &r); err != nil {
+		return err
+	}
+	*e = EnrolledTask(r)
+	e.Status = normalizeType(e.Status)
+	return nil
 }
 
 func (l *Lesson) RegisteredCount() int {
 	count := 0
 	for _, t := range l.EnrolledTasks {
-		if t.Status == RegisterTaskRecord || t.Status == ReviewedTaskRecord {
+		if t.Status == RegisterRecord || t.Status == ReviewedRecord {
 			count++
 		}
 	}
@@ -57,7 +70,7 @@ func (l *Lesson) RegisteredCount() int {
 func (l *Lesson) ReviewedCount() int {
 	count := 0
 	for _, t := range l.EnrolledTasks {
-		if t.Status == ReviewedTaskRecord {
+		if t.Status == ReviewedRecord {
 			count++
 		}
 	}
@@ -67,7 +80,7 @@ func (l *Lesson) ReviewedCount() int {
 func (l *Lesson) RevokedCount() int {
 	count := 0
 	for _, t := range l.PreviousEnrolledTasks {
-		if t.Status == RevokedTaskRecord {
+		if t.Status == RevokeRecord {
 			count++
 		}
 	}
@@ -178,20 +191,29 @@ func (d *DB) DeleteLesson(lessonID LessonID, teacherID UserID) error {
 			return err
 		}
 
-		// Reset registered task records back to submit state
+		// Append a RevokeRecord for each currently-registered enrollment so
+		// students can re-register to another lesson without resubmitting.
 		for _, enrolled := range lesson.EnrolledTasks {
-			if enrolled.Status == RegisterTaskRecord {
-				taskRecord, err := getValue[TaskRecord](b, enrolled.TaskRecordID)
-				if err != nil {
-					return err
-				}
-				taskRecord.Status = SubmitTaskRecord
-				taskRecord.LessonAt = time.Time{}
-				taskRecord.LessonID = ""
-				if err := setValue(b, taskRecord.ID, *taskRecord); err != nil {
-					return err
-				}
+			if enrolled.Status != RegisterRecord {
+				continue
 			}
+			regRecord, err := readRecordRaw(b, enrolled.TaskRecordID)
+			if err != nil {
+				continue // best-effort; skip on error
+			}
+			revokeRecord := TaskRecord{
+				TaskID:     enrolled.TaskID,
+				StudentID:  enrolled.StudentID,
+				AuthorID:   enrolled.StudentID,
+				AuthorName: regRecord.AuthorName,
+				Type:       RevokeRecord,
+				LessonID:   lessonID,
+				CreatedAt:  time.Now(),
+				SubmitAt:   regRecord.SubmitAt,
+				Counter:    regRecord.Counter + 1,
+				Content:    regRecord.Content,
+			}
+			_ = appendRecordInTx(b, &revokeRecord) // best-effort
 		}
 
 		if err := removeFromIndex(b, lessonsKey, lessonID); err != nil {
@@ -233,10 +255,16 @@ func (d *DB) ListLessonTaskRecords(lesson *Lesson) ([]*TaskRecord, error) {
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 		for _, enrolledTask := range lesson.EnrolledTasks {
-			taskRecordID := enrolledTask.TaskRecordID
-			taskRecord, err := getValue[TaskRecord](b, taskRecordID)
+			taskRecord, err := readRecordRaw(b, enrolledTask.TaskRecordID)
 			if err != nil {
 				return err
+			}
+			// In the immutable model the record at TaskRecordID is a RegisterRecord.
+			// Use EnrolledTask.Status as the effective status for lesson display so
+			// handlers can detect reviewed/revoked states correctly.
+			taskRecord.Type = enrolledTask.Status
+			if taskRecord.SubmitAt.IsZero() {
+				taskRecord.SubmitAt = enrolledTask.SubmitAt
 			}
 			result = append(result, taskRecord)
 		}
@@ -254,9 +282,15 @@ func (d *DB) ListLessonPreviousTaskRecords(lesson *Lesson) ([]*TaskRecord, error
 	err := d.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 		for _, enrolledTask := range lesson.PreviousEnrolledTasks {
-			taskRecord, err := getValue[TaskRecord](b, enrolledTask.TaskRecordID)
+			taskRecord, err := readRecordRaw(b, enrolledTask.TaskRecordID)
 			if err != nil {
 				return err
+			}
+			// Use EnrolledTask.Status as the effective status so handlers can
+			// distinguish reviewed from revoked previous enrollments.
+			taskRecord.Type = enrolledTask.Status
+			if taskRecord.SubmitAt.IsZero() {
+				taskRecord.SubmitAt = enrolledTask.SubmitAt
 			}
 			result = append(result, taskRecord)
 		}
