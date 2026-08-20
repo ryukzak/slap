@@ -49,9 +49,9 @@
       </div>
       <div>
         {{ if gt .Lesson.Capacity 0 }}
-        {{ .Lesson.Capacity }}
+        <span class="lesson-detail-capacity">{{ .Lesson.Capacity }}</span>
       {{ else }}
-        unlimited
+        <span class="lesson-detail-capacity">unlimited</span>
         {{ end }}
       </div>
       <div class="text-gray-400">
@@ -106,6 +106,28 @@
       </form>
     </div>
   </details>
+</section>
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // edit capacity
+  </div>
+  <form class="space-y-2 max-w-2xl"
+        action="/api/lesson/{{.Lesson.ID}}/capacity"
+        method="post">
+    <div class="flex items-center space-x-2">
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8 w-24"
+             type="number"
+             name="capacity"
+             min="0"
+             step="1"
+             value="{{.Lesson.Capacity}}" />
+      <span class="text-xs text-gray-400">0 = unlimited</span>
+      <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-2 rounded h-8"
+              type="submit">
+        [set capacity]
+      </button>
+    </div>
+  </form>
 </section>
 {{ end }}
 {{ if .SessionIsTeacher }}

@@ -76,6 +76,8 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 6. Teacher can see which tasks have been reviewed and which are still pending.
 7. Teacher can bulk-revoke all queued registrations via `[revoke all]`.
 8. Teacher can edit the lesson description after creation.
+   - The lesson capacity can also be changed after creation via the "edit capacity" form
+     (`0` means unlimited). Enrollments above the new capacity are kept below the cutoff.
 9. Teacher can toggle `[show history]` to see previously revoked registration attempts.
 10. Teacher can expand or collapse all task records with `[open all]`.
 

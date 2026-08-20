@@ -238,6 +238,22 @@ func (d *DB) UpdateLessonDescription(lessonID LessonID, description string) erro
 	})
 }
 
+// SetLessonCapacity sets the lesson's capacity. A capacity of 0 means unlimited.
+func (d *DB) SetLessonCapacity(lessonID LessonID, capacity int) error {
+	if capacity < 0 {
+		return fmt.Errorf("capacity cannot be negative")
+	}
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		lesson, err := getValue[Lesson](b, lessonID)
+		if err != nil {
+			return err
+		}
+		lesson.Capacity = capacity
+		return setValue(b, lessonID, *lesson)
+	})
+}
+
 func (d *DB) SetLessonDeadline(lessonID LessonID, deadline time.Time) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
