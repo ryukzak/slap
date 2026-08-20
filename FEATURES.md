@@ -128,3 +128,6 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 5. Teacher has access to a users table (`/users`) showing all registered students with
    per-task columns. Each cell shows the score (if the teacher started the review with a
    number) and a status badge.
+6. Every page header shows the instance name from the `name` config field (e.g. `csa.2026.2`,
+   `fp.2027`), so several SLAP instances running different courses can be told apart.
+   Defaults to `slap` when not configured.

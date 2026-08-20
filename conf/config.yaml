@@ -1,5 +1,10 @@
 # SLAP Application Configuration
 
+# Instance name shown in the page header, e.g. a course code like csa.2026.2.
+# Lets several SLAP instances for different courses be told apart.
+# Omit for the "slap" default.
+name: "slap.dev"
+
 # Teacher IDs - users with these GUIDs get teacher role
 teacher_ids:
   - "123"

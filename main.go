@@ -140,6 +140,12 @@ func init() {
 			return ""
 		},
 		"appVersion": func() string { return version },
+		"slapName": func() string {
+			if appConfig == nil {
+				return config.DefaultName
+			}
+			return appConfig.GetName()
+		},
 		"uptime": func() string {
 			return util.FormatUptime(time.Since(handlers.StartTime))
 		},

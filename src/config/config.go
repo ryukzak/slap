@@ -11,8 +11,15 @@ import (
 
 const DefaultWaitingPeriod = 24 * time.Hour
 
+// DefaultName is the instance name used when `name` is not set in the config.
+const DefaultName = "slap"
+
 // Config represents the application configuration
 type Config struct {
+	// Name identifies this SLAP instance (e.g. "csa.2026.2") and is shown in
+	// the page header so several courses can be told apart. When unset,
+	// DefaultName applies — read it through GetName.
+	Name                     string      `yaml:"name"`
 	Tasks                    []Task      `yaml:"tasks"`
 	TeacherIDs               []string    `yaml:"teacher_ids"`
 	TitleMaxLen              int         `yaml:"title_max_len"`
@@ -53,6 +60,14 @@ func (c *Config) IsTeacher(userID string) bool {
 		}
 	}
 	return false
+}
+
+// GetName returns the instance name, defaulting to DefaultName when unset.
+func (c *Config) GetName() string {
+	if c.Name == "" {
+		return DefaultName
+	}
+	return c.Name
 }
 
 // GetWaitingPeriod returns the task's waiting period, defaulting to 24h.

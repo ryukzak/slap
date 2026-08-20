@@ -46,6 +46,8 @@ SLAP_JWT_SECRET=test go run main.go
 Default path: `conf/config.yaml` (override with `-config` flag or `SLAP_CONF` env var).
 
 ```yaml
+name: "csa.2026.2"
+
 teacher_ids:
   - "123"
 
@@ -61,6 +63,7 @@ tasks:
       # Task description (Markdown)
 ```
 
+- **name** — instance name shown in the page header (e.g. a course code such as `csa.2026.2`), so instances for different courses can be told apart; defaults to `slap`
 - **teacher_ids** — users signing up with a matching ID get the teacher role
 - **tasks** — task list available to all students
 - **default_lesson_description** — pre-filled text when creating a new lesson
