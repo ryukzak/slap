@@ -61,11 +61,16 @@ tasks:
     title: "Lab 1"
     description: |
       # Task description (Markdown)
+    visible: true
+    tags:
+      - "approve"
 ```
 
 - **name** — instance name shown in the page header (e.g. a course code such as `csa.2026.2`), so instances for different courses can be told apart; defaults to `slap`
 - **teacher_ids** — users signing up with a matching ID get the teacher role
 - **tasks** — task list available to all students
+  - **visible** — when `true`, students see a short excerpt and tags of other students' submissions for this task on a shared lesson page (not just their own), so they can spot duplicate topics before the lesson; defaults to `false`. Full content stays restricted to the author and teachers.
+  - **tags** — this task's allow-list of tag names shown on the lesson page. Only a teacher can tag a task record, by writing `#tag` (and remove one with `-#tag`) anywhere in a review — a student writing `#tag` in their own submission has no effect. The task page always shows every active tag, but the lesson page only shows tags listed here — so a tag can be used freely and "promoted" to the lesson page later just by adding it to this task's list. Scoped per task, so a tag meant for one task (e.g. a group tag on a presentation task) can't unexpectedly show up as "allowed" on another task's lesson-page rows.
 - **default_lesson_description** — pre-filled text when creating a new lesson
 
 ### Environment variables

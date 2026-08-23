@@ -10,6 +10,8 @@
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/teachers">[teachers]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/tags">[tags]</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
 {{ end }}
 {{ if eq .ID .SessionUserID }}
 <a class="text-blue-400 hover:text-blue-300"
@@ -88,11 +90,15 @@
     {{ range .Tasks }}
     {{ $status := index $.TaskStatuses .ID }}
     {{ $journal := index $.Journals .ID }}
+    {{ $tags := index $.TaskTags .ID }}
     <li class="border-b border-gray-800 pb-1">
       <a class="block text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
          href="/user/{{$.ID}}/task/{{.ID}}">
         <span class="flex items-center space-x-2 min-w-0">
           <span class="flex-shrink-0">{{.Title}}</span>
+          {{ range $tags }}
+          <span class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 flex-shrink-0 journal-author-teacher">#{{.Name}}</span>
+          {{ end }}
           {{ if $journal }}
           {{ with index $journal 0 }}
           <span class="text-gray-500 truncate">{{.AuthorName}}:

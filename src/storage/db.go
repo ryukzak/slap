@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -18,6 +19,9 @@ const (
 type DB struct {
 	db         *bolt.DB
 	bucketName []byte
+
+	// tagCache caches TaskTags results, keyed by "studentID:taskID".
+	tagCache sync.Map
 }
 
 func NewDB(dbPath string, bucketName string) (*DB, error) {

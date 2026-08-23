@@ -23,6 +23,12 @@ tasks:
     # Hours that must pass since the last teacher review before a student can
     # re-register this task for a lesson. Omit for the 24h default; 0 disables it.
     waiting_period_hours: 24
+    # Allow-list of tag names shown on the lesson page for this task. Any
+    # #tag can still be used in a submission or review — only listed tags
+    # are surfaced on the lesson page (see task-tags.hurl /
+    # lesson-tags-allowlist.hurl).
+    tags:
+      - "approve"
     description: |
       # Basic Data Structures
 
@@ -177,6 +183,18 @@ tasks:
       2. Identify optimal use cases
       3. Discuss limitations and potential optimizations
 
+  - id: "task5"
+    title: "Lab 5"
+    visible: true
+    tags:
+      - "approve"
+    description: |
+      # Presentation Topic
+
+      Submit a short presentation topic proposal. Once the teacher tags it
+      with your group (e.g. `#group1`), other students can see each other's
+      topics on the lesson page to avoid picking a duplicate.
+
 score_rules:
   # Tiered deadline — use non-overlapping ranges.
   - name: "Lab 1 soft deadline"
@@ -220,4 +238,3 @@ score_rules:
       min_checked_before: 4
       checked_before: "2026-05-01T23:59:00+03:00"
     effect: -2
-

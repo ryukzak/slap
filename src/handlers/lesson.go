@@ -81,6 +81,33 @@ type TaskRecordWithInfo struct {
 	JournalRecords  []storage.TaskRecord
 	JournalSummary  string
 	Notes           []storage.UserNote
+	// Tags are this record's active tags allow-listed for lesson-page display
+	// (see config.Task.IsAllowedTag).
+	Tags []storage.Tag
+	// TaskVisible mirrors config.Task.Visible: when true, non-owner students
+	// viewing this lesson see a content excerpt instead of the "hidden" notice.
+	TaskVisible bool
+}
+
+// lessonTags returns the active tags for a student/task pair, filtered to the
+// task's lesson-page allow-list.
+func lessonTags(studentID, taskID string) []storage.Tag {
+	tags, err := DB.TaskTags(studentID, taskID)
+	if err != nil {
+		log.Printf("Error computing tags for student %s task %s: %v", studentID, taskID, err)
+		return nil
+	}
+	task := AppConfig.GetTask(storage.TaskID(taskID))
+	if task == nil {
+		return nil
+	}
+	var allowed []storage.Tag
+	for _, t := range tags {
+		if task.IsAllowedTag(t.Name) {
+			allowed = append(allowed, t)
+		}
+	}
+	return allowed
 }
 
 // lessonRecordsData is the data passed to the lesson_task_records partial.
@@ -192,6 +219,8 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			JournalRecords:  reverseSlice(allForTask),
 			JournalSummary:  strings.Join(summaryParts, " "),
 			Notes:           getNotes(taskRecord.StudentID),
+			Tags:            lessonTags(taskRecord.StudentID, taskRecord.TaskID),
+			TaskVisible:     task != nil && task.Visible,
 		})
 	}
 	for _, pr := range previousTaskRecords {
@@ -204,9 +233,11 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			taskTitle = task.Title
 		}
 		allRecords = append(allRecords, TaskRecordWithInfo{
-			TaskRecord: *pr,
-			TaskTitle:  taskTitle,
-			Notes:      getNotes(pr.StudentID),
+			TaskRecord:  *pr,
+			TaskTitle:   taskTitle,
+			Notes:       getNotes(pr.StudentID),
+			Tags:        lessonTags(pr.StudentID, pr.TaskID),
+			TaskVisible: task != nil && task.Visible,
 		})
 	}
 

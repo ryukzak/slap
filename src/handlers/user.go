@@ -54,6 +54,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	taskStatuses := make(map[storage.TaskID]storage.TaskRecordType)
 	journals := make(map[storage.TaskID][]storage.TaskRecord)
+	taskTags := make(map[storage.TaskID][]storage.Tag)
 	for _, task := range AppConfig.Tasks {
 		rec, err := DB.LatestTaskRecord(profileUserID, task.ID)
 		if err != nil {
@@ -69,6 +70,12 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		journals[task.ID] = records
+
+		if tags, err := DB.TaskTags(profileUserID, task.ID); err != nil {
+			log.Printf("Error computing tags for user %s task %s: %v", profileUserID, task.ID, err)
+		} else {
+			taskTags[task.ID] = tags
+		}
 	}
 
 	var rulesWithStatus []ScoreRuleWithStatus
@@ -126,6 +133,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Tasks:                    AppConfig.Tasks,
 		TaskStatuses:             taskStatuses,
 		Journals:                 journals,
+		TaskTags:                 taskTags,
 		Lessons:                  []*storage.Lesson{},
 		ShowPastLessons:          showPast,
 		Now:                      now,

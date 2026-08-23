@@ -121,6 +121,31 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 1. When a student views a lesson page, only their own task records are shown.
 2. When a teacher views a lesson page, all task records from all students are shown.
 
+# Use Case: task tags
+
+1. Only a teacher adds a tag, by writing `#tag` anywhere in a review; `-#tag` removes
+   it. No separate form — tags are mined from the same review content field. A student
+   writing `#tag` in their own submission has no effect (it's just text) — a student
+   cannot tag their own or anyone else's work.
+   - Tags are derived from a task's full record history, not stored as a separate field:
+     a `#tag` written in any past teacher review stays active until a later review
+     removes it with `-#tag`.
+2. The task page and the student dashboard's `// your tasks` list always show every
+   currently active tag, regardless of configuration.
+3. The lesson page (next to the task title) only shows tags listed in that task's own
+   `tags` allow-list in the config — scoped per task, so a tag meant for one task can't
+   unexpectedly show up as "allowed" on another task's lesson-page rows. An unlisted tag
+   still exists and works — it just isn't surfaced on the lesson page until added to
+   that task's list, so tags can be used freely and "promoted" later.
+4. A task configured with `visible: true` lets any signed-in student see a short
+   content excerpt and tags of another student's submission for that task on a shared
+   lesson page — not just the teacher and the author. This is how students can check for
+   duplicate topics or groups themselves before the teacher does. Full content, reviews,
+   and teacher notes stay restricted to the author and teachers.
+5. Teachers have a tag browser: `/tags` lists every currently active tag with a count of
+   student+task pairs carrying it; `/tags/{tag}` lists those pairs, each linking to the
+   student's task page. Tag chips elsewhere link here for a teacher viewer.
+
 # General requirements
 
 1. Teacher can see all profiles, tasks, and their statuses.
@@ -133,3 +158,5 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 6. Every page header shows the instance name from the `name` config field (e.g. `csa.2026.2`,
    `fp.2027`), so several SLAP instances running different courses can be told apart.
    Defaults to `slap` when not configured.
+7. The `/tags` and `/tags/{tag}` browse pages are teacher-only, since they aggregate
+   tag data across all students.

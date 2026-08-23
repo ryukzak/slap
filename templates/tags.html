@@ -1,0 +1,33 @@
+{{define "title"}}Tags - SLAP{{end}}
+{{define "header"}}
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span>//&nbsp;tags</span>
+{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/users">[students]</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}
+{{define "content"}}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // tags ({{ len .Tags }})
+  </div>
+  {{ if .Tags }}
+  <ul class="space-y-1">
+    {{ range .Tags }}
+    <li class="border-b border-gray-800 py-1 flex items-center justify-between">
+      <a class="text-blue-400 hover:text-blue-300 text-xs"
+         href="/tags/{{.Name}}">#{{.Name}}</a>
+      <span class="text-xs text-gray-500">{{.Count}}</span>
+    </li>
+    {{ end }}
+  </ul>
+{{ else }}
+  <p class="text-xs text-gray-400">
+    No tags yet.
+  </p>
+  {{ end }}
+</section>
+{{end}}

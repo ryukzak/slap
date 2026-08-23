@@ -19,6 +19,31 @@ func writeTempConfig(t *testing.T, content string) string {
 
 func intPtr(v int) *int { return &v }
 
+func TestIsAllowedTag(t *testing.T) {
+	task := Task{Tags: []string{"approve", "Group1"}}
+	other := Task{}
+
+	tests := []struct {
+		name string
+		task Task
+		tag  string
+		want bool
+	}{
+		{"listed tag", task, "approve", true},
+		{"listed tag case-insensitive", task, "APPROVE", true},
+		{"listed tag mixed case in config", task, "group1", true},
+		{"unlisted tag", task, "reject", false},
+		{"empty allow-list", other, "approve", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.task.IsAllowedTag(tt.tag); got != tt.want {
+				t.Errorf("IsAllowedTag(%q) = %v, want %v", tt.tag, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetWaitingPeriod(t *testing.T) {
 	tests := []struct {
 		name string

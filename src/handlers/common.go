@@ -24,6 +24,7 @@ type User struct {
 	Tasks                    []config.Task
 	TaskStatuses             map[storage.TaskID]storage.TaskRecordType
 	Journals                 map[storage.TaskID][]storage.TaskRecord
+	TaskTags                 map[storage.TaskID][]storage.Tag
 	Lessons                  []*storage.Lesson
 	ShowPastLessons          bool
 	Now                      time.Time
