@@ -66,6 +66,37 @@ tasks:
 	}
 }
 
+func TestLoadConfig_Name(t *testing.T) {
+	path := writeTempConfig(t, `
+name: "csa.2026.2"
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`)
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if got := cfg.GetName(); got != "csa.2026.2" {
+		t.Errorf("GetName() = %q, want %q", got, "csa.2026.2")
+	}
+}
+
+func TestLoadConfig_NameDefaults(t *testing.T) {
+	path := writeTempConfig(t, `
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`)
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if got := cfg.GetName(); got != DefaultName {
+		t.Errorf("GetName() = %q, want default %q", got, DefaultName)
+	}
+}
+
 func TestLoadConfig_NegativeWaitingPeriodRejected(t *testing.T) {
 	path := writeTempConfig(t, `
 tasks:

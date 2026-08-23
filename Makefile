@@ -88,6 +88,11 @@ test-hurl:
 	hurl --test $(HURL_VARS) \
 		--variable student_id=student_$$(date +%s)25 \
 		tests/ui/lesson-waiting-period.hurl
+	hurl --test $(HURL_VARS) \
+		tests/ui/header-slap-name.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)26 \
+		tests/ui/lesson-capacity-edit.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]

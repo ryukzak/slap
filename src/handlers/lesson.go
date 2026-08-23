@@ -494,6 +494,49 @@ func UpdateLessonDescriptionHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
 }
 
+func UpdateLessonCapacityHandler(w http.ResponseWriter, r *http.Request) {
+	user := teacherSession(w, r)
+	if user == nil {
+		return
+	}
+
+	lessonID := mux.Vars(r)["lessonID"]
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	// An empty value clears the limit, same as 0.
+	capacity := 0
+	if capacityStr := strings.TrimSpace(r.FormValue("capacity")); capacityStr != "" {
+		parsed, err := strconv.Atoi(capacityStr)
+		if err != nil || parsed < 0 {
+			http.Error(w, "Capacity must be a non-negative number (0 for unlimited)", http.StatusBadRequest)
+			return
+		}
+		capacity = parsed
+	}
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+	if lesson.TeacherID != user.ID {
+		http.Error(w, "Only the lesson's teacher can update the capacity", http.StatusForbidden)
+		return
+	}
+
+	if err := DB.SetLessonCapacity(lessonID, capacity); err != nil {
+		log.Printf("action=update_lesson_capacity user=%s lesson=%s error=%v", user.ID, lessonID, err)
+		http.Error(w, "Failed to update capacity", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("action=update_lesson_capacity user=%s lesson=%s capacity=%d", user.ID, lessonID, capacity)
+	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
+}
+
 func DeleteLessonHandler(w http.ResponseWriter, r *http.Request) {
 	user := teacherSession(w, r)
 	if user == nil {
