@@ -16,9 +16,7 @@
       <div class="flex items-center space-x-3 min-w-0">
         <span class="text-xs text-gray-400 flex-shrink-0 w-6 text-right">#{{ add $index 1 }}</span>
         {{ if eq $record.Type "register" }}
-        <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 flex-shrink-0">
-          Queued
-        </span>
+        <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-700 text-yellow-200 flex-shrink-0">Queued</span>
       {{ else }}
       <span class="px-2 py-0.5 rounded-full text-xs flex-shrink-0 {{ if eq $record.Type "revoke" }}bg-red-800 text-red-200{{ else if eq $record.Type "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
       {{ if eq $record.Type "revoke" }}Dropped{{ else if eq $record.Type "reviewed" }}Checked{{ else }}{{$record.Type}}{{ end }}
@@ -26,9 +24,18 @@
       {{ end }}
       <span class="text-sm flex-shrink-0">@{{$record.AuthorName}}</span>
       <span class="text-xs text-gray-400 truncate hidden sm:inline">{{$record.TaskTitle}}</span>
+      {{ range $record.Tags }}
+      {{ if $.SessionIsTeacher }}
+      <a class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 flex-shrink-0 hidden sm:inline journal-author-teacher"
+         href="/tags/{{.Name}}">#{{.Name}}</a>
+    {{ else }}
+      <span class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 flex-shrink-0 hidden sm:inline journal-author-teacher">#{{.Name}}</span>
+      {{ end }}
+      {{ end }}
     </div>
     <div class="text-xs text-gray-400 truncate sm:hidden pl-1">
       {{$record.TaskTitle}}
+      {{ range $record.Tags }}#{{.Name}} {{ end }}
     </div>
     <div class="text-xs text-gray-400 flex-shrink-0 sm:ml-4 pl-1 sm:pl-0">
     {{ if not $record.SubmitAt.IsZero }}{{ formatDateTime $record.SubmitAt }}{{ else }}{{ formatDateTime $record.CreatedAt }}{{ end }}
@@ -132,6 +139,15 @@
     {{ end }}
   </div>
   {{ end }}
+  {{ else if $record.TaskVisible }}
+  <div class="p-3 bg-gray-800 rounded">
+    <div class="text-xs text-gray-400 mb-2">
+      // topic
+    </div>
+    <p class="text-xs text-gray-300">
+      {{ getTitle $record.Content }}
+    </p>
+  </div>
 {{ else }}
   <p class="text-xs text-gray-500">
     Submission content is only visible to the author and teacher.

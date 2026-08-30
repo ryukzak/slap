@@ -93,6 +93,18 @@ test-hurl:
 	hurl --test $(HURL_VARS) \
 		--variable student_id=$$(date +%s)26 \
 		tests/ui/lesson-capacity-edit.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)27 \
+		tests/ui/task-tags.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)28 \
+		tests/ui/lesson-tags-allowlist.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)29 \
+		tests/ui/lesson-visible-task-peer-excerpt.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)30 \
+		tests/ui/tags-browse-page.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]

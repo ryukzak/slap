@@ -145,6 +145,22 @@ run_test tests/ui/lesson-capacity-edit.hurl \
     --variable "student_id=${TIMESTAMP}26" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/task-tags.hurl \
+    --variable "student_id=${TIMESTAMP}27" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/lesson-tags-allowlist.hurl \
+    --variable "student_id=${TIMESTAMP}28" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/lesson-visible-task-peer-excerpt.hurl \
+    --variable "student_id=${TIMESTAMP}29" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/tags-browse-page.hurl \
+    --variable "student_id=${TIMESTAMP}30" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

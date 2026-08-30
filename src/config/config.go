@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/ryukzak/slap/src/storage"
@@ -51,6 +53,18 @@ type Task struct {
 	// last teacher review before a student may re-register the task for a lesson.
 	// When unset, DefaultWaitingPeriod applies. A value of 0 disables the check.
 	WaitingPeriodHours *int `yaml:"waiting_period_hours,omitempty"`
+	// Visible, when true, lets any signed-in student see a short excerpt and
+	// tags of other students' submissions for this task on a lesson page they
+	// share — not just their own — so students can self-check for duplicate
+	// topics/groups. Full content stays restricted to the author and teachers.
+	Visible bool `yaml:"visible,omitempty"`
+	// Tags is this task's allow-list of tag names shown on the lesson page.
+	// Scoped per task so a tag meant for one task (e.g. a group tag on a
+	// presentation task) can't unexpectedly show up as "allowed" for another
+	// task. A tag found in record content that isn't listed here still
+	// exists and shows on the task page — it just isn't surfaced on the
+	// lesson page until added here. See IsAllowedTag.
+	Tags []string `yaml:"tags,omitempty"`
 }
 
 func (c *Config) IsTeacher(userID string) bool {
@@ -60,6 +74,16 @@ func (c *Config) IsTeacher(userID string) bool {
 		}
 	}
 	return false
+}
+
+// IsAllowedTag reports whether name is in this task's configured tag
+// allow-list (case-insensitive). Only allow-listed tags render on the lesson
+// page.
+func (t *Task) IsAllowedTag(name string) bool {
+	name = strings.ToLower(name)
+	return slices.ContainsFunc(t.Tags, func(tag string) bool {
+		return strings.ToLower(tag) == name
+	})
 }
 
 // GetName returns the instance name, defaulting to DefaultName when unset.

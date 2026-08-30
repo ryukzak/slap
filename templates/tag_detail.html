@@ -1,0 +1,52 @@
+{{define "title"}}#{{.TagName}} - SLAP{{end}}
+{{define "header"}}
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-gray-300 hover:text-white" href="/tags">//&nbsp;tags</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<span>//&nbsp;tag:&nbsp;{{.TagName}}</span>
+{{end}}
+{{define "footer_nav"}}
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/tags">[tags]</a>
+<span class="text-gray-500 hidden sm:inline">·</span>
+<a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
+{{end}}
+{{define "content"}}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // #{{.TagName}} ({{ len .Rows }})
+  </div>
+  {{ if .Rows }}
+  <ul class="space-y-1">
+    {{ range .Rows }}
+    <li class="border border-gray-800 rounded p-3 mb-1">
+      <div class="text-xs flex items-center justify-between mb-1">
+        <div class="flex items-center space-x-2 min-w-0">
+          <a class="text-blue-400 hover:text-blue-300 flex-shrink-0"
+             href="/user/{{.StudentID}}">@{{.StudentName}}</a>
+          <a class="text-gray-400 hover:text-gray-300 truncate"
+             href="/user/{{.StudentID}}/task/{{.TaskID}}">{{.TaskTitle}}</a>
+        </div>
+      <span class="flex-shrink-0 {{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">
+      {{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoke" }}Dropped{{ else }}Pending{{ end }}
+      </span>
+    </div>
+    <div class="flex flex-wrap gap-1 mb-1">
+      {{ range .Tags }}
+      <a class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 journal-author-teacher"
+         href="/tags/{{.Name}}">#{{.Name}}</a>
+      {{ end }}
+    </div>
+    <p class="text-xs text-gray-400">
+      {{ getTitle .Excerpt }}
+    </p>
+  </li>
+  {{ end }}
+</ul>
+{{ else }}
+<p class="text-xs text-gray-400">
+  No tasks currently tagged #{{.TagName}}.
+</p>
+{{ end }}
+</section>
+{{end}}

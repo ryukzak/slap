@@ -59,6 +59,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		QueuePosition    int
 		QueueTotal       int
 		WaitingMessage   string
+		Tags             []storage.Tag
 	}
 
 	model := TaskViewModel{
@@ -92,6 +93,12 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	model.TaskRecords = rawRecords
+
+	if tags, err := DB.TaskTags(userIDFromURL, taskID); err != nil {
+		log.Printf("Error computing tags for user %s task %s: %v", userIDFromURL, taskID, err)
+	} else {
+		model.Tags = tags
+	}
 
 	if remaining := waitingPeriodRemaining(task, rawRecords); remaining > 0 {
 		model.WaitingMessage = formatWaitingMessage(remaining)

@@ -40,6 +40,21 @@
   </form>
 </section>
 <section class="mb-8">
+  {{ if .Tags }}
+  <div class="text-xs text-gray-500 mb-1">
+    // tags
+  </div>
+  <div class="flex flex-wrap gap-1 mb-2">
+    {{ range .Tags }}
+    {{ if $.IsTeacher }}
+    <a class="px-2 py-0.5 rounded-full text-[10px] border border-gray-700 journal-author-teacher"
+       href="/tags/{{.Name}}">#{{.Name}}</a>
+  {{ else }}
+    <span class="px-2 py-0.5 rounded-full text-[10px] border border-gray-700 journal-author-teacher">#{{.Name}}</span>
+    {{ end }}
+    {{ end }}
+  </div>
+  {{ end }}
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>// journal</span>
     <span class="flex items-center space-x-1">

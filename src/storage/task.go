@@ -202,7 +202,7 @@ func (d *DB) AppendTaskRecord(record *TaskRecord) error {
 	newRecordKey := "task:" + record.StudentID + ":" + record.TaskID + ":" + uuid.New().String()
 	record.ID = newRecordKey
 
-	return d.db.Update(func(tx *bolt.Tx) error {
+	err := d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 
 		taskRecordKeys, err := getIndex(b, indexKey)
@@ -252,6 +252,10 @@ func (d *DB) AppendTaskRecord(record *TaskRecord) error {
 		}
 		return setValue(b, newRecordKey, record)
 	})
+	if err == nil {
+		d.invalidateTags(record.StudentID, record.TaskID)
+	}
+	return err
 }
 
 // ListTaskRecords returns all task records for a student/task pair, normalized
@@ -328,7 +332,7 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 		return fmt.Errorf("taskID and lessonID should provided")
 	}
 
-	return d.db.Update(func(tx *bolt.Tx) error {
+	err := d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 
 		keys, err := getIndex(b, "tasks:"+authorID+":"+taskID)
@@ -418,6 +422,10 @@ func (d *DB) RegisterToLesson(lessonID LessonID, taskID TaskID, authorID UserID,
 		})
 		return setValue(b, lessonID, *lesson)
 	})
+	if err == nil {
+		d.invalidateTags(authorID, taskID)
+	}
+	return err
 }
 
 func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
@@ -426,6 +434,7 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 	}
 
 	var count int
+	var revoked []EnrolledTask
 	err := d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 
@@ -465,11 +474,17 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 
 			enrolled.Status = RevokeRecord
 			lesson.PreviousEnrolledTasks = append(lesson.PreviousEnrolledTasks, enrolled)
+			revoked = append(revoked, enrolled)
 			count++
 		}
 		lesson.EnrolledTasks = remaining
 		return setValue(b, lessonID, *lesson)
 	})
+	if err == nil {
+		for _, enrolled := range revoked {
+			d.invalidateTags(enrolled.StudentID, enrolled.TaskID)
+		}
+	}
 	return count, err
 }
 
@@ -478,7 +493,7 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 		return fmt.Errorf("lessonID, taskID, and authorID must be provided")
 	}
 
-	return d.db.Update(func(tx *bolt.Tx) error {
+	err := d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 
 		lesson, err := getValue[Lesson](b, lessonID)
@@ -529,4 +544,8 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 		lesson.EnrolledTasks = append(lesson.EnrolledTasks[:existingIdx], lesson.EnrolledTasks[existingIdx+1:]...)
 		return setValue(b, lessonID, *lesson)
 	})
+	if err == nil {
+		d.invalidateTags(authorID, taskID)
+	}
+	return err
 }
