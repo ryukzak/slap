@@ -178,6 +178,34 @@ func init() {
 	handlers.Version = version
 }
 
+// redactedEnv returns the given environment variable's presence without
+// leaking its value into logs (used for secrets like SLAP_JWT_SECRET).
+func redactedEnv(name string) string {
+	if os.Getenv(name) == "" {
+		return "(not set)"
+	}
+	return "(set)"
+}
+
+func printStartupInfo(configPath string) {
+	log.Println("=== Environment ===")
+	log.Printf("SLAP_PORT=%s", *port)
+	log.Printf("SLAP_CONF=%s", configPath)
+	log.Printf("SLAP_DB=%s", os.Getenv("SLAP_DB"))
+	log.Printf("SLAP_TZ=%s", os.Getenv("SLAP_TZ"))
+	log.Printf("SLAP_SECURE_COOKIES=%s", os.Getenv("SLAP_SECURE_COOKIES"))
+	log.Printf("SLAP_POSTHOG_HOST=%s", os.Getenv("SLAP_POSTHOG_HOST"))
+	log.Printf("SLAP_POSTHOG_KEY=%s", redactedEnv("SLAP_POSTHOG_KEY"))
+	log.Printf("SLAP_JWT_SECRET=%s", redactedEnv("SLAP_JWT_SECRET"))
+
+	log.Println("=== Config ===")
+	log.Printf("name=%s", appConfig.GetName())
+	log.Printf("tasks=%d", len(appConfig.Tasks))
+	log.Printf("teacher_ids=%d", len(appConfig.TeacherIDs))
+	log.Printf("title_max_len=%d", appConfig.TitleMaxLen)
+	log.Printf("score_rules=%d", len(appConfig.ScoreRules))
+}
+
 func main() {
 	// Get default config path from environment variable or use default
 	defaultConfigPath := "conf/config.yaml"
@@ -200,6 +228,8 @@ func main() {
 
 	// Update handlers package AppConfig with the loaded config
 	handlers.AppConfig = appConfig
+
+	printStartupInfo(*configPath)
 
 	defer analytics.Close()
 	defer func() {
