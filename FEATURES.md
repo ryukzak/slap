@@ -131,7 +131,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
      a `#tag` written in any past teacher review stays active until a later review
      removes it with `-#tag`.
 2. The task page and the student dashboard's `// your tasks` list always show every
-   currently active tag, regardless of configuration.
+   currently active tag, regardless of configuration. The one-line preview text next to
+   a task (on the dashboard and in the tag browser below) is always the student's own
+   latest message — not a teacher's newer, short review remark — so a tag-only comment
+   like "approved #approve" never displaces the student's actual topic.
 3. The lesson page (next to the task title) only shows tags listed in that task's own
    `tags` allow-list in the config — scoped per task, so a tag meant for one task can't
    unexpectedly show up as "allowed" on another task's lesson-page rows. An unlisted tag
@@ -142,9 +145,12 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    lesson page — not just the teacher and the author. This is how students can check for
    duplicate topics or groups themselves before the teacher does. Full content, reviews,
    and teacher notes stay restricted to the author and teachers.
-5. Teachers have a tag browser: `/tags` lists every currently active tag with a count of
-   student+task pairs carrying it; `/tags/{tag}` lists those pairs, each linking to the
-   student's task page. Tag chips elsewhere link here for a teacher viewer.
+5. Any signed-in user has a tag browser: `/tags` lists every currently active tag with a
+   count of student+task pairs carrying it; `/tags/{tag}` lists those pairs, each linking
+   to the student's task page. Tag chips elsewhere always link here. A student always
+   sees their own rows; a row for another student only appears if its task is configured
+   `visible: true` (the same peer-visibility rule as the shared lesson page) — otherwise
+   it's omitted from both the count and the detail listing, not just hidden in the UI.
 
 # General requirements
 
@@ -158,5 +164,5 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 6. Every page header shows the instance name from the `name` config field (e.g. `csa.2026.2`,
    `fp.2027`), so several SLAP instances running different courses can be told apart.
    Defaults to `slap` when not configured.
-7. The `/tags` and `/tags/{tag}` browse pages are teacher-only, since they aggregate
-   tag data across all students.
+7. The `/tags` and `/tags/{tag}` browse pages are open to any signed-in user (see the
+   task tags use case above for the per-row visibility rule that applies to students).

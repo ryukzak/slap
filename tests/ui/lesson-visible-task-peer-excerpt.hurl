@@ -117,10 +117,10 @@ Cookie: user_data={{student_b_token}}
 
 HTTP 200
 [Asserts]
-# Visible task: Student B sees Alice's excerpt and tag (as plain text, not
-# a /tags/ link — that link is teacher-only).
+# Visible task: Student B sees Alice's excerpt and tag, linking to the tag
+# browse page (now open to any signed-in user, not just teachers).
 body contains "Alice secret presentation topic"
-body contains "#approve</span>"
+body contains "href=\"/tags/approve\""
 # Non-visible task: content stays fully hidden from a peer.
 body not contains "Alice hidden lab1 content"
 body contains "Submission content is only visible to the author and teacher."

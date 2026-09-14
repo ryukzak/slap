@@ -62,6 +62,20 @@ func SortTaskRecordsNewestFirst(records []TaskRecord) {
 	})
 }
 
+// LatestOwnRecord returns the most recent record in a newest-first slice
+// that the student authored themselves. This is where a task's actual topic
+// lives, as opposed to a teacher's short review remark (e.g. a tag-only
+// comment), which would otherwise surface as the newest record. Returns nil
+// if the student has no record of their own.
+func LatestOwnRecord(records []TaskRecord) *TaskRecord {
+	for i := range records {
+		if records[i].AuthorID == records[i].StudentID {
+			return &records[i]
+		}
+	}
+	return nil
+}
+
 // normalizeType maps legacy on-disk type strings to their canonical names.
 // Safe to call on already-canonical values.
 func normalizeType(t TaskRecordType) TaskRecordType {

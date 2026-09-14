@@ -38,7 +38,7 @@
       {{ end }}
     </div>
     <p class="text-xs text-gray-400">
-      {{ getTitle .Excerpt }}
+      {{ getTitle (firstLine .Excerpt) }}
     </p>
   </li>
   {{ end }}

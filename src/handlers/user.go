@@ -53,7 +53,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	taskStatuses := make(map[storage.TaskID]storage.TaskRecordType)
-	journals := make(map[storage.TaskID][]storage.TaskRecord)
+	taskPreview := make(map[storage.TaskID]*storage.TaskRecord)
 	taskTags := make(map[storage.TaskID][]storage.Tag)
 	for _, task := range AppConfig.Tasks {
 		rec, err := DB.LatestTaskRecord(profileUserID, task.ID)
@@ -69,7 +69,11 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error fetching task records for user %s task %s: %v", profileUserID, task.ID, err)
 			continue
 		}
-		journals[task.ID] = records
+		if preview := storage.LatestOwnRecord(records); preview != nil {
+			taskPreview[task.ID] = preview
+		} else if len(records) > 0 {
+			taskPreview[task.ID] = &records[0]
+		}
 
 		if tags, err := DB.TaskTags(profileUserID, task.ID); err != nil {
 			log.Printf("Error computing tags for user %s task %s: %v", profileUserID, task.ID, err)
@@ -132,7 +136,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		IsTeacher:                dbUser.IsTeacher,
 		Tasks:                    AppConfig.Tasks,
 		TaskStatuses:             taskStatuses,
-		Journals:                 journals,
+		TaskPreview:              taskPreview,
 		TaskTags:                 taskTags,
 		Lessons:                  []*storage.Lesson{},
 		ShowPastLessons:          showPast,

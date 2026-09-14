@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/gorilla/mux"
+	"github.com/ryukzak/slap/src/auth"
 	"github.com/ryukzak/slap/src/storage"
 )
 
@@ -26,10 +27,24 @@ type TagRow struct {
 	Status      storage.TaskRecordType
 }
 
+// canViewTagRow reports whether viewer may see a student+task pair on the
+// tag browser: teachers see everything, a student always sees their own
+// rows, and otherwise the task must be marked peer-visible (config.Task.Visible)
+// — the same rule that gates content excerpts on the shared lesson page.
+func canViewTagRow(viewer *auth.UserClaims, studentID string, taskID storage.TaskID) bool {
+	if viewer.IsTeacher || viewer.ID == studentID {
+		return true
+	}
+	task := AppConfig.GetTask(taskID)
+	return task != nil && task.Visible
+}
+
 // TagsIndexHandler lists every currently active tag with a count of
-// student+task pairs carrying it. Teacher-only.
+// student+task pairs carrying it. Open to any signed-in user; a non-teacher
+// only sees counts for their own tasks and peer-visible tasks (see
+// canViewTagRow).
 func TagsIndexHandler(w http.ResponseWriter, r *http.Request) {
-	user := teacherSession(w, r)
+	user := userSession(w, r)
 	if user == nil {
 		return
 	}
@@ -52,6 +67,9 @@ func TagsIndexHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		for taskID := range allRecords {
+			if !canViewTagRow(user, u.ID, taskID) {
+				continue
+			}
 			tags, err := DB.TaskTags(u.ID, taskID)
 			if err != nil {
 				log.Printf("Error computing tags for user %s task %s: %v", u.ID, taskID, err)
@@ -75,19 +93,23 @@ func TagsIndexHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	renderPage(w, "templates/tags.html", struct {
-		SessionUserID string
-		Tags          []TagCount
+		SessionUserID    string
+		SessionIsTeacher bool
+		Tags             []TagCount
 	}{
-		SessionUserID: user.ID,
-		Tags:          tagList,
+		SessionUserID:    user.ID,
+		SessionIsTeacher: user.IsTeacher,
+		Tags:             tagList,
 	})
 }
 
 // TagDetailHandler lists every student+task pair currently carrying the given
-// tag. Teacher-only — this is what lets a teacher (or, via a linked chip, a
-// browsing student's teacher) check for duplicate topics before approving one.
+// tag. Open to any signed-in user; a non-teacher only sees their own rows and
+// rows for peer-visible tasks (see canViewTagRow) — this is what lets a
+// teacher, or a student self-checking for duplicate topics, browse who else
+// carries a tag.
 func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
-	user := teacherSession(w, r)
+	user := userSession(w, r)
 	if user == nil {
 		return
 	}
@@ -115,6 +137,9 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 			if len(records) == 0 {
 				continue
 			}
+			if !canViewTagRow(user, u.ID, taskID) {
+				continue
+			}
 			tags, err := DB.TaskTags(u.ID, taskID)
 			if err != nil {
 				log.Printf("Error computing tags for user %s task %s: %v", u.ID, taskID, err)
@@ -136,13 +161,18 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 				taskTitle = task.Title
 			}
 
+			excerpt := records[0]
+			if own := storage.LatestOwnRecord(records); own != nil {
+				excerpt = *own
+			}
+
 			rows = append(rows, TagRow{
 				StudentID:   u.ID,
 				StudentName: u.Username,
 				TaskID:      taskID,
 				TaskTitle:   taskTitle,
 				Tags:        tags,
-				Excerpt:     records[0].Content,
+				Excerpt:     excerpt.Content,
 				Status:      records[0].Type,
 			})
 		}
