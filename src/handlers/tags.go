@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ryukzak/slap/src/auth"
 	"github.com/ryukzak/slap/src/storage"
+	"github.com/ryukzak/slap/src/util"
 )
 
 // TagCount is a tag name with how many student+task pairs currently carry it.
@@ -25,62 +26,65 @@ type TagRow struct {
 	TaskTitle   string
 	Excerpt     string
 	Status      storage.TaskRecordType
+	// Score is the current numeric score for this student+task pair (the
+	// leading number of the most recent teacher record that has one), or ""
+	// if it has never been scored.
+	Score string
 }
 
-// TagStatusFilter controls which record statuses show up on the tag detail
-// page. All four are enabled by default (no filter query params at all); once
-// any one of pending/queued/checked/dropped appears in the query, all four
-// are read explicitly from it.
-type TagStatusFilter struct {
-	Pending bool
-	Queued  bool
-	Checked bool
-	Dropped bool
+// TagScoreFilter controls whether scored and/or unscored student+task pairs
+// show up on the tag detail page. Both are enabled by default (no filter
+// query params at all); once either "scored" or "unscored" appears in the
+// query, both are read explicitly from it.
+type TagScoreFilter struct {
+	Scored   bool
+	Unscored bool
 
-	// Href* toggle just that one status, keeping the other three as-is.
-	HrefPending string
-	HrefQueued  string
-	HrefChecked string
-	HrefDropped string
+	// Href* toggle just that one bucket, keeping the other as-is.
+	HrefScored   string
+	HrefUnscored string
 }
 
-func parseTagStatusFilter(r *http.Request) TagStatusFilter {
+func parseTagScoreFilter(r *http.Request) TagScoreFilter {
 	q := r.URL.Query()
-	pending, queued, checked, dropped := true, true, true, true
-	if q.Has("pending") || q.Has("queued") || q.Has("checked") || q.Has("dropped") {
-		pending = q.Get("pending") == "true"
-		queued = q.Get("queued") == "true"
-		checked = q.Get("checked") == "true"
-		dropped = q.Get("dropped") == "true"
+	scored, unscored := true, true
+	if q.Has("scored") || q.Has("unscored") {
+		scored = q.Get("scored") == "true"
+		unscored = q.Get("unscored") == "true"
 	}
 
-	href := func(p, qd, c, d bool) string {
-		return fmt.Sprintf("?pending=%t&queued=%t&checked=%t&dropped=%t", p, qd, c, d)
+	href := func(s, u bool) string {
+		return fmt.Sprintf("?scored=%t&unscored=%t", s, u)
 	}
 
-	return TagStatusFilter{
-		Pending: pending, Queued: queued, Checked: checked, Dropped: dropped,
-		HrefPending: href(!pending, queued, checked, dropped),
-		HrefQueued:  href(pending, !queued, checked, dropped),
-		HrefChecked: href(pending, queued, !checked, dropped),
-		HrefDropped: href(pending, queued, checked, !dropped),
+	return TagScoreFilter{
+		Scored: scored, Unscored: unscored,
+		HrefScored:   href(!scored, unscored),
+		HrefUnscored: href(scored, !unscored),
 	}
 }
 
-// Allows reports whether a record of the given status passes this filter.
-func (f TagStatusFilter) Allows(t storage.TaskRecordType) bool {
-	switch t {
-	case storage.SubmitRecord:
-		return f.Pending
-	case storage.RegisterRecord:
-		return f.Queued
-	case storage.ReviewedRecord:
-		return f.Checked
-	case storage.RevokeRecord:
-		return f.Dropped
-	default:
-		return true
+// Allows reports whether a row with the given score passes this filter.
+func (f TagScoreFilter) Allows(hasScore bool) bool {
+	if hasScore {
+		return f.Scored
 	}
+	return f.Unscored
+}
+
+// latestScore returns the current numeric score for a newest-first record
+// history: the leading number of the most recent teacher-authored record
+// that has one, or "" if none does. Mirrors the score shown on the task page.
+func latestScore(records []storage.TaskRecord) string {
+	for _, r := range records {
+		if r.AuthorID == r.StudentID {
+			continue
+		}
+		if s := util.ExtractScore(r.Content); s != "" {
+			return s
+		}
+	}
+	return ""
 }
 
 // canViewTagRow reports whether viewer may see a student+task pair on the
@@ -171,7 +175,7 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagName := mux.Vars(r)["tag"]
-	filter := parseTagStatusFilter(r)
+	filter := parseTagScoreFilter(r)
 
 	users, err := DB.ListUsers()
 	if err != nil {
@@ -219,8 +223,10 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 				taskTitle = task.Title
 			}
 
+			score := latestScore(records)
+
 			totalRows++
-			if !filter.Allows(records[0].Type) {
+			if !filter.Allows(score != "") {
 				continue
 			}
 
@@ -236,6 +242,7 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 				TaskTitle:   taskTitle,
 				Excerpt:     excerpt.Content,
 				Status:      records[0].Type,
+				Score:       score,
 			})
 		}
 	}
@@ -252,7 +259,7 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 		TagName       string
 		Rows          []TagRow
 		TotalRows     int
-		Filter        TagStatusFilter
+		Filter        TagScoreFilter
 	}{
 		SessionUserID: user.ID,
 		TagName:       tagName,
