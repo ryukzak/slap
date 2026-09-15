@@ -10,9 +10,9 @@
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/teachers">[teachers]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
+{{ end }}
 <a class="text-blue-400 hover:text-blue-300" href="/tags">[tags]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
-{{ end }}
 {{ if eq .ID .SessionUserID }}
 <a class="text-blue-400 hover:text-blue-300"
    href="/user/{{.ID}}/settings">[settings]</a>
@@ -88,7 +88,6 @@
   <ul class="space-y-1">
     {{ range .Tasks }}
     {{ $status := index $.TaskStatuses .ID }}
-    {{ $journal := index $.Journals .ID }}
     {{ $tags := index $.TaskTags .ID }}
     <li class="border-b border-gray-800 pb-1">
       <a class="block text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
@@ -98,11 +97,10 @@
           {{ range $tags }}
           <span class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 flex-shrink-0 journal-author-teacher">#{{.Name}}</span>
           {{ end }}
-          {{ if $journal }}
-          {{ with index $journal 0 }}
+          {{ $preview := index $.TaskPreview .ID }}
+          {{ with $preview }}
           <span class="text-gray-500 truncate">{{.AuthorName}}:
-          {{ if ne .AuthorID .StudentID }}{{ boldScore (getTitle .Content) }}{{ else }}{{ getTitle .Content }}{{ end }}</span>
-          {{ end }}
+          {{ if ne .AuthorID .StudentID }}{{ boldScore (getTitle (firstLine .Content)) }}{{ else }}{{ getTitle (firstLine .Content) }}{{ end }}</span>
           {{ end }}
         </span>
         {{ if $status }}

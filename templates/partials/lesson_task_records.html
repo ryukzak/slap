@@ -25,12 +25,8 @@
       <span class="text-sm flex-shrink-0">@{{$record.AuthorName}}</span>
       <span class="text-xs text-gray-400 truncate hidden sm:inline">{{$record.TaskTitle}}</span>
       {{ range $record.Tags }}
-      {{ if $.SessionIsTeacher }}
       <a class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 flex-shrink-0 hidden sm:inline journal-author-teacher"
          href="/tags/{{.Name}}">#{{.Name}}</a>
-    {{ else }}
-      <span class="px-1.5 py-0.5 rounded-full text-[10px] border border-gray-700 flex-shrink-0 hidden sm:inline journal-author-teacher">#{{.Name}}</span>
-      {{ end }}
       {{ end }}
     </div>
     <div class="text-xs text-gray-400 truncate sm:hidden pl-1">

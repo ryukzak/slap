@@ -106,6 +106,9 @@ test-hurl:
 		--variable student_id=$$(date +%s)30 \
 		tests/ui/tags-browse-page.hurl
 	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)31 \
+		tests/ui/task-preview-own-topic.hurl
+	hurl --test $(HURL_VARS) \
 		--variable student_id=$$(date +%s)32 \
 		tests/ui/dashboard-lesson-queue-display.hurl
 	hurl --test $(HURL_VARS) \

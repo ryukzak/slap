@@ -14,16 +14,19 @@ import (
 
 // User represents the user data structure
 type User struct {
-	Username                 string
-	ID                       storage.UserID // profile user's ID
-	SessionUserID            storage.UserID // logged-in user's ID
-	SessionIsTeacher         bool
-	IsStudent                bool
-	IsTeacher                bool
-	RegisterMode             bool
-	Tasks                    []config.Task
-	TaskStatuses             map[storage.TaskID]storage.TaskRecordType
-	Journals                 map[storage.TaskID][]storage.TaskRecord
+	Username         string
+	ID               storage.UserID // profile user's ID
+	SessionUserID    storage.UserID // logged-in user's ID
+	SessionIsTeacher bool
+	IsStudent        bool
+	IsTeacher        bool
+	RegisterMode     bool
+	Tasks            []config.Task
+	TaskStatuses     map[storage.TaskID]storage.TaskRecordType
+	// TaskPreview holds the record whose content best represents each task's
+	// topic for a one-line preview: the student's own latest record when one
+	// exists, falling back to the newest record of any author otherwise.
+	TaskPreview              map[storage.TaskID]*storage.TaskRecord
 	TaskTags                 map[storage.TaskID][]storage.Tag
 	Lessons                  []*storage.Lesson
 	ShowPastLessons          bool
