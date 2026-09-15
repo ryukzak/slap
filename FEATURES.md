@@ -146,11 +146,15 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    duplicate topics or groups themselves before the teacher does. Full content, reviews,
    and teacher notes stay restricted to the author and teachers.
 5. Any signed-in user has a tag browser: `/tags` lists every currently active tag with a
-   count of student+task pairs carrying it; `/tags/{tag}` lists those pairs, each linking
-   to the student's task page. Tag chips elsewhere always link here. A student always
-   sees their own rows; a row for another student only appears if its task is configured
-   `visible: true` (the same peer-visibility rule as the shared lesson page) — otherwise
-   it's omitted from both the count and the detail listing, not just hidden in the UI.
+   count of student+task pairs carrying it; `/tags/{tag}` lists those pairs, each with a
+   `[view task]` button to the student's task page. Tag chips elsewhere always link here.
+   A student always sees their own rows; a row for another student only appears if its
+   task is configured `visible: true` (the same peer-visibility rule as the shared lesson
+   page) — otherwise it's omitted from both the count and the detail listing, not just
+   hidden in the UI. The tag detail page doesn't repeat the tag itself on each row (every
+   row already carries it) and can be filtered by status (Pending/Queued/Checked/Dropped)
+   via toggleable pills — a disabled status is excluded from the listing entirely, not
+   just visually dimmed.
 
 # General requirements
 

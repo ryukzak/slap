@@ -173,6 +173,10 @@ run_test tests/ui/lesson-sort-modes.hurl \
     --variable "student_id=${TIMESTAMP}33" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/tag-detail-filters.hurl \
+    --variable "student_id=${TIMESTAMP}34" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
