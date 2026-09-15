@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -22,9 +23,64 @@ type TagRow struct {
 	StudentName string
 	TaskID      storage.TaskID
 	TaskTitle   string
-	Tags        []storage.Tag
 	Excerpt     string
 	Status      storage.TaskRecordType
+}
+
+// TagStatusFilter controls which record statuses show up on the tag detail
+// page. All four are enabled by default (no filter query params at all); once
+// any one of pending/queued/checked/dropped appears in the query, all four
+// are read explicitly from it.
+type TagStatusFilter struct {
+	Pending bool
+	Queued  bool
+	Checked bool
+	Dropped bool
+
+	// Href* toggle just that one status, keeping the other three as-is.
+	HrefPending string
+	HrefQueued  string
+	HrefChecked string
+	HrefDropped string
+}
+
+func parseTagStatusFilter(r *http.Request) TagStatusFilter {
+	q := r.URL.Query()
+	pending, queued, checked, dropped := true, true, true, true
+	if q.Has("pending") || q.Has("queued") || q.Has("checked") || q.Has("dropped") {
+		pending = q.Get("pending") == "true"
+		queued = q.Get("queued") == "true"
+		checked = q.Get("checked") == "true"
+		dropped = q.Get("dropped") == "true"
+	}
+
+	href := func(p, qd, c, d bool) string {
+		return fmt.Sprintf("?pending=%t&queued=%t&checked=%t&dropped=%t", p, qd, c, d)
+	}
+
+	return TagStatusFilter{
+		Pending: pending, Queued: queued, Checked: checked, Dropped: dropped,
+		HrefPending: href(!pending, queued, checked, dropped),
+		HrefQueued:  href(pending, !queued, checked, dropped),
+		HrefChecked: href(pending, queued, !checked, dropped),
+		HrefDropped: href(pending, queued, checked, !dropped),
+	}
+}
+
+// Allows reports whether a record of the given status passes this filter.
+func (f TagStatusFilter) Allows(t storage.TaskRecordType) bool {
+	switch t {
+	case storage.SubmitRecord:
+		return f.Pending
+	case storage.RegisterRecord:
+		return f.Queued
+	case storage.ReviewedRecord:
+		return f.Checked
+	case storage.RevokeRecord:
+		return f.Dropped
+	default:
+		return true
+	}
 }
 
 // canViewTagRow reports whether viewer may see a student+task pair on the
@@ -115,6 +171,7 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tagName := mux.Vars(r)["tag"]
+	filter := parseTagStatusFilter(r)
 
 	users, err := DB.ListUsers()
 	if err != nil {
@@ -124,6 +181,7 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var rows []TagRow
+	totalRows := 0
 	for _, u := range users {
 		if !u.IsStudent {
 			continue
@@ -161,6 +219,11 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 				taskTitle = task.Title
 			}
 
+			totalRows++
+			if !filter.Allows(records[0].Type) {
+				continue
+			}
+
 			excerpt := records[0]
 			if own := storage.LatestOwnRecord(records); own != nil {
 				excerpt = *own
@@ -171,7 +234,6 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 				StudentName: u.Username,
 				TaskID:      taskID,
 				TaskTitle:   taskTitle,
-				Tags:        tags,
 				Excerpt:     excerpt.Content,
 				Status:      records[0].Type,
 			})
@@ -189,9 +251,13 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SessionUserID string
 		TagName       string
 		Rows          []TagRow
+		TotalRows     int
+		Filter        TagStatusFilter
 	}{
 		SessionUserID: user.ID,
 		TagName:       tagName,
 		Rows:          rows,
+		TotalRows:     totalRows,
+		Filter:        filter,
 	})
 }
