@@ -161,6 +161,10 @@ run_test tests/ui/tags-browse-page.hurl \
     --variable "student_id=${TIMESTAMP}30" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/dashboard-lesson-queue-display.hurl \
+    --variable "student_id=${TIMESTAMP}32" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
