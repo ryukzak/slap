@@ -11,6 +11,29 @@ import (
 	"github.com/ryukzak/slap/src/util"
 )
 
+// TestSubmitAtOrCreated locks in the backward-compatibility fallback: some
+// records (e.g. legacy ones read via readRecordRaw, which skips the usual
+// SubmitAt backfill) can have a zero SubmitAt despite having a real
+// CreatedAt. submitAtOrCreated must fall back to CreatedAt in that case.
+func TestSubmitAtOrCreated(t *testing.T) {
+	created := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	submitted := created.Add(10 * time.Minute)
+
+	t.Run("prefers SubmitAt when set", func(t *testing.T) {
+		r := TaskRecordWithInfo{TaskRecord: storage.TaskRecord{CreatedAt: created, SubmitAt: submitted}}
+		if got := submitAtOrCreated(r); !got.Equal(submitted) {
+			t.Errorf("expected %v, got %v", submitted, got)
+		}
+	})
+
+	t.Run("falls back to CreatedAt when SubmitAt is zero", func(t *testing.T) {
+		r := TaskRecordWithInfo{TaskRecord: storage.TaskRecord{CreatedAt: created}}
+		if got := submitAtOrCreated(r); !got.Equal(created) {
+			t.Errorf("expected %v, got %v", created, got)
+		}
+	})
+}
+
 func TestParseSortMode_Valid(t *testing.T) {
 	tests := []struct {
 		input string
@@ -62,7 +85,7 @@ func applySortMode(records []TaskRecordWithInfo, mode SortMode) []TaskRecordWith
 	case SortByRegisterOrd:
 		out := append([]TaskRecordWithInfo(nil), records...)
 		sort.SliceStable(out, func(i, j int) bool {
-			return registeredAtOrCreated(out[i]).Before(registeredAtOrCreated(out[j]))
+			return out[i].CreatedAt.Before(out[j].CreatedAt)
 		})
 		return out
 	case SortByTaskMix:
@@ -152,43 +175,33 @@ func TestSortModes(t *testing.T) {
 	}
 }
 
+// TestSortByRegisterOrd verifies register-ord orders by CreatedAt (when the
+// registration itself happened), independent of SubmitAt (when the
+// underlying work was originally submitted). Before this was fixed,
+// register-ord mistakenly reused the SubmitAt-based key that everything else
+// (submit-ord, task-mix, student-mix) is built on, making it indistinguishable
+// from submit-ord.
 func TestSortByRegisterOrd(t *testing.T) {
 	base := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	mk := func(student, task string, createdMin, registeredMin int) TaskRecordWithInfo {
-		r := TaskRecordWithInfo{
+	mk := func(student, task string, createdMin, submitMin int) TaskRecordWithInfo {
+		return TaskRecordWithInfo{
 			TaskRecord: storage.TaskRecord{
 				TaskID:    storage.TaskID(task),
 				StudentID: storage.UserID(student),
 				CreatedAt: base.Add(time.Duration(createdMin) * time.Minute),
+				SubmitAt:  base.Add(time.Duration(submitMin) * time.Minute),
 			},
 		}
-		if registeredMin >= 0 {
-			r.SubmitAt = base.Add(time.Duration(registeredMin) * time.Minute)
-		}
-		return r
 	}
 
-	t.Run("orders by RegisteredAt regardless of CreatedAt", func(t *testing.T) {
+	t.Run("orders by CreatedAt (registration time) regardless of SubmitAt (submit time)", func(t *testing.T) {
 		input := []TaskRecordWithInfo{
-			mk("Alice", "T1", 1, 30), // submitted early, registered late
-			mk("Bob", "T2", 2, 10),   // submitted mid, registered first
-			mk("Carol", "T3", 3, 20), // submitted late, registered mid
+			mk("Alice", "T1", 30, 1), // submitted early, registered late
+			mk("Bob", "T2", 10, 2),   // submitted mid, registered first
+			mk("Carol", "T3", 20, 3), // submitted late, registered mid
 		}
 		got := formatSequence(applySortMode(input, SortByRegisterOrd))
 		want := "Bob:T2 Carol:T3 Alice:T1"
-		if got != want {
-			t.Errorf("expected %q, got %q", want, got)
-		}
-	})
-
-	t.Run("falls back to CreatedAt when RegisteredAt is zero", func(t *testing.T) {
-		input := []TaskRecordWithInfo{
-			mk("Alice", "T1", 5, -1), // no RegisteredAt -> uses CreatedAt=5
-			mk("Bob", "T2", 1, 10),   // RegisteredAt=10
-			mk("Carol", "T3", 9, 2),  // RegisteredAt=2
-		}
-		got := formatSequence(applySortMode(input, SortByRegisterOrd))
-		want := "Carol:T3 Alice:T1 Bob:T2"
 		if got != want {
 			t.Errorf("expected %q, got %q", want, got)
 		}
