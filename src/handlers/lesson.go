@@ -242,7 +242,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 	}
 
 	sort.Slice(allRecords, func(i, j int) bool {
-		return registeredAtOrCreated(allRecords[i]).Before(registeredAtOrCreated(allRecords[j]))
+		return submitAtOrCreated(allRecords[i]).Before(submitAtOrCreated(allRecords[j]))
 	})
 
 	totalRecords := len(allRecords)
@@ -255,8 +255,11 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 
 	switch sortMode {
 	case SortByRegisterOrd:
+		// CreatedAt on a register/revoke record is when that action happened —
+		// true per-lesson registration order, distinct from SubmitAt (submit
+		// order, used by everything else including task-mix/student-mix).
 		sort.SliceStable(visible, func(i, j int) bool {
-			return registeredAtOrCreated(visible[i]).Before(registeredAtOrCreated(visible[j]))
+			return visible[i].CreatedAt.Before(visible[j].CreatedAt)
 		})
 	case SortByTaskMix:
 		visible = util.InterleaveByKey(visible, func(r TaskRecordWithInfo) string { return string(r.TaskID) })
@@ -683,7 +686,12 @@ func reverseSlice(s []storage.TaskRecord) []storage.TaskRecord {
 	return c
 }
 
-func registeredAtOrCreated(r TaskRecordWithInfo) time.Time {
+// submitAtOrCreated returns the time a record's underlying work was
+// submitted (SubmitAt is fixed at the original submission and carried
+// unchanged through register/reviewed/revoke), falling back to CreatedAt for
+// legacy records that predate SubmitAt. This is submit order, not
+// registration order — see SortByRegisterOrd for the latter.
+func submitAtOrCreated(r TaskRecordWithInfo) time.Time {
 	if !r.SubmitAt.IsZero() {
 		return r.SubmitAt
 	}
