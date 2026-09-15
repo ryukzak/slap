@@ -10,7 +10,7 @@
         <span class="text-gray-400 truncate min-w-0">{{getTitle .Description}}</span>
       </div>
       <div class="flex items-center space-x-2 flex-shrink-0">
-        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}{{ if gt .Capacity 0 }}/{{.Capacity}}{{ end }}]</span>
+        <span class="text-gray-500">{{ if gt .Capacity 0 }}{{.RegisteredCount}}/{{.Capacity}}{{ else }}{{.RegisteredCount}}{{ end }} queued ({{.ReviewedCount}} checked)</span>
         {{ if not .IsRegistrationOpen }}
         <span class="lesson-registration-unavailable text-xs">[closed]</span>
         {{ else if $.WaitingMessage }}
@@ -37,7 +37,7 @@
         {{ if not .IsRegistrationOpen }}
         <span class="lesson-list-registration-closed text-xs">[closed]</span>
         {{ end }}
-        <span class="text-gray-500">[{{.ReviewedCount}}/{{.RegisteredCount}}{{ if gt .Capacity 0 }}/{{.Capacity}}{{ end }}]</span>
+        <span class="text-gray-500">{{ if gt .Capacity 0 }}{{.RegisteredCount}}/{{.Capacity}}{{ else }}{{.RegisteredCount}}{{ end }} queued ({{.ReviewedCount}} checked)</span>
       </div>
     </a>
     {{end}}

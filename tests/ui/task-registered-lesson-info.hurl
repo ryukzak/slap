@@ -82,4 +82,4 @@ HTTP 200
 body contains "Queued"
 body contains "@Test Teacher"
 body contains "Lesson info test"
-body contains "[0/1]"
+body contains "1 queued (0 checked)"

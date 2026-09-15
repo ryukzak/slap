@@ -131,7 +131,7 @@
           <span class="flex-shrink-0">{{ formatDateTime $.RegisteredLesson.DateTime}}</span>
           <span class="lesson-teacher-name flex-shrink-0">@{{$.RegisteredLesson.TeacherName}}</span>
           <span class="text-gray-400 truncate">{{getTitle $.RegisteredLesson.Description}}</span>
-          <span class="text-gray-500 flex-shrink-0">[{{$.RegisteredLesson.ReviewedCount}}/{{$.RegisteredLesson.RegisteredCount}}{{ if gt $.RegisteredLesson.Capacity 0 }}/{{$.RegisteredLesson.Capacity}}{{ end }}]</span>
+          <span class="text-gray-500 flex-shrink-0">{{ if gt $.RegisteredLesson.Capacity 0 }}{{$.RegisteredLesson.RegisteredCount}}/{{$.RegisteredLesson.Capacity}}{{ else }}{{$.RegisteredLesson.RegisteredCount}}{{ end }} queued ({{$.RegisteredLesson.ReviewedCount}} checked)</span>
         </a>
       {{ else }}
         <a class="text-yellow-400 hover:text-yellow-300"
