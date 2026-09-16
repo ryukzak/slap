@@ -152,9 +152,9 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    task is configured `visible: true` (the same peer-visibility rule as the shared lesson
    page) — otherwise it's omitted from both the count and the detail listing, not just
    hidden in the UI. The tag detail page doesn't repeat the tag itself on each row (every
-   row already carries it) and can be filtered by status (Pending/Queued/Checked/Dropped)
-   via toggleable pills — a disabled status is excluded from the listing entirely, not
-   just visually dimmed.
+   row already carries it) and can be filtered by whether it has a score yet (Scored /
+   No score toggleable pills) — a disabled bucket is excluded from the listing entirely,
+   not just visually dimmed.
 
 # General requirements
 
