@@ -37,27 +37,27 @@
           {{ if .Score }}
           <span class="text-green-300">{{.Score}}</span>
           {{ end }}
-          <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">
-          {{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoke" }}Dropped{{ else }}Pending{{ end }}
-          </span>
-          <a class="text-blue-400 hover:text-blue-300"
-             href="/user/{{.StudentID}}/task/{{.TaskID}}">[view task]</a>
-        </div>
+        <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">
+        {{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoke" }}Dropped{{ else }}Pending{{ end }}
+        </span>
+        <a class="text-blue-400 hover:text-blue-300"
+           href="/user/{{.StudentID}}/task/{{.TaskID}}">[view task]</a>
       </div>
-      <p class="text-xs text-gray-400">
-        {{ getTitle (firstLine .Excerpt) }}
-      </p>
-    </li>
-    {{ end }}
-  </ul>
-  {{ else if eq .TotalRows 0 }}
-  <p class="text-xs text-gray-400">
-    No tasks currently tagged #{{.TagName}}.
-  </p>
-  {{ else }}
-  <p class="text-xs text-gray-400">
-    No tasks match the current score filter.
-  </p>
+    </div>
+    <p class="text-xs text-gray-400">
+      {{ getTitle (firstLine .Excerpt) }}
+    </p>
+  </li>
   {{ end }}
+</ul>
+{{ else if eq .TotalRows 0 }}
+<p class="text-xs text-gray-400">
+  No tasks currently tagged #{{.TagName}}.
+</p>
+{{ else }}
+<p class="text-xs text-gray-400">
+  No tasks match the current score filter.
+</p>
+{{ end }}
 </section>
 {{end}}
