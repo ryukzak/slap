@@ -277,6 +277,7 @@ func main() {
 	r.HandleFunc("/api/lessons", handlers.CreateLessonHandler).Methods("POST")
 	r.HandleFunc("/lesson/{lessonID}", handlers.LessonDetailHandler).Methods("GET")
 	r.HandleFunc("/lesson/{lessonID}/records", handlers.LessonTaskRecordsPartialHandler).Methods("GET")
+	r.HandleFunc("/lesson/{lessonID}/stats", handlers.LessonStatsPartialHandler).Methods("GET")
 	r.HandleFunc("/api/lessons", handlers.RenderLessonListHandler).Methods("GET")
 	r.HandleFunc("/api/lesson/{lessonID}/register", handlers.RegisterTaskRecordToLessonHandler).Methods("POST")
 	r.HandleFunc("/api/lesson/{lessonID}/unregister", handlers.UnregisterFromLessonHandler).Methods("POST")

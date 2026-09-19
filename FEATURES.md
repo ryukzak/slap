@@ -74,12 +74,20 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Submit feedback via the review form — the student will see it on their task page.
    - Move to the next task from another student.
 6. Teacher can see which tasks have been reviewed and which are still pending.
+   - Each review shown on the lesson page is timestamped, so the teacher can tell when
+     it was placed, not just who placed it.
 7. Teacher can bulk-revoke all queued registrations via `[revoke all]`.
 8. Teacher can edit the lesson description after creation.
    - The lesson capacity can also be changed after creation via the "edit capacity" form
      (`0` means unlimited). Enrollments above the new capacity are kept below the cutoff.
 9. Teacher can toggle `[show history]` to see previously revoked registration attempts.
 10. Teacher can expand or collapse all task records with `[open all]`.
+11. A teacher-only "lesson summary" panel at the top of the lesson page shows how the
+    lesson finished: counts of checked/queued/dropped task records, plus the score
+    distribution (min/avg/median/max and a per-score breakdown) of the checked ones. A
+    score of 0 is counted and shown here, unlike the min/avg/median/max summary on the
+    students page, which excludes it. The panel refreshes live alongside the task list
+    whenever a review is submitted.
 
 # Use Case: teacher views student dashboard
 

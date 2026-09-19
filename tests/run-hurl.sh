@@ -177,6 +177,18 @@ run_test tests/ui/tag-detail-filters.hurl \
     --variable "student_id=${TIMESTAMP}34" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/lesson-review-timestamp.hurl \
+    --variable "student_id=${TIMESTAMP}35" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/lesson-open-all-button.hurl \
+    --variable "student_id=${TIMESTAMP}36" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/lesson-teacher-summary.hurl \
+    --variable "student_id=${TIMESTAMP}37" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

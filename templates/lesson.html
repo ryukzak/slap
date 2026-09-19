@@ -20,6 +20,19 @@
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{end}}
 {{define "content"}}
+{{ if .SessionIsTeacher }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // lesson summary
+  </div>
+  <div id="lesson-stats"
+       hx-get="/lesson/{{.Lesson.ID}}/stats"
+       hx-trigger="lessonRecordsRefresh"
+       hx-swap="innerHTML">
+    {{template "lesson_stats.html" .}}
+  </div>
+</section>
+{{ end }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
     // lesson
@@ -180,8 +193,8 @@
       <button class="text-blue-400 hover:text-blue-300 text-xs"
               type="button"
               data-action="open-all"
-              data-target="#lesson-task-records > ul > li > details[data-status='register']">
-        [open queued]
+              data-target="#lesson-task-records > ul > li > details">
+        [open all]
       </button>
       {{ if .ShowRevoked }}
       <a class="text-blue-400 hover:text-blue-300" href="?sort={{.SortMode}}">[hide history]</a>

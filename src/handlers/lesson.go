@@ -128,15 +128,99 @@ func shouldShowCapacityCutoff(lesson *storage.Lesson, records []TaskRecordWithIn
 		len(records) > lesson.Capacity
 }
 
-func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortMode) ([]TaskRecordWithInfo, int, error) {
+// LessonScoreBucket is one row of a lesson's score histogram: how many
+// reviewed tasks received a given numeric score.
+type LessonScoreBucket struct {
+	Score int
+	Count int
+}
+
+// LessonStats summarizes how a lesson finished: how many registrations ended
+// up checked, are still queued, or were dropped, plus the score distribution
+// of the checked ones. Unlike the per-user score stats on the users page, a
+// score of 0 counts here — a lesson summary should show zero-scored work
+// rather than hide it.
+type LessonStats struct {
+	Checked         int
+	Queued          int
+	Dropped         int
+	UnscoredChecked int
+	Scores          *ScoreStats
+	ScoreBreakdown  []LessonScoreBucket
+}
+
+// computeLessonStats aggregates a lesson's registrations, regardless of the
+// showRevoked/sort display filters, so the summary always reflects the
+// lesson's full history.
+func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
+	var stats LessonStats
+	scoreCounts := map[int]int{}
+	var vals []int
+
+	for _, r := range records {
+		switch r.Type {
+		case storage.RegisterRecord:
+			stats.Queued++
+		case storage.RevokeRecord:
+			stats.Dropped++
+		case storage.ReviewedRecord:
+			stats.Checked++
+			score := ""
+			if len(r.ReviewRecords) > 0 {
+				score = util.ExtractScore(r.ReviewRecords[0].Content)
+			}
+			v, err := strconv.Atoi(score)
+			if score == "" || err != nil {
+				stats.UnscoredChecked++
+				continue
+			}
+			vals = append(vals, v)
+			scoreCounts[v]++
+		}
+	}
+
+	if len(vals) > 0 {
+		sort.Ints(vals)
+		sum := 0
+		for _, v := range vals {
+			sum += v
+		}
+		n := len(vals)
+		var median float64
+		if n%2 == 0 {
+			median = float64(vals[n/2-1]+vals[n/2]) / 2
+		} else {
+			median = float64(vals[n/2])
+		}
+		stats.Scores = &ScoreStats{
+			Min:    vals[0],
+			Avg:    float64(sum) / float64(n),
+			Median: median,
+			Max:    vals[n-1],
+		}
+
+		scores := make([]int, 0, len(scoreCounts))
+		for s := range scoreCounts {
+			scores = append(scores, s)
+		}
+		sort.Ints(scores)
+		for _, s := range scores {
+			stats.ScoreBreakdown = append(stats.ScoreBreakdown, LessonScoreBucket{Score: s, Count: scoreCounts[s]})
+		}
+	}
+
+	return stats
+}
+
+func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortMode) ([]TaskRecordWithInfo, int, LessonStats, error) {
 	taskRecords, err := DB.ListLessonTaskRecords(lesson)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, LessonStats{}, err
 	}
 
 	previousTaskRecords, err := DB.ListLessonPreviousTaskRecords(lesson)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, LessonStats{}, err
 	}
 
 	// Reviewed previous records go inside the current enrollment's accordion.
@@ -245,6 +329,8 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		return submitAtOrCreated(allRecords[i]).Before(submitAtOrCreated(allRecords[j]))
 	})
 
+	stats := computeLessonStats(allRecords)
+
 	totalRecords := len(allRecords)
 	var visible []TaskRecordWithInfo
 	for _, r := range allRecords {
@@ -267,7 +353,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		visible = util.InterleaveByKey(visible, func(r TaskRecordWithInfo) string { return r.StudentID })
 	}
 
-	return visible, totalRecords, nil
+	return visible, totalRecords, stats, nil
 }
 
 func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
@@ -295,7 +381,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 	showRevoked := r.URL.Query().Get("showRevoked") == "true"
 	sortMode := ParseSortMode(r.URL.Query().Get("sort"))
 
-	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked, sortMode)
+	visibleTaskRecords, totalRecords, stats, err := buildLessonRecords(lesson, showRevoked, sortMode)
 	if err != nil {
 		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
 		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
@@ -315,6 +401,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SortMode         SortMode
 		Capacity         int
 		ShowCutoff       bool
+		Stats            LessonStats
 	}{
 		Lesson:           lesson,
 		TeacherID:        lesson.TeacherID,
@@ -328,6 +415,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SortMode:         sortMode,
 		Capacity:         lesson.Capacity,
 		ShowCutoff:       shouldShowCapacityCutoff(lesson, visibleTaskRecords, showRevoked),
+		Stats:            stats,
 	})
 }
 
@@ -348,7 +436,7 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	visibleTaskRecords, totalRecords, err := buildLessonRecords(lesson, showRevoked, sortMode)
+	visibleTaskRecords, totalRecords, _, err := buildLessonRecords(lesson, showRevoked, sortMode)
 	if err != nil {
 		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
 		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
@@ -374,6 +462,43 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html")
 	if err := t.ExecuteTemplate(w, "lesson_task_records.html", data); err != nil {
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		log.Printf("Template execution error: %v", err)
+	}
+}
+
+// LessonStatsPartialHandler re-renders the teacher-only lesson summary panel,
+// refreshed on the same "lessonRecordsRefresh" event as the task record list.
+func LessonStatsPartialHandler(w http.ResponseWriter, r *http.Request) {
+	user := teacherSession(w, r)
+	if user == nil {
+		return
+	}
+
+	lessonID := mux.Vars(r)["lessonID"]
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		log.Printf("Error fetching lesson: %v", err)
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+
+	_, _, stats, err := buildLessonRecords(lesson, true, SortBySubmitOrd)
+	if err != nil {
+		log.Printf("Error fetching task records for lesson %s: %v", lesson.ID, err)
+		http.Error(w, "Error fetching task records", http.StatusInternalServerError)
+		return
+	}
+
+	t, err := BaseTemplates.Clone()
+	if err != nil {
+		http.Error(w, "Failed to clone template", http.StatusInternalServerError)
+		log.Printf("Template clone error: %v", err)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	if err := t.ExecuteTemplate(w, "lesson_stats.html", struct{ Stats LessonStats }{Stats: stats}); err != nil {
 		http.Error(w, "Failed to render template", http.StatusInternalServerError)
 		log.Printf("Template execution error: %v", err)
 	}
