@@ -143,6 +143,68 @@
 </details>
 </section>
 {{ end }}
+{{ if .ScoreLog }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
+    <span>// score log ({{ len .ScoreLog }})</span>
+    <span class="space-x-2">
+      {{ $limit := .LogLimit }}
+      {{ range .LogLimits }}
+      {{ if eq . $limit }}
+      <span class="text-gray-200">{{.}}</span>
+    {{ else }}
+      <a class="text-blue-400 hover:text-blue-300" href="?logLimit={{.}}">{{.}}</a>
+      {{ end }}
+      {{ end }}
+    </span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs border-collapse">
+      <thead>
+        <tr class="border-b border-gray-700">
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            time
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            teacher
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            student
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            task
+          </th>
+          <th class="text-right text-gray-400 py-1 pl-2 font-normal">
+            score
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .ScoreLog }}
+        <tr class="border-b border-gray-800 hover:bg-gray-800">
+          <td class="py-1 pr-4 text-gray-500 whitespace-nowrap">
+            {{ formatDateTime .CreatedAt }}
+          </td>
+          <td class="py-1 pr-4 text-gray-300">
+            @{{.TeacherName}}
+          </td>
+          <td class="py-1 pr-4">
+            <a class="text-blue-400 hover:text-blue-300" href="/user/{{.StudentID}}">@{{.StudentName}}</a>
+          </td>
+          <td class="py-1 pr-4">
+            <a class="text-blue-400 hover:text-blue-300"
+               href="/user/{{.StudentID}}/task/{{.TaskID}}">{{.TaskTitle}}</a>
+          </td>
+          <td class="py-1 pl-2 text-right text-green-300">
+            {{.Score}}
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{ end }}
 {{ if .StudentCount }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
