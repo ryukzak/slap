@@ -93,8 +93,9 @@ func init() {
 	handlers.StartTime = time.Now()
 
 	funcMap := template.FuncMap{
-		"markdown":       util.RenderMarkdown,
-		"formatDateTime": util.FormatDateTime(primaryTZName, primaryLoc, "CET", secondaryLoc),
+		"markdown":              util.RenderMarkdown,
+		"formatDateTime":        util.FormatDateTime(primaryTZName, primaryLoc, "CET", secondaryLoc),
+		"formatDateTimeSeconds": util.FormatDateTimeSeconds(primaryTZName, primaryLoc, "CET", secondaryLoc),
 		"sub": func(a, b int) int {
 			return a - b
 		},

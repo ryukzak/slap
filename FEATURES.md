@@ -104,11 +104,18 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Score (if the teacher started a review with a number) and status badge.
    - Compact status summary (e.g. `p:2 q:1 c:1`).
 5. Teacher can download the table as CSV via `[download csv]`.
-6. **Score log** — a compact, reverse-chronological table of every teacher review that set a
-   numeric score, across all students and tasks: teacher name, student name, task name
-   (linked to the task page), score, and timestamp. A score of 0 is included, not filtered
-   out. Defaults to the last 10 entries; a `[10] [100] [500]` toggle switches how many are
-   shown.
+
+# Use Case: teacher views teacher directory
+
+1. Teacher navigates to `/teachers` (linked from the students page).
+2. A table lists every teacher with lesson count, review count, currently-queued count, and
+   last/next lesson date, sortable by lessons or reviews.
+3. At the bottom of the page, a **score log** shows a compact, reverse-chronological table of
+   every teacher review that set a numeric score, across all students and tasks: timestamp
+   (with seconds), teacher name (linked to their profile), student name (linked to their
+   profile), task name (linked to the task page), and score. A score of 0 is included, not
+   filtered out. Defaults to the last 10 entries; a `[10] [100] [500]` toggle switches how
+   many are shown.
 
 # Use Case: teacher notes for a student
 

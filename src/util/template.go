@@ -74,12 +74,23 @@ func FormatUptime(d time.Duration) string {
 }
 
 func FormatDateTime(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location) func(time.Time) string {
+	return formatDateTimeWithClock(fstName, fstLoc, sndName, sndLoc, "15:04")
+}
+
+// FormatDateTimeSeconds is FormatDateTime with seconds included in the clock
+// time \u2014 for spots that need finer-grained ordering than a minute, such as
+// the teacher score log.
+func FormatDateTimeSeconds(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location) func(time.Time) string {
+	return formatDateTimeWithClock(fstName, fstLoc, sndName, sndLoc, "15:04:05")
+}
+
+func formatDateTimeWithClock(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location, clockFormat string) func(time.Time) string {
 	return func(t time.Time) string {
 		return fmt.Sprintf("%s\u00a0%s(%s)/%s(%s)",
 			t.In(fstLoc).Format("Mon\u00a02.1.2006"),
-			t.In(fstLoc).Format("15:04"),
+			t.In(fstLoc).Format(clockFormat),
 			fstName,
-			t.In(sndLoc).Format("15:04"),
+			t.In(sndLoc).Format(clockFormat),
 			sndName,
 		)
 	}

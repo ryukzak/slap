@@ -128,7 +128,7 @@ test-hurl:
 		tests/ui/lesson-teacher-summary.hurl
 	hurl --test $(HURL_VARS) \
 		--variable student_id=$$(date +%s)38 \
-		tests/ui/users-score-log.hurl
+		tests/ui/teachers-score-log.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]

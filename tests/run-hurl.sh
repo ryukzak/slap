@@ -189,7 +189,7 @@ run_test tests/ui/lesson-teacher-summary.hurl \
     --variable "student_id=${TIMESTAMP}37" \
     --variable "teacher_id=$TEACHER_ID"
 
-run_test tests/ui/users-score-log.hurl \
+run_test tests/ui/teachers-score-log.hurl \
     --variable "student_id=${TIMESTAMP}38" \
     --variable "teacher_id=$TEACHER_ID"
 
