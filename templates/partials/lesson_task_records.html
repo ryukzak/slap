@@ -127,7 +127,7 @@
     <hr class="border-gray-700 my-2" />
     {{ end }}
     <div class="text-xs text-gray-500 mb-1">
-      // review by @{{$rev.AuthorName}}
+      // review by @{{$rev.AuthorName}} · {{ formatDateTime $rev.CreatedAt }}
     </div>
     <div class="text-xs markdown">
       {{ markdown $rev.Content }}

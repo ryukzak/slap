@@ -1,0 +1,33 @@
+{{ $total := add (add .Stats.Checked .Stats.Queued) .Stats.Dropped }}
+{{ if $total }}
+<div class="text-xs p-4 border border-gray-800 rounded max-w-2xl">
+  <div class="text-gray-400">
+    <span class="text-teal-400">checked: {{.Stats.Checked}}</span>
+    <span class="text-gray-600">·</span>
+    <span class="text-purple-400">queued: {{.Stats.Queued}}</span>
+    <span class="text-gray-600">·</span>
+    <span class="text-red-400">dropped: {{.Stats.Dropped}}</span>
+  </div>
+  {{ if .Stats.Checked }}
+  <div class="text-gray-500 mt-2">
+    {{ if .Stats.Scores }}
+    scores (min:{{.Stats.Scores.Min}}&nbsp;avg:{{ printf "%.1f" .Stats.Scores.Avg }}&nbsp;med:{{ printf "%.1f" .Stats.Scores.Median }}&nbsp;max:{{.Stats.Scores.Max}})
+    {{ end }}
+    {{ if .Stats.UnscoredChecked }}
+    <span>{{ if .Stats.Scores }}·{{ end }} {{.Stats.UnscoredChecked}} checked without a numeric score</span>
+    {{ end }}
+  </div>
+  {{ end }}
+  {{ if .Stats.ScoreBreakdown }}
+  <div class="flex flex-wrap gap-1 mt-2">
+    {{ range .Stats.ScoreBreakdown }}
+    <span class="px-2 py-0.5 rounded-full bg-gray-800 text-gray-300">{{.Score}}:&nbsp;{{.Count}}</span>
+    {{ end }}
+  </div>
+  {{ end }}
+</div>
+{{ else }}
+<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded max-w-2xl">
+  No registered task records for this lesson yet.
+</p>
+{{ end }}

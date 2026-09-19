@@ -244,7 +244,7 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func queuePosition(lesson *storage.Lesson, studentID storage.UserID, taskID storage.TaskID, sortMode SortMode) (int, int) {
-	visible, _, err := buildLessonRecords(lesson, false, sortMode)
+	visible, _, _, err := buildLessonRecords(lesson, false, sortMode)
 	if err != nil {
 		log.Printf("Error building lesson records for queue position: %v", err)
 		return 0, 0
