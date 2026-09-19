@@ -274,34 +274,6 @@ type TimelineTeacherReview struct {
 	Checked int
 }
 
-// ScoreLogEntry is one teacher-authored review that carried a numeric score,
-// shown newest-first in the score log on the students page.
-type ScoreLogEntry struct {
-	TeacherName string
-	StudentID   string
-	StudentName string
-	TaskID      string
-	TaskTitle   string
-	Score       string
-	CreatedAt   time.Time
-}
-
-// allowedLogLimits are the selectable score-log sizes, in display order.
-var allowedLogLimits = []int{10, 100, 500}
-
-// parseLogLimit validates s against allowedLogLimits, defaulting to the
-// first (smallest) one.
-func parseLogLimit(s string) int {
-	if n, err := strconv.Atoi(s); err == nil {
-		for _, allowed := range allowedLogLimits {
-			if n == allowed {
-				return n
-			}
-		}
-	}
-	return allowedLogLimits[0]
-}
-
 type TimelineEntry struct {
 	Date           string // "Mon 02 Jan"
 	Checked        int    // teacher reviews that day (past only)
@@ -379,8 +351,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	// dayKey -> teacherID -> count
 	checkedByDayTeacher := make(map[string]map[string]int)
 
-	var scoreLog []ScoreLogEntry
-
 	rows := make([]UserTableRow, 0, len(users))
 	for _, u := range users {
 		row := UserTableRow{
@@ -407,19 +377,8 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				var pending, queued, checked int
 				for _, rec := range records {
 					if rec.AuthorID != rec.StudentID {
-						if score := util.ExtractScore(rec.Content); score != "" {
-							if summary.Score == "" {
-								summary.Score = score
-							}
-							scoreLog = append(scoreLog, ScoreLogEntry{
-								TeacherName: rec.AuthorName,
-								StudentID:   u.ID,
-								StudentName: u.Username,
-								TaskID:      string(task.ID),
-								TaskTitle:   task.Title,
-								Score:       score,
-								CreatedAt:   rec.CreatedAt,
-							})
+						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
+							summary.Score = score
 						}
 						dayKey := rec.CreatedAt.In(PrimaryLoc).Format("2006-01-02")
 						checkedByDay[dayKey]++
@@ -460,14 +419,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		rows = append(rows, row)
-	}
-
-	sort.Slice(scoreLog, func(i, j int) bool {
-		return scoreLog[i].CreatedAt.After(scoreLog[j].CreatedAt)
-	})
-	logLimit := parseLogLimit(r.URL.Query().Get("logLimit"))
-	if logLimit < len(scoreLog) {
-		scoreLog = scoreLog[:logLimit]
 	}
 
 	// Compute per-task aggregate stats (students only).
@@ -705,9 +656,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		PendingTotal  WaitBucket
 		Timeline      []TimelineEntry
 		MaxBar        int
-		ScoreLog      []ScoreLogEntry
-		LogLimit      int
-		LogLimits     []int
 	}{
 		SessionUserID: sessionUser.ID,
 		Users:         rows,
@@ -718,9 +666,6 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		PendingTotal:  pendingTotal,
 		Timeline:      timeline,
 		MaxBar:        maxBar,
-		ScoreLog:      scoreLog,
-		LogLimit:      logLimit,
-		LogLimits:     allowedLogLimits,
 	})
 }
 

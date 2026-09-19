@@ -12,7 +12,7 @@ Student Lesson & Attempts Platform. A lightweight queue and task management syst
 
 **Teachers** schedule lessons, review queued submissions one by one, leave feedback or scores, and track progress across all students.
 
-**Teacher dashboard** (`/users`) provides an activity timeline, a recent-scores log, per-task statistics with visual bars, a students table with scores and statuses, and CSV export.
+**Teacher dashboard** (`/users`) provides an activity timeline, per-task statistics with visual bars, a students table with scores and statuses, and CSV export. The teacher directory (`/teachers`) adds per-teacher stats and a recent-scores log.
 
 Under the hood: embedded BoltDB (no external database), JWT authentication, Markdown rendering, self-hosted static assets.
 

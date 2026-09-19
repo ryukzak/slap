@@ -4,9 +4,11 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/ryukzak/slap/src/storage"
+	"github.com/ryukzak/slap/src/util"
 )
 
 type TeacherRow struct {
@@ -33,6 +35,35 @@ func ParseTeacherSortMode(s string) TeacherSortMode {
 	default:
 		return TeacherSortByLessons
 	}
+}
+
+// ScoreLogEntry is one teacher-authored review that carried a numeric score,
+// shown newest-first in the score log on the teachers page.
+type ScoreLogEntry struct {
+	TeacherID   string
+	TeacherName string
+	StudentID   string
+	StudentName string
+	TaskID      string
+	TaskTitle   string
+	Score       string
+	CreatedAt   time.Time
+}
+
+// allowedLogLimits are the selectable score-log sizes, in display order.
+var allowedLogLimits = []int{10, 100, 500}
+
+// parseLogLimit validates s against allowedLogLimits, defaulting to the
+// first (smallest) one.
+func parseLogLimit(s string) int {
+	if n, err := strconv.Atoi(s); err == nil {
+		for _, allowed := range allowedLogLimits {
+			if n == allowed {
+				return n
+			}
+		}
+	}
+	return allowedLogLimits[0]
 }
 
 func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +122,7 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var scoreLog []ScoreLogEntry
 	for _, u := range users {
 		if !u.IsStudent {
 			continue
@@ -108,8 +140,28 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 				if t, ok := teachers[rec.AuthorID]; ok {
 					t.Reviews++
 				}
+				if score := util.ExtractScore(rec.Content); score != "" {
+					scoreLog = append(scoreLog, ScoreLogEntry{
+						TeacherID:   rec.AuthorID,
+						TeacherName: rec.AuthorName,
+						StudentID:   u.ID,
+						StudentName: u.Username,
+						TaskID:      string(task.ID),
+						TaskTitle:   task.Title,
+						Score:       score,
+						CreatedAt:   rec.CreatedAt,
+					})
+				}
 			}
 		}
+	}
+
+	sort.Slice(scoreLog, func(i, j int) bool {
+		return scoreLog[i].CreatedAt.After(scoreLog[j].CreatedAt)
+	})
+	logLimit := parseLogLimit(r.URL.Query().Get("logLimit"))
+	if logLimit < len(scoreLog) {
+		scoreLog = scoreLog[:logLimit]
 	}
 
 	rows := make([]*TeacherRow, 0, len(teachers))
@@ -143,9 +195,15 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 		SessionUserID string
 		Teachers      []*TeacherRow
 		SortMode      TeacherSortMode
+		ScoreLog      []ScoreLogEntry
+		LogLimit      int
+		LogLimits     []int
 	}{
 		SessionUserID: sessionUser.ID,
 		Teachers:      rows,
 		SortMode:      sortMode,
+		ScoreLog:      scoreLog,
+		LogLimit:      logLimit,
+		LogLimits:     allowedLogLimits,
 	})
 }
