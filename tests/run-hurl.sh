@@ -189,6 +189,10 @@ run_test tests/ui/lesson-teacher-summary.hurl \
     --variable "student_id=${TIMESTAMP}37" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/users-score-log.hurl \
+    --variable "student_id=${TIMESTAMP}38" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
