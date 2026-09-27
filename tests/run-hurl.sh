@@ -193,6 +193,14 @@ run_test tests/ui/teachers-score-log.hurl \
     --variable "student_id=${TIMESTAMP}38" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/tag-detail-queued-filter.hurl \
+    --variable "student_id=${TIMESTAMP}39" \
+    --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/ui/tag-detail-reviewed-excerpt.hurl \
+    --variable "student_id=${TIMESTAMP}40" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"
