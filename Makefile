@@ -129,6 +129,12 @@ test-hurl:
 	hurl --test $(HURL_VARS) \
 		--variable student_id=$$(date +%s)38 \
 		tests/ui/teachers-score-log.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)39 \
+		tests/ui/tag-detail-queued-filter.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)40 \
+		tests/ui/tag-detail-reviewed-excerpt.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]

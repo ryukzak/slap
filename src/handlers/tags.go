@@ -26,23 +26,29 @@ type TagRow struct {
 	TaskTitle   string
 	Excerpt     string
 	Status      storage.TaskRecordType
+	// LessonID is the lesson this student+task pair is currently queued in,
+	// set only when Status is "register".
+	LessonID storage.LessonID
 	// Score is the current numeric score for this student+task pair (the
 	// leading number of the most recent teacher record that has one), or ""
 	// if it has never been scored.
 	Score string
 }
 
-// TagScoreFilter controls whether scored and/or unscored student+task pairs
-// show up on the tag detail page. Both are enabled by default (no filter
-// query params at all); once either "scored" or "unscored" appears in the
-// query, both are read explicitly from it.
+// TagScoreFilter controls whether scored and/or unscored student+task pairs,
+// and whether only queued ones, show up on the tag detail page. Scored and
+// Unscored are enabled by default (no filter query params at all); once
+// either "scored" or "unscored" appears in the query, both are read
+// explicitly from it. Queued defaults to off (no filtering by queue status).
 type TagScoreFilter struct {
 	Scored   bool
 	Unscored bool
+	Queued   bool
 
-	// Href* toggle just that one bucket, keeping the other as-is.
+	// Href* toggle just that one bucket, keeping the others as-is.
 	HrefScored   string
 	HrefUnscored string
+	HrefQueued   string
 }
 
 func parseTagScoreFilter(r *http.Request) TagScoreFilter {
@@ -52,15 +58,17 @@ func parseTagScoreFilter(r *http.Request) TagScoreFilter {
 		scored = q.Get("scored") == "true"
 		unscored = q.Get("unscored") == "true"
 	}
+	queued := q.Get("queued") == "true"
 
-	href := func(s, u bool) string {
-		return fmt.Sprintf("?scored=%t&unscored=%t", s, u)
+	href := func(s, u, qd bool) string {
+		return fmt.Sprintf("?scored=%t&unscored=%t&queued=%t", s, u, qd)
 	}
 
 	return TagScoreFilter{
-		Scored: scored, Unscored: unscored,
-		HrefScored:   href(!scored, unscored),
-		HrefUnscored: href(scored, !unscored),
+		Scored: scored, Unscored: unscored, Queued: queued,
+		HrefScored:   href(!scored, unscored, queued),
+		HrefUnscored: href(scored, !unscored, queued),
+		HrefQueued:   href(scored, unscored, !queued),
 	}
 }
 
@@ -85,6 +93,33 @@ func latestScore(records []storage.TaskRecord) string {
 		}
 	}
 	return ""
+}
+
+// reviewedExcerpt returns the student's own submission that the most recent
+// teacher-authored record actually responded to, walking newest-first
+// records. This matters because a student sometimes resubmits placeholder
+// content (e.g. "just for registration") purely to satisfy the state
+// machine for re-registering into a lesson, without changing their real
+// topic; picking the latest own record blindly would then surface that
+// placeholder instead of the topic a teacher actually reviewed. Falls back
+// to the latest own record when the task has never been reviewed, or to the
+// newest record of any kind if the student has no own record at all.
+func reviewedExcerpt(records []storage.TaskRecord) storage.TaskRecord {
+	for i, r := range records {
+		if r.AuthorID == r.StudentID {
+			continue
+		}
+		for _, later := range records[i+1:] {
+			if later.AuthorID == later.StudentID {
+				return later
+			}
+		}
+		break
+	}
+	if own := storage.LatestOwnRecord(records); own != nil {
+		return *own
+	}
+	return records[0]
 }
 
 // canViewTagRow reports whether viewer may see a student+task pair on the
@@ -229,11 +264,11 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 			if !filter.Allows(score != "") {
 				continue
 			}
-
-			excerpt := records[0]
-			if own := storage.LatestOwnRecord(records); own != nil {
-				excerpt = *own
+			if filter.Queued && records[0].Type != storage.RegisterRecord {
+				continue
 			}
+
+			excerpt := reviewedExcerpt(records)
 
 			rows = append(rows, TagRow{
 				StudentID:   u.ID,
@@ -242,6 +277,7 @@ func TagDetailHandler(w http.ResponseWriter, r *http.Request) {
 				TaskTitle:   taskTitle,
 				Excerpt:     excerpt.Content,
 				Status:      records[0].Type,
+				LessonID:    records[0].LessonID,
 				Score:       score,
 			})
 		}

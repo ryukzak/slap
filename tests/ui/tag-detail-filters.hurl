@@ -6,7 +6,7 @@
 #      independently via query params, hiding non-matching rows entirely
 #      (not just visually) -- more useful than filtering by status, since
 #      "does this have a score yet" is what a teacher actually cares about.
-#   3. Has a [view task] button in the row's own top line (not a separate
+#   3. Has a [task] button in the row's own top line (not a separate
 #      row), linking to the task page where a teacher sees full information.
 #
 # Prerequisites: server running against a fresh DB with default config
@@ -98,7 +98,7 @@ content: Nice \#filtertag
 HTTP 303
 
 # Step 4: Default view (no filter params) shows both rows, no per-row tag
-# chip, a [view task] link per row, Alice's score, and the two filter pills.
+# chip, a [task] link per row, Alice's score, and the two filter pills.
 GET {{base_url}}/tags/filtertag
 Cookie: user_data={{teacher_token}}
 
@@ -106,11 +106,11 @@ HTTP 200
 [Asserts]
 body contains "@FilterAlice"
 body contains "@FilterBob"
-body contains "[view task]"
+body contains "[task]"
 body contains "href=\"/user/{{student_id}}/task/task1\""
 body contains "href=\"/user/{{student_b_id}}/task/task2\""
 body not contains "href=\"/tags/filtertag\""
-body contains "href=\"?scored=false&amp;unscored=true\""
+body contains "href=\"?scored=false&amp;unscored=true&amp;queued=false\""
 body contains "text-green-300\">10<"
 
 # Step 5: Turning the Scored pill off hides Alice's row and updates the count.

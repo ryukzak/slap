@@ -22,30 +22,37 @@
        href="{{.Filter.HrefScored}}">Scored</a>
     <a class="px-2 py-0.5 rounded-full text-[10px] border {{ if .Filter.Unscored }}bg-gray-700 text-gray-200 border-gray-600{{ else }}text-gray-500 border-gray-700{{ end }}"
        href="{{.Filter.HrefUnscored}}">No score</a>
+    <a class="px-2 py-0.5 rounded-full text-[10px] border {{ if .Filter.Queued }}bg-yellow-800 text-yellow-200 border-yellow-700{{ else }}text-gray-500 border-gray-700{{ end }}"
+       href="{{.Filter.HrefQueued}}">Queued</a>
   </div>
   {{ if .Rows }}
   <ul class="space-y-1">
-    {{ range .Rows }}
+    {{ range $i, $row := .Rows }}
     <li class="border border-gray-800 rounded p-3 mb-1">
       <div class="text-xs flex items-center justify-between mb-1">
         <div class="flex items-center space-x-2 min-w-0">
+          <span class="text-gray-600 flex-shrink-0">#{{ add $i 1 }}</span>
           <a class="text-blue-400 hover:text-blue-300 flex-shrink-0"
-             href="/user/{{.StudentID}}">@{{.StudentName}}</a>
-          <span class="text-gray-400 truncate">{{.TaskTitle}}</span>
+             href="/user/{{$row.StudentID}}">@{{$row.StudentName}}</a>
+          <span class="text-gray-400 truncate">{{$row.TaskTitle}}</span>
         </div>
         <div class="flex items-center space-x-2 flex-shrink-0">
-          {{ if .Score }}
-          <span class="text-green-300">{{.Score}}</span>
+          {{ if $row.Score }}
+          <span class="text-green-300">{{$row.Score}}</span>
           {{ end }}
-        <span class="{{ if eq .Status "reviewed" }}text-green-400{{ else if eq .Status "register" }}text-yellow-400{{ else if eq .Status "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">
-        {{ if eq .Status "reviewed" }}Checked{{ else if eq .Status "register" }}Queued{{ else if eq .Status "revoke" }}Dropped{{ else }}Pending{{ end }}
+        <span class="{{ if eq $row.Status "reviewed" }}text-green-400{{ else if eq $row.Status "register" }}text-yellow-400{{ else if eq $row.Status "revoke" }}text-red-400{{ else }}text-blue-400{{ end }}">
+        {{ if eq $row.Status "reviewed" }}Checked{{ else if eq $row.Status "register" }}Queued{{ else if eq $row.Status "revoke" }}Dropped{{ else }}Pending{{ end }}
         </span>
+        {{ if eq $row.Status "register" }}
         <a class="text-blue-400 hover:text-blue-300"
-           href="/user/{{.StudentID}}/task/{{.TaskID}}">[view task]</a>
+           href="/lesson/{{$row.LessonID}}">[lesson]</a>
+        {{ end }}
+        <a class="text-blue-400 hover:text-blue-300"
+           href="/user/{{$row.StudentID}}/task/{{$row.TaskID}}">[task]</a>
       </div>
     </div>
     <p class="text-xs text-gray-400">
-      {{ getTitle (firstLine .Excerpt) }}
+      {{ getTitle (firstLine $row.Excerpt) }}
     </p>
   </li>
   {{ end }}

@@ -152,9 +152,11 @@ Note: role assignment happens at signup and is re-evaluated from config on every
      removes it with `-#tag`.
 2. The task page and the student dashboard's `// your tasks` list always show every
    currently active tag, regardless of configuration. The one-line preview text next to
-   a task (on the dashboard and in the tag browser below) is always the student's own
-   latest message — not a teacher's newer, short review remark — so a tag-only comment
-   like "approved #approve" never displaces the student's actual topic.
+   a task (on the dashboard and in the tag browser below) is the submission the most
+   recent teacher review actually responded to — not necessarily the student's latest
+   message — so neither a tag-only remark like "approved #approve" nor a later
+   placeholder resubmission (e.g. made just to satisfy re-registering into a lesson)
+   displaces the student's actual reviewed topic.
 3. The lesson page (next to the task title) only shows tags listed in that task's own
    `tags` allow-list in the config — scoped per task, so a tag meant for one task can't
    unexpectedly show up as "allowed" on another task's lesson-page rows. An unlisted tag
@@ -166,15 +168,18 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    duplicate topics or groups themselves before the teacher does. Full content, reviews,
    and teacher notes stay restricted to the author and teachers.
 5. Any signed-in user has a tag browser: `/tags` lists every currently active tag with a
-   count of student+task pairs carrying it; `/tags/{tag}` lists those pairs, each with a
-   `[view task]` button to the student's task page. Tag chips elsewhere always link here.
-   A student always sees their own rows; a row for another student only appears if its
-   task is configured `visible: true` (the same peer-visibility rule as the shared lesson
-   page) — otherwise it's omitted from both the count and the detail listing, not just
-   hidden in the UI. The tag detail page doesn't repeat the tag itself on each row (every
-   row already carries it) and can be filtered by whether it has a score yet (Scored /
-   No score toggleable pills) — a disabled bucket is excluded from the listing entirely,
-   not just visually dimmed.
+   count of student+task pairs carrying it; `/tags/{tag}` lists those pairs, numbered
+   `#1`, `#2`, ... over whatever is currently visible (not the full unfiltered set), each
+   with a `[task]` button to the student's task page and, when the row is currently
+   queued into a lesson, a `[lesson]` button next to it linking to that lesson. Tag chips
+   elsewhere always link here. A student always sees their own rows; a row for another
+   student only appears if its task is configured `visible: true` (the same
+   peer-visibility rule as the shared lesson page) — otherwise it's omitted from both the
+   count and the detail listing, not just hidden in the UI. The tag detail page doesn't
+   repeat the tag itself on each row (every row already carries it) and can be filtered
+   by whether it has a score yet (Scored / No score pills) or by whether it's currently
+   queued (Queued pill) — a disabled bucket is excluded from the listing entirely, not
+   just visually dimmed.
 
 # General requirements
 
