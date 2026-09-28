@@ -118,15 +118,24 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 2. **Activity timeline** — shows a 3-week window (2 weeks past, 1 week future) with:
    - Past days: count of teacher reviews performed that day.
    - Future days: scheduled lessons with registered/reviewed counts.
-3. **Task statistics** — per-task aggregate bars showing status distribution across all students
+3. **Course activity heatmap** — a second, separate collapsible section below the activity
+   timeline: one row per task, one cell per week, spanning the whole course (not just 3 weeks).
+   Every cell shares a single color; only its shade varies, interpolated pale-to-saturated by that
+   week's record volume relative to the page's busiest cell — record type
+   (submit/register/reviewed/revoke) no longer maps to a different hue, since a week mixing
+   several types would otherwise collapse to one arbitrarily "dominant" color and hide the rest.
+   Hovering a cell shows the exact type breakdown instead. The heatmap's weekly columns span
+   `course_start`/`course_end` from config when both are set, or fall back to the
+   earliest-to-latest task record seen across every student.
+4. **Task statistics** — per-task aggregate bars showing status distribution across all students
    (Pending, Queued, Checked, no submission). Each student falls into exactly one bucket per task:
    Checked if a teacher reviewed it, Queued if registered for a lesson that has not passed yet,
    otherwise Pending. A stale registration (registered, lesson day passed, never reviewed) counts
    as Pending, not Queued. Numeric scores are summarised separately as min/avg/median/max.
-4. **Students table** — all registered users with per-task columns. Each cell shows:
+5. **Students table** — all registered users with per-task columns. Each cell shows:
    - Score (if the teacher started a review with a number) and status badge.
    - Compact status summary (e.g. `p:2 q:1 c:1`).
-5. Teacher can download the table as CSV via `[download csv]`.
+6. Teacher can download the table as CSV via `[download csv]`.
 
 # Use Case: teacher views teacher directory
 
