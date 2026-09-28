@@ -24,7 +24,7 @@ func TestBuildTaskSummaryFeedbackCount(t *testing.T) {
 		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(4)},
 		{Type: storage.SubmitRecord, AuthorID: "student", StudentID: "student", CreatedAt: at(3)},
 		{Type: storage.RegisterRecord, AuthorID: "student", StudentID: "student", CreatedAt: at(2)},
-		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(1)},
+		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(1), Content: "8 Great job"},
 	}
 
 	summary := buildTaskSummary(records)
@@ -32,6 +32,10 @@ func TestBuildTaskSummaryFeedbackCount(t *testing.T) {
 	wantFeedback := 3
 	if summary.FeedbackCount != wantFeedback {
 		t.Errorf("FeedbackCount = %d, want %d", summary.FeedbackCount, wantFeedback)
+	}
+
+	if summary.Score != "8" {
+		t.Errorf("Score = %q, want %q", summary.Score, "8")
 	}
 
 	// Cross-check against the same "checked" predicate task.go's
@@ -61,6 +65,41 @@ func TestBuildTaskSummaryFeedbackCount(t *testing.T) {
 	wantFirstRegister := at(2) // oldest register
 	if summary.FirstRegistration == nil || !summary.FirstRegistration.Equal(wantFirstRegister) {
 		t.Errorf("FirstRegistration = %v, want %v", summary.FirstRegistration, wantFirstRegister)
+	}
+}
+
+// TestBuildTaskSummaryScore checks that Score picks the leading number of
+// the most recent teacher-authored record that has one, ignoring a
+// look-alike leading digit in the student's own submission content.
+func TestBuildTaskSummaryScore(t *testing.T) {
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	at := func(days int) time.Time { return base.Add(time.Duration(days) * 24 * time.Hour) }
+
+	// Newest-first.
+	records := []storage.TaskRecord{
+		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(3), Content: "9 Even better"},
+		{Type: storage.SubmitRecord, AuthorID: "student", StudentID: "student", CreatedAt: at(2), Content: "2nd attempt at the assignment"},
+		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(1), Content: "7 Needs polish"},
+	}
+
+	summary := buildTaskSummary(records)
+
+	if summary.Score != "9" {
+		t.Errorf("Score = %q, want %q (the most recent teacher-authored score)", summary.Score, "9")
+	}
+}
+
+// TestBuildTaskSummaryScoreEmptyWhenUnscored checks that Score stays empty
+// when no teacher-authored record has a leading number.
+func TestBuildTaskSummaryScoreEmptyWhenUnscored(t *testing.T) {
+	records := []storage.TaskRecord{
+		{Type: storage.SubmitRecord, AuthorID: "student", StudentID: "student", CreatedAt: time.Now(), Content: "My submission"},
+	}
+
+	summary := buildTaskSummary(records)
+
+	if summary.Score != "" {
+		t.Errorf("Score = %q, want empty", summary.Score)
 	}
 }
 

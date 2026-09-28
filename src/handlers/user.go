@@ -47,7 +47,11 @@ type TaskSummary struct {
 	FirstSubmission   *time.Time
 	FirstRegistration *time.Time
 	FeedbackCount     int
-	Timeline          []TaskTimelineEvent
+	// Score is the current numeric score for this task (the leading number
+	// of the most recent teacher-authored record that has one), or "" if
+	// it has never been scored.
+	Score    string
+	Timeline []TaskTimelineEvent
 }
 
 // buildTaskSummary derives a TaskSummary from a task's full record history.
@@ -73,6 +77,13 @@ func buildTaskSummary(records []storage.TaskRecord) TaskSummary {
 		// overcount teacher feedback.
 		if r.Type == storage.ReviewedRecord && r.AuthorID != r.StudentID {
 			summary.FeedbackCount++
+		}
+		// Walking oldest-to-newest and overwriting on every match leaves
+		// the most recent teacher-authored score by the time the loop ends.
+		if r.AuthorID != r.StudentID {
+			if s := util.ExtractScore(r.Content); s != "" {
+				summary.Score = s
+			}
 		}
 		if r.Type == storage.SubmitRecord && summary.FirstSubmission == nil {
 			t := r.CreatedAt

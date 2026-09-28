@@ -37,10 +37,12 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 
 # Use Case: student task overview
 
-1. On a student's profile page, the "// your tasks" list shows, per task: the
-   first submission time, the first lesson-registration time (if any), and a
-   count of how many times a teacher has actually left feedback (a `review`
-   record — not administrative register/revoke actions).
+1. On a student's profile page, the "// your tasks" list shows, per task, in
+   its title line: the current score (if assigned) and a count of how many
+   times a teacher has actually left feedback (a `review` record authored by
+   someone other than the student — not administrative register/revoke
+   actions, and not a record merely typed `review` by legacy/imported data
+   the student authored themselves).
 2. Each task also shows a time-scaled activity timeline: one dot per record
    (submit/register/revoke/review), colored by type, positioned along a
    shared time axis so positions are directly comparable across a student's

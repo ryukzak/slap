@@ -95,6 +95,7 @@
     {{ range .Tasks }}
     {{ $status := index $.TaskStatuses .ID }}
     {{ $tags := index $.TaskTags .ID }}
+    {{ $summary := index $.TaskSummaries .ID }}
     <li class="border-b border-gray-800 pb-1">
       <a class="block text-xs flex items-center justify-between hover:bg-gray-800 py-1 px-1 rounded"
          href="/user/{{$.ID}}/task/{{.ID}}">
@@ -109,21 +110,19 @@
           {{ if ne .AuthorID .StudentID }}{{ boldScore (getTitle (firstLine .Content)) }}{{ else }}{{ getTitle (firstLine .Content) }}{{ end }}</span>
           {{ end }}
         </span>
-        {{ if $status }}
-      <span class="flex-shrink-0 ml-2 px-2 py-0.5 rounded-full text-xs {{ if eq $status "submit" }}bg-blue-800 text-blue-200 {{ else if eq $status "register" }}bg-yellow-700 text-yellow-200 {{ else if eq $status "revoke" }}bg-red-800 text-red-200 {{ else if eq $status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
-      {{ if eq $status "submit" }}Pending{{ else if eq $status "register" }}Queued{{ else if eq $status "revoke" }}Dropped{{ else if eq $status "reviewed" }}Checked{{ else }}{{$status}}{{ end }}
+        <span class="flex items-center space-x-2 flex-shrink-0">
+          {{ if $summary.Score }}<span class="text-[10px] text-gray-600">score: <span class="text-green-300">{{ $summary.Score }}</span></span>{{ end }}
+          {{ if $summary.FeedbackCount }}<span class="text-[10px] text-gray-600">feedback: {{ $summary.FeedbackCount }}</span>{{ end }}
+          {{ if $status }}
+        <span class="flex-shrink-0 px-2 py-0.5 rounded-full text-xs {{ if eq $status "submit" }}bg-blue-800 text-blue-200 {{ else if eq $status "register" }}bg-yellow-700 text-yellow-200 {{ else if eq $status "revoke" }}bg-red-800 text-red-200 {{ else if eq $status "reviewed" }}bg-green-800 text-green-200{{ else }}bg-gray-700 text-gray-300{{ end }}">
+        {{ if eq $status "submit" }}Pending{{ else if eq $status "register" }}Queued{{ else if eq $status "revoke" }}Dropped{{ else if eq $status "reviewed" }}Checked{{ else }}{{$status}}{{ end }}
+        </span>
+        {{ end }}
       </span>
-      {{ end }}
     </a>
-    {{ $summary := index $.TaskSummaries .ID }}
     {{ if $summary.Timeline }}
     <div class="px-1 mt-1">
-      <div class="flex flex-wrap gap-x-3 text-[10px] text-gray-600">
-        {{ with $summary.FirstSubmission }}<span>first submit: {{ formatDateTime . }}</span>{{ end }}
-        {{ with $summary.FirstRegistration }}<span>first queued: {{ formatDateTime . }}</span>{{ end }}
-        {{ if $summary.FeedbackCount }}<span>feedback: {{ $summary.FeedbackCount }}</span>{{ end }}
-      </div>
-      <div class="relative h-2 bg-gray-800 rounded mt-1">
+      <div class="relative h-2 bg-gray-800 rounded">
         {{ range $summary.Timeline }}
         <span class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full {{ if eq .Type "reviewed" }}bg-green-400{{ else if eq .Type "register" }}bg-yellow-400{{ else if eq .Type "revoke" }}bg-red-400{{ else }}bg-blue-400{{ end }}"
               style="left: {{ .PositionPct }}%"

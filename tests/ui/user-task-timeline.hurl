@@ -1,12 +1,12 @@
 # Student Page Task Timeline Test
-# The "// your tasks" list on a student's profile now shows, per task: the
-# first submission time, the first lesson registration time (if any), a
-# count of teacher feedback records, and a time-scaled event timeline (a
-# dot per record, positioned between that task's own first and last event --
-# each task gets its own scale). The timeline must never leak a teacher's
-# review content into the page (even via a hover tooltip) -- only a
-# student's own "submit" records carry a content excerpt, matching the
-# existing rule that a teacher's short remark never becomes a preview.
+# The "// your tasks" list on a student's profile now shows, per task in its
+# title line: the current score (if assigned) and a count of teacher
+# feedback records. Below that is a time-scaled event timeline (a dot per
+# record, positioned on a scale shared by every task on the page). The
+# timeline must never leak a teacher's review content into the page (even
+# via a hover tooltip) -- only a student's own "submit" records carry a
+# content excerpt, matching the existing rule that a teacher's short remark
+# never becomes a preview.
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -80,7 +80,7 @@ HTTP 303
 POST {{base_url}}/user/{{student_id}}/task/task2/journal
 Cookie: user_data={{teacher_token}}
 [FormParams]
-content: SecretTeacherRemarkXYZ
+content: 9 SecretTeacherRemarkXYZ
 
 HTTP 303
 
@@ -94,9 +94,8 @@ Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
-body contains "first submit:"
-body contains "first queued:"
 body contains "feedback: 1"
+body contains "text-green-300\">9<"
 body contains "My real topic for the timeline test"
 body not contains "SecretTeacherRemarkXYZ"
 body contains "bg-yellow-400"
