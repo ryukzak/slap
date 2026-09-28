@@ -12,7 +12,7 @@ Student Lesson & Attempts Platform. A lightweight queue and task management syst
 
 **Teachers** schedule lessons, review queued submissions one by one, leave feedback or scores, and track progress across all students.
 
-**Teacher dashboard** (`/users`) provides an activity timeline, per-task statistics with visual bars, a students table with scores and statuses, and CSV export. The teacher directory (`/teachers`) adds per-teacher stats and a recent-scores log.
+**Teacher dashboard** (`/users`) provides a day-by-day activity timeline, a course-wide per-task activity heatmap (one row per task, one cell per week spanning the whole course), per-task statistics with visual bars, a students table with scores and statuses, and CSV export. The teacher directory (`/teachers`) adds per-teacher stats and a recent-scores log.
 
 Under the hood: embedded BoltDB (no external database), JWT authentication, Markdown rendering, self-hosted static assets.
 
@@ -72,7 +72,7 @@ tasks:
   - **visible** — when `true`, students see a short excerpt and tags of other students' submissions for this task on a shared lesson page (not just their own), so they can spot duplicate topics before the lesson; defaults to `false`. Full content stays restricted to the author and teachers.
   - **tags** — this task's allow-list of tag names shown on the lesson page. Only a teacher can tag a task record, by writing `#tag` (and remove one with `-#tag`) anywhere in a review — a student writing `#tag` in their own submission has no effect. The task page always shows every active tag, but the lesson page only shows tags listed here — so a tag can be used freely and "promoted" to the lesson page later just by adding it to this task's list. Scoped per task, so a tag meant for one task (e.g. a group tag on a presentation task) can't unexpectedly show up as "allowed" on another task's lesson-page rows.
 - **default_lesson_description** — pre-filled text when creating a new lesson
-- **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page, so every student's timeline is plotted on the same window and positions are directly comparable across students. When unset, each student's timeline falls back to that student's own earliest-to-latest task activity.
+- **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page (every student's timeline is then plotted on the same window, so positions are directly comparable across students) and by the teacher dashboard's course activity heatmap (its weekly columns then span this window instead of the earliest-to-latest record seen). When unset, both fall back to the earliest-to-latest task activity actually recorded.
 
 ### Environment variables
 

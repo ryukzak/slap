@@ -149,6 +149,174 @@ func applyTimelineScale(summaries map[storage.TaskID]TaskSummary, start, end tim
 	}
 }
 
+// courseActivityAnchor is a heatmap color range: a pale tone for a cell's
+// lowest nonzero volume and a saturated tone for the busiest cell,
+// interpolated in between. Using two fixed, fully-opaque colors (rather
+// than fading one color's alpha toward the page background) keeps the
+// gradient legible in both light and dark themes — alpha-blended cells
+// nearly vanished against a light background while reading fine on dark.
+type courseActivityAnchor struct{ lowR, lowG, lowB, highR, highG, highB int }
+
+// courseActivityFillAnchor is the single color every cell is shaded with —
+// only volume varies (pale = quiet week, saturated = busy week); record
+// type no longer maps to hue, since a week mixing several types would
+// otherwise collapse to one arbitrarily "dominant" color and hide the rest.
+// Blue matches this app's primary accent color elsewhere in the UI.
+var courseActivityFillAnchor = courseActivityAnchor{191, 219, 254, 37, 99, 235} // blue-200 -> blue-600
+
+// lerpRGB blends an anchor's pale->saturated range by ratio (0 = pale, 1 =
+// saturated, clamped), returning a "R,G,B" string for an inline style.
+func lerpRGB(a courseActivityAnchor, ratio float64) string {
+	ratio = math.Max(0, math.Min(1, ratio))
+	lerp := func(lo, hi int) int {
+		return int(math.Round(float64(lo) + (float64(hi)-float64(lo))*ratio))
+	}
+	return fmt.Sprintf("%d,%d,%d", lerp(a.lowR, a.highR), lerp(a.lowG, a.highG), lerp(a.lowB, a.highB))
+}
+
+var courseActivityTypeLabel = map[storage.TaskRecordType]string{
+	storage.SubmitRecord:   "submitted",
+	storage.RegisterRecord: "queued",
+	storage.ReviewedRecord: "checked",
+	storage.RevokeRecord:   "dropped",
+}
+
+// courseActivityTypeOrder is a stable iteration order for the maps above, so
+// dominant-type ties and tooltip text are deterministic.
+var courseActivityTypeOrder = []storage.TaskRecordType{
+	storage.SubmitRecord, storage.RegisterRecord, storage.ReviewedRecord, storage.RevokeRecord,
+}
+
+// CourseActivityCell is one task/week cell in the course-wide activity
+// heatmap: Total records of any type that week, filled with a single color
+// interpolated pale-to-saturated by volume relative to the page-wide
+// busiest cell (see courseActivityFillAnchor/lerpRGB). Tooltip carries the
+// type breakdown that the color itself no longer encodes.
+type CourseActivityCell struct {
+	Total   int
+	FillRGB string // "R,G,B"; empty when Total == 0
+	Tooltip string
+}
+
+// CourseActivityRow is one task's row in the heatmap: one cell per week
+// across the course.
+type CourseActivityRow struct {
+	TaskID    storage.TaskID
+	TaskTitle string
+	Cells     []CourseActivityCell
+}
+
+// CourseActivity is the course-wide, per-task activity heatmap shown on the
+// teacher dashboard: rows are tasks, columns are weeks spanning the whole
+// course.
+type CourseActivity struct {
+	Rows       []CourseActivityRow
+	RangeStart string
+	RangeEnd   string
+}
+
+// buildCourseActivity aggregates every student's task record history into a
+// per-task, per-week heatmap spanning the whole course. userRecords maps
+// each student's ID to their records by task, as cached from
+// DB.GetAllTaskRecordsForUser while building the students table. The course
+// scale is cfg.CourseStart/CourseEnd when both are set (see
+// computeTimelineScale for the same convention on the student page),
+// falling back to the earliest-to-latest record seen across every student.
+func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[storage.TaskID][]storage.TaskRecord) CourseActivity {
+	start, end := cfg.CourseStart, cfg.CourseEnd
+	var scaleStart, scaleEnd time.Time
+	if start != nil && end != nil {
+		scaleStart, scaleEnd = *start, *end
+	} else {
+		for _, byTask := range userRecords {
+			for _, records := range byTask {
+				for _, r := range records {
+					if scaleStart.IsZero() || r.CreatedAt.Before(scaleStart) {
+						scaleStart = r.CreatedAt
+					}
+					if scaleEnd.IsZero() || r.CreatedAt.After(scaleEnd) {
+						scaleEnd = r.CreatedAt
+					}
+				}
+			}
+		}
+	}
+	if scaleStart.IsZero() || scaleEnd.IsZero() || !scaleStart.Before(scaleEnd) {
+		return CourseActivity{}
+	}
+
+	weeks := int(scaleEnd.Sub(scaleStart).Hours()/(24*7)) + 1
+
+	type cellCounts struct {
+		byType map[storage.TaskRecordType]int
+		total  int
+	}
+	grid := make(map[storage.TaskID][]cellCounts, len(cfg.Tasks))
+	for _, task := range cfg.Tasks {
+		cells := make([]cellCounts, weeks)
+		for i := range cells {
+			cells[i].byType = make(map[storage.TaskRecordType]int)
+		}
+		grid[task.ID] = cells
+	}
+
+	maxTotal := 0
+	for _, byTask := range userRecords {
+		for taskID, records := range byTask {
+			cells, ok := grid[taskID]
+			if !ok {
+				continue // record belongs to a task no longer in config
+			}
+			for _, r := range records {
+				week := int(r.CreatedAt.Sub(scaleStart).Hours() / (24 * 7))
+				week = max(0, min(weeks-1, week))
+				cells[week].byType[r.Type]++
+				cells[week].total++
+				if cells[week].total > maxTotal {
+					maxTotal = cells[week].total
+				}
+			}
+		}
+	}
+
+	weekLabels := make([]string, weeks)
+	for i := range weeks {
+		weekLabels[i] = scaleStart.AddDate(0, 0, i*7).Format("2 Jan")
+	}
+
+	rows := make([]CourseActivityRow, 0, len(cfg.Tasks))
+	for _, task := range cfg.Tasks {
+		row := CourseActivityRow{TaskID: task.ID, TaskTitle: task.Title, Cells: make([]CourseActivityCell, weeks)}
+		for i, c := range grid[task.ID] {
+			if c.total == 0 {
+				continue
+			}
+			ratio := 0.0
+			if maxTotal > 0 {
+				ratio = float64(c.total) / float64(maxTotal)
+			}
+			var parts []string
+			for _, t := range courseActivityTypeOrder {
+				if n := c.byType[t]; n > 0 {
+					parts = append(parts, fmt.Sprintf("%d %s", n, courseActivityTypeLabel[t]))
+				}
+			}
+			row.Cells[i] = CourseActivityCell{
+				Total:   c.total,
+				FillRGB: lerpRGB(courseActivityFillAnchor, ratio),
+				Tooltip: fmt.Sprintf("week of %s: %s", weekLabels[i], strings.Join(parts, ", ")),
+			}
+		}
+		rows = append(rows, row)
+	}
+
+	return CourseActivity{
+		Rows:       rows,
+		RangeStart: scaleStart.Format("2 Jan"),
+		RangeEnd:   scaleEnd.Format("2 Jan"),
+	}
+}
+
 // UserInfoHandler displays the user information and available tasks
 func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := userSession(w, r)
@@ -488,6 +656,10 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	// dayKey -> teacherID -> count
 	checkedByDayTeacher := make(map[string]map[string]int)
 
+	// userRecords caches each student's full record history (by task) so
+	// buildCourseActivity can aggregate it below without a second DB pass.
+	userRecords := make(map[storage.UserID]map[storage.TaskID][]storage.TaskRecord)
+
 	rows := make([]UserTableRow, 0, len(users))
 	for _, u := range users {
 		row := UserTableRow{
@@ -503,6 +675,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				rows = append(rows, row)
 				continue
 			}
+			userRecords[u.ID] = allRecords
 
 			for _, task := range AppConfig.Tasks {
 				records, ok := allRecords[task.ID]
@@ -783,26 +956,30 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	courseActivity := buildCourseActivity(AppConfig, userRecords)
+
 	renderPage(w, "templates/users.html", struct {
-		SessionUserID string
-		Users         []UserTableRow
-		Tasks         []config.Task
-		StudentCount  int
-		TaskStats     map[storage.TaskID]TaskStats
-		PendingByTask map[storage.TaskID]WaitBucket
-		PendingTotal  WaitBucket
-		Timeline      []TimelineEntry
-		MaxBar        int
+		SessionUserID  string
+		Users          []UserTableRow
+		Tasks          []config.Task
+		StudentCount   int
+		TaskStats      map[storage.TaskID]TaskStats
+		PendingByTask  map[storage.TaskID]WaitBucket
+		PendingTotal   WaitBucket
+		Timeline       []TimelineEntry
+		MaxBar         int
+		CourseActivity CourseActivity
 	}{
-		SessionUserID: sessionUser.ID,
-		Users:         rows,
-		Tasks:         AppConfig.Tasks,
-		StudentCount:  studentCount,
-		TaskStats:     taskStats,
-		PendingByTask: pendingByTask,
-		PendingTotal:  pendingTotal,
-		Timeline:      timeline,
-		MaxBar:        maxBar,
+		SessionUserID:  sessionUser.ID,
+		Users:          rows,
+		Tasks:          AppConfig.Tasks,
+		StudentCount:   studentCount,
+		TaskStats:      taskStats,
+		PendingByTask:  pendingByTask,
+		PendingTotal:   pendingTotal,
+		Timeline:       timeline,
+		MaxBar:         maxBar,
+		CourseActivity: courseActivity,
 	})
 }
 
