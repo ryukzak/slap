@@ -72,6 +72,7 @@ tasks:
   - **visible** — when `true`, students see a short excerpt and tags of other students' submissions for this task on a shared lesson page (not just their own), so they can spot duplicate topics before the lesson; defaults to `false`. Full content stays restricted to the author and teachers.
   - **tags** — this task's allow-list of tag names shown on the lesson page. Only a teacher can tag a task record, by writing `#tag` (and remove one with `-#tag`) anywhere in a review — a student writing `#tag` in their own submission has no effect. The task page always shows every active tag, but the lesson page only shows tags listed here — so a tag can be used freely and "promoted" to the lesson page later just by adding it to this task's list. Scoped per task, so a tag meant for one task (e.g. a group tag on a presentation task) can't unexpectedly show up as "allowed" on another task's lesson-page rows.
 - **default_lesson_description** — pre-filled text when creating a new lesson
+- **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page, so every student's timeline is plotted on the same window and positions are directly comparable across students. When unset, each student's timeline falls back to that student's own earliest-to-latest task activity.
 
 ### Environment variables
 

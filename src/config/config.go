@@ -27,6 +27,13 @@ type Config struct {
 	TitleMaxLen              int         `yaml:"title_max_len"`
 	DefaultLessonDescription string      `yaml:"default_lesson_description"`
 	ScoreRules               []ScoreRule `yaml:"score_rules"`
+	// CourseStart and CourseEnd bound the shared time scale used by the
+	// student page's task activity timeline. When both are set, every
+	// student's timeline is plotted on this same scale, so positions are
+	// directly comparable across students. When unset, each student page
+	// falls back to that student's own earliest-to-latest task activity.
+	CourseStart *time.Time `yaml:"course_start,omitempty"`
+	CourseEnd   *time.Time `yaml:"course_end,omitempty"`
 }
 
 // ScoreRule defines a rule that adds effect to student's total score
@@ -137,6 +144,10 @@ func LoadConfig(filePath string) (*Config, error) {
 		if task.WaitingPeriodHours != nil && *task.WaitingPeriodHours < 0 {
 			return nil, fmt.Errorf("task %s has a negative waiting_period_hours (use 0 to disable)", task.ID)
 		}
+	}
+
+	if config.CourseStart != nil && config.CourseEnd != nil && !config.CourseStart.Before(*config.CourseEnd) {
+		return nil, fmt.Errorf("course_start must be before course_end")
 	}
 
 	// Check all tasks are exist

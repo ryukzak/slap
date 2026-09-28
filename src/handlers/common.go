@@ -26,8 +26,15 @@ type User struct {
 	// TaskPreview holds the record whose content best represents each task's
 	// topic for a one-line preview: the student's own latest record when one
 	// exists, falling back to the newest record of any author otherwise.
-	TaskPreview              map[storage.TaskID]*storage.TaskRecord
-	TaskTags                 map[storage.TaskID][]storage.Tag
+	TaskPreview   map[storage.TaskID]*storage.TaskRecord
+	TaskTags      map[storage.TaskID][]storage.Tag
+	TaskSummaries map[storage.TaskID]TaskSummary
+	// TimelineStart and TimelineEnd are the shared scale used by every
+	// task's activity timeline on this page (see computeTimelineScale):
+	// nil when there is nothing to plot (no events, no configured course
+	// bounds).
+	TimelineStart            *time.Time
+	TimelineEnd              *time.Time
 	Lessons                  []*storage.Lesson
 	ShowPastLessons          bool
 	Now                      time.Time

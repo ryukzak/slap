@@ -35,6 +35,27 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Records with status `review` are teacher feedback entries, shown inline below the submission they belong to.
    - A compact summary of record counts by status is shown next to the task status (e.g. `p:2 f:1 c:1`).
 
+# Use Case: student task overview
+
+1. On a student's profile page, the "// your tasks" list shows, per task: the
+   first submission time, the first lesson-registration time (if any), and a
+   count of how many times a teacher has actually left feedback (a `review`
+   record — not administrative register/revoke actions).
+2. Each task also shows a time-scaled activity timeline: one dot per record
+   (submit/register/revoke/review), colored by type, positioned along a
+   shared time axis so positions are directly comparable across a student's
+   own tasks. Hovering a dot shows the exact date/time, the action, and its
+   author — a submit's dot additionally shows a short content excerpt, but a
+   teacher's review content never appears in a tooltip, mirroring the rule
+   that a teacher's remark never becomes the task-list preview text (see the
+   task tags use case below).
+3. The timeline's shared scale is shown once above the task list, not
+   repeated per task. By default it spans that student's own
+   earliest-to-latest task activity. When `course_start` and `course_end`
+   are both set in the config, every student's timeline instead uses that
+   same fixed window, so positions become directly comparable across
+   students (e.g. "this student registered in week 2 of the course").
+
 # Use Case: teacher checks a student task (outside of a lesson)
 
 1. Teacher opens a student's task page (via the student's profile).

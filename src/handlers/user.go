@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -23,6 +24,113 @@ type ScoreRuleWithStatus struct {
 	Status      string // "active", "applied", "not_applied"
 	StatusColor string // "yellow", "red", "green", "gray"
 	EffectColor string // "yellow", "red", "green", "gray"
+}
+
+// TaskTimelineEvent is one point on a task's activity timeline. PositionPct
+// places it on the page-wide timeline scale shared by every task on the
+// student page (0 = scale start, 100 = scale end; see computeTimelineScale),
+// so positions are directly comparable across a student's tasks.
+type TaskTimelineEvent struct {
+	Type        storage.TaskRecordType
+	CreatedAt   time.Time
+	AuthorName  string
+	Content     string
+	PositionPct float64
+}
+
+// TaskSummary aggregates a task's full record history for the student page:
+// when the student first submitted and first registered into a lesson, how
+// many times a teacher has actually left feedback (a "reviewed" record —
+// not administrative register/revoke actions), and the events making up its
+// timeline bar.
+type TaskSummary struct {
+	FirstSubmission   *time.Time
+	FirstRegistration *time.Time
+	FeedbackCount     int
+	Timeline          []TaskTimelineEvent
+}
+
+// buildTaskSummary derives a TaskSummary from a task's full record history.
+// records must be newest-first, as returned by DB.ListTaskRecords.
+// PositionPct on the returned events is left unset (0) — call
+// applyTimelineScale afterward once the page-wide scale is known.
+func buildTaskSummary(records []storage.TaskRecord) TaskSummary {
+	var summary TaskSummary
+	if len(records) == 0 {
+		return summary
+	}
+
+	summary.Timeline = make([]TaskTimelineEvent, 0, len(records))
+
+	// Walk oldest-first so "first submission"/"first registration" and the
+	// timeline order come out naturally.
+	for i := len(records) - 1; i >= 0; i-- {
+		r := records[i]
+		if r.Type == storage.ReviewedRecord {
+			summary.FeedbackCount++
+		}
+		if r.Type == storage.SubmitRecord && summary.FirstSubmission == nil {
+			t := r.CreatedAt
+			summary.FirstSubmission = &t
+		}
+		if r.Type == storage.RegisterRecord && summary.FirstRegistration == nil {
+			t := r.CreatedAt
+			summary.FirstRegistration = &t
+		}
+
+		summary.Timeline = append(summary.Timeline, TaskTimelineEvent{
+			Type:       r.Type,
+			CreatedAt:  r.CreatedAt,
+			AuthorName: r.AuthorName,
+			Content:    r.Content,
+		})
+	}
+
+	return summary
+}
+
+// computeTimelineScale picks the shared time scale for a student page's task
+// timelines: the configured course start/end when both are set (so every
+// student's timeline is plotted on the same, comparable scale), falling
+// back to that student's own earliest-to-latest task activity otherwise.
+// Returns the zero Value twice if there are no events and no configured
+// course bounds.
+func computeTimelineScale(cfg *config.Config, summaries map[storage.TaskID]TaskSummary) (time.Time, time.Time) {
+	if cfg.CourseStart != nil && cfg.CourseEnd != nil {
+		return *cfg.CourseStart, *cfg.CourseEnd
+	}
+
+	var start, end time.Time
+	for _, summary := range summaries {
+		for _, ev := range summary.Timeline {
+			if start.IsZero() || ev.CreatedAt.Before(start) {
+				start = ev.CreatedAt
+			}
+			if end.IsZero() || ev.CreatedAt.After(end) {
+				end = ev.CreatedAt
+			}
+		}
+	}
+	return start, end
+}
+
+// applyTimelineScale sets PositionPct on every event across summaries,
+// placing each event between start and end (0 = start, 100 = end, clamped).
+// Mutates summaries in place.
+func applyTimelineScale(summaries map[storage.TaskID]TaskSummary, start, end time.Time) {
+	span := end.Sub(start)
+	for _, summary := range summaries {
+		for i := range summary.Timeline {
+			ev := &summary.Timeline[i]
+			pct := 50.0
+			if span > 0 {
+				pct = float64(ev.CreatedAt.Sub(start)) / float64(span) * 100
+				pct = math.Round(pct*10) / 10
+				pct = math.Max(0, math.Min(100, pct))
+			}
+			ev.PositionPct = pct
+		}
+	}
 }
 
 // UserInfoHandler displays the user information and available tasks
@@ -55,6 +163,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 	taskStatuses := make(map[storage.TaskID]storage.TaskRecordType)
 	taskPreview := make(map[storage.TaskID]*storage.TaskRecord)
 	taskTags := make(map[storage.TaskID][]storage.Tag)
+	taskSummaries := make(map[storage.TaskID]TaskSummary)
 	for _, task := range AppConfig.Tasks {
 		rec, err := DB.LatestTaskRecord(profileUserID, task.ID)
 		if err != nil {
@@ -74,6 +183,7 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		} else if len(records) > 0 {
 			taskPreview[task.ID] = &records[0]
 		}
+		taskSummaries[task.ID] = buildTaskSummary(records)
 
 		if tags, err := DB.TaskTags(profileUserID, task.ID); err != nil {
 			log.Printf("Error computing tags for user %s task %s: %v", profileUserID, task.ID, err)
@@ -81,6 +191,9 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 			taskTags[task.ID] = tags
 		}
 	}
+
+	timelineStart, timelineEnd := computeTimelineScale(AppConfig, taskSummaries)
+	applyTimelineScale(taskSummaries, timelineStart, timelineEnd)
 
 	var rulesWithStatus []ScoreRuleWithStatus
 	totalEffect := 0
@@ -119,6 +232,11 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var timelineStartPtr, timelineEndPtr *time.Time
+	if !timelineStart.IsZero() {
+		timelineStartPtr, timelineEndPtr = &timelineStart, &timelineEnd
+	}
+
 	showPast := r.URL.Query().Get("showPast") == "true"
 	now := time.Now()
 
@@ -138,6 +256,9 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		TaskStatuses:             taskStatuses,
 		TaskPreview:              taskPreview,
 		TaskTags:                 taskTags,
+		TaskSummaries:            taskSummaries,
+		TimelineStart:            timelineStartPtr,
+		TimelineEnd:              timelineEndPtr,
 		Lessons:                  []*storage.Lesson{},
 		ShowPastLessons:          showPast,
 		Now:                      now,

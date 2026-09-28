@@ -84,6 +84,12 @@
     <span>// your tasks</span>
     <span class="text-gray-600">[score] status</span>
   </div>
+  {{ with .TimelineStart }}
+  <div class="flex items-center justify-between text-[10px] text-gray-700 mb-1">
+    <span>{{ formatDateTime . }}</span>
+    <span>{{ formatDateTime $.TimelineEnd }}</span>
+  </div>
+  {{ end }}
   {{ if .Tasks }}
   <ul class="space-y-1">
     {{ range .Tasks }}
@@ -109,6 +115,23 @@
       </span>
       {{ end }}
     </a>
+    {{ $summary := index $.TaskSummaries .ID }}
+    {{ if $summary.Timeline }}
+    <div class="px-1 mt-1">
+      <div class="flex flex-wrap gap-x-3 text-[10px] text-gray-600">
+        {{ with $summary.FirstSubmission }}<span>first submit: {{ formatDateTime . }}</span>{{ end }}
+        {{ with $summary.FirstRegistration }}<span>first queued: {{ formatDateTime . }}</span>{{ end }}
+        {{ if $summary.FeedbackCount }}<span>feedback: {{ $summary.FeedbackCount }}</span>{{ end }}
+      </div>
+      <div class="relative h-2 bg-gray-800 rounded mt-1">
+        {{ range $summary.Timeline }}
+        <span class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full {{ if eq .Type "reviewed" }}bg-green-400{{ else if eq .Type "register" }}bg-yellow-400{{ else if eq .Type "revoke" }}bg-red-400{{ else }}bg-blue-400{{ end }}"
+              style="left: {{ .PositionPct }}%"
+              title="{{ if eq .Type "reviewed" }}Checked{{ else if eq .Type "register" }}Queued{{ else if eq .Type "revoke" }}Dropped{{ else }}Submitted{{ end }} by {{.AuthorName}} · {{ formatDateTime .CreatedAt }}{{ if eq .Type "submit" }} · {{ getTitle (firstLine .Content) }}{{ end }}"></span>
+        {{ end }}
+      </div>
+    </div>
+    {{ end }}
   </li>
   {{ end }}
 </ul>
