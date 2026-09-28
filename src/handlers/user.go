@@ -66,7 +66,12 @@ func buildTaskSummary(records []storage.TaskRecord) TaskSummary {
 	// timeline order come out naturally.
 	for i := len(records) - 1; i >= 0; i-- {
 		r := records[i]
-		if r.Type == storage.ReviewedRecord {
+		// Require the author to actually differ from the student, not just
+		// a "reviewed" Type: legacy/imported data can carry a Type of
+		// "reviewed" on a record the student authored themselves (Type
+		// alone isn't a reliable signal there), which would otherwise
+		// overcount teacher feedback.
+		if r.Type == storage.ReviewedRecord && r.AuthorID != r.StudentID {
 			summary.FeedbackCount++
 		}
 		if r.Type == storage.SubmitRecord && summary.FirstSubmission == nil {
