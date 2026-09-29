@@ -52,6 +52,9 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 	if row.TaskID != "task1" || row.TaskTitle != "Lab 1" {
 		t.Errorf("row = %+v, want task1/Lab 1", row)
 	}
+	if activity.MaxTotal != 3 {
+		t.Errorf("MaxTotal = %d, want 3 (the legend's upper bound)", activity.MaxTotal)
+	}
 
 	// Course span is base .. base+16d, so 3 weekly buckets (0, 1, 2).
 	if len(row.Cells) != 3 {
@@ -59,16 +62,14 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 	}
 
 	// week0 and week2 both have 3 events, tied for the busiest cell -> both
-	// sit at the fully-saturated color despite their different type mixes:
-	// color encodes volume only, not type.
-	saturated := lerpRGB(courseActivityFillAnchor, 1)
-
+	// get the densest glyph despite their different type mixes: the glyph
+	// encodes volume only, not type.
 	week0 := row.Cells[0]
 	if week0.Total != 3 {
 		t.Errorf("week0.Total = %d, want 3", week0.Total)
 	}
-	if week0.FillRGB != saturated {
-		t.Errorf("week0.FillRGB = %q, want %q (tied for busiest cell)", week0.FillRGB, saturated)
+	if week0.Glyph != "█" {
+		t.Errorf("week0.Glyph = %q, want the densest glyph (tied for busiest cell)", week0.Glyph)
 	}
 	if week0.Tooltip != "week of 5 Jan: 3 submitted" {
 		t.Errorf("week0.Tooltip = %q, want the type breakdown text", week0.Tooltip)
@@ -78,46 +79,45 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 	if week1.Total != 0 {
 		t.Errorf("week1.Total = %d, want 0 (no activity that week)", week1.Total)
 	}
-	if week1.FillRGB != "" {
-		t.Errorf("week1.FillRGB = %q, want empty for an empty cell", week1.FillRGB)
+	if week1.Glyph != "" {
+		t.Errorf("week1.Glyph = %q, want empty for an empty cell", week1.Glyph)
 	}
 
 	week2 := row.Cells[2]
 	if week2.Total != 3 {
 		t.Errorf("week2.Total = %d, want 3", week2.Total)
 	}
-	if week2.FillRGB != saturated {
-		t.Errorf("week2.FillRGB = %q, want %q (tied for busiest cell, same color as week0 despite a different type mix)", week2.FillRGB, saturated)
+	if week2.Glyph != "█" {
+		t.Errorf("week2.Glyph = %q, want the densest glyph (tied for busiest cell, same as week0 despite a different type mix)", week2.Glyph)
 	}
 	if week2.Tooltip != "week of 19 Jan: 3 checked" {
 		t.Errorf("week2.Tooltip = %q, want the type breakdown text", week2.Tooltip)
 	}
 }
 
-func TestLerpRGB(t *testing.T) {
-	anchor := courseActivityAnchor{lowR: 191, lowG: 219, lowB: 254, highR: 37, highG: 99, highB: 235}
-
-	if got := lerpRGB(anchor, 0); got != "191,219,254" {
-		t.Errorf("lerpRGB(0) = %q, want the pale anchor %q", got, "191,219,254")
+func TestCourseActivityGlyph(t *testing.T) {
+	tests := []struct {
+		ratio float64
+		want  string
+	}{
+		{0.01, "░"}, {0.25, "░"},
+		{0.26, "▒"}, {0.5, "▒"},
+		{0.51, "▓"}, {0.75, "▓"},
+		{0.76, "█"}, {1.0, "█"},
 	}
-	if got := lerpRGB(anchor, 1); got != "37,99,235" {
-		t.Errorf("lerpRGB(1) = %q, want the saturated anchor %q", got, "37,99,235")
-	}
-	// Out-of-range ratios must clamp rather than extrapolate past either anchor.
-	if got := lerpRGB(anchor, -5); got != "191,219,254" {
-		t.Errorf("lerpRGB(-5) = %q, want clamped to the pale anchor", got)
-	}
-	if got := lerpRGB(anchor, 5); got != "37,99,235" {
-		t.Errorf("lerpRGB(5) = %q, want clamped to the saturated anchor", got)
+	for _, tt := range tests {
+		if got := courseActivityGlyph(tt.ratio); got != tt.want {
+			t.Errorf("courseActivityGlyph(%v) = %q, want %q", tt.ratio, got, tt.want)
+		}
 	}
 }
 
 // TestBuildCourseActivityIntensityIsDistinct guards the actual bug this was
 // built to fix: a low-volume week and a high-volume week must resolve to
-// visibly different colors (not both collapse toward the same faint tone),
-// regardless of the viewer's light/dark theme -- which is why cells are
-// fully opaque, distinct colors rather than one color faded via alpha
-// toward an unknown page background.
+// visibly different glyphs (not both collapse toward the same faint tone).
+// Unicode shade blocks were chosen over a color gradient specifically
+// because density reads the same regardless of theme or how well a viewer
+// distinguishes subtly different shades of one color.
 func TestBuildCourseActivityIntensityIsDistinct(t *testing.T) {
 	cfg := &config.Config{Tasks: []config.Task{{ID: "task1", Title: "Lab 1"}}}
 	base := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
@@ -141,14 +141,14 @@ func TestBuildCourseActivityIntensityIsDistinct(t *testing.T) {
 	if low.Total != 1 || high.Total != 10 {
 		t.Fatalf("low/high totals = %d/%d, want 1/10", low.Total, high.Total)
 	}
-	if low.FillRGB == high.FillRGB {
-		t.Errorf("low-volume (1 event) and high-volume (10 events) cells share the same color %q -- intensity isn't distinguishable", low.FillRGB)
+	if low.Glyph == high.Glyph {
+		t.Errorf("low-volume (1 event) and high-volume (10 events) cells share the same glyph %q -- intensity isn't distinguishable", low.Glyph)
 	}
-	if low.FillRGB != lerpRGB(courseActivityFillAnchor, 0.1) {
-		t.Errorf("low.FillRGB = %q, want the ratio-0.1 blend", low.FillRGB)
+	if low.Glyph != "░" {
+		t.Errorf("low.Glyph = %q, want the lightest glyph (ratio 0.1)", low.Glyph)
 	}
-	if high.FillRGB != lerpRGB(courseActivityFillAnchor, 1) {
-		t.Errorf("high.FillRGB = %q, want the fully saturated anchor", high.FillRGB)
+	if high.Glyph != "█" {
+		t.Errorf("high.Glyph = %q, want the densest glyph (the busiest cell)", high.Glyph)
 	}
 }
 

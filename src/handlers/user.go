@@ -149,29 +149,22 @@ func applyTimelineScale(summaries map[storage.TaskID]TaskSummary, start, end tim
 	}
 }
 
-// courseActivityAnchor is a heatmap color range: a pale tone for a cell's
-// lowest nonzero volume and a saturated tone for the busiest cell,
-// interpolated in between. Using two fixed, fully-opaque colors (rather
-// than fading one color's alpha toward the page background) keeps the
-// gradient legible in both light and dark themes — alpha-blended cells
-// nearly vanished against a light background while reading fine on dark.
-type courseActivityAnchor struct{ lowR, lowG, lowB, highR, highG, highB int }
+// courseActivityGlyphs are Unicode shade blocks encoding a cell's activity
+// volume as glyph density instead of color — density reads the same
+// regardless of theme, and doesn't ask the viewer to calibrate "what does
+// this particular shade of blue mean" the way a continuous color gradient
+// did. Ordered lightest (quietest nonzero week) to densest (busiest).
+var courseActivityGlyphs = []string{"░", "▒", "▓", "█"}
 
-// courseActivityFillAnchor is the single color every cell is shaded with —
-// only volume varies (pale = quiet week, saturated = busy week); record
-// type no longer maps to hue, since a week mixing several types would
-// otherwise collapse to one arbitrarily "dominant" color and hide the rest.
-// Blue matches this app's primary accent color elsewhere in the UI.
-var courseActivityFillAnchor = courseActivityAnchor{191, 219, 254, 37, 99, 235} // blue-200 -> blue-600
-
-// lerpRGB blends an anchor's pale->saturated range by ratio (0 = pale, 1 =
-// saturated, clamped), returning a "R,G,B" string for an inline style.
-func lerpRGB(a courseActivityAnchor, ratio float64) string {
-	ratio = math.Max(0, math.Min(1, ratio))
-	lerp := func(lo, hi int) int {
-		return int(math.Round(float64(lo) + (float64(hi)-float64(lo))*ratio))
-	}
-	return fmt.Sprintf("%d,%d,%d", lerp(a.lowR, a.highR), lerp(a.lowG, a.highG), lerp(a.lowB, a.highB))
+// courseActivityGlyph splits (0, 1] into as many equal buckets as there are
+// glyphs and returns the one for ratio (a cell's volume relative to the
+// page's busiest cell). ratio must be > 0; callers handle the Total == 0
+// case (no glyph at all) separately.
+func courseActivityGlyph(ratio float64) string {
+	n := len(courseActivityGlyphs)
+	idx := int(math.Ceil(ratio*float64(n))) - 1
+	idx = max(0, min(n-1, idx))
+	return courseActivityGlyphs[idx]
 }
 
 var courseActivityTypeLabel = map[storage.TaskRecordType]string{
@@ -188,13 +181,13 @@ var courseActivityTypeOrder = []storage.TaskRecordType{
 }
 
 // CourseActivityCell is one task/week cell in the course-wide activity
-// heatmap: Total records of any type that week, filled with a single color
-// interpolated pale-to-saturated by volume relative to the page-wide
-// busiest cell (see courseActivityFillAnchor/lerpRGB). Tooltip carries the
-// type breakdown that the color itself no longer encodes.
+// heatmap: Total records of any type that week, rendered as a Unicode
+// shade block whose density reflects volume relative to the page-wide
+// busiest cell (see courseActivityGlyph). Tooltip carries the type
+// breakdown that the glyph itself doesn't encode.
 type CourseActivityCell struct {
 	Total   int
-	FillRGB string // "R,G,B"; empty when Total == 0
+	Glyph   string // one of courseActivityGlyphs; empty when Total == 0
 	Tooltip string
 }
 
@@ -213,6 +206,11 @@ type CourseActivity struct {
 	Rows       []CourseActivityRow
 	RangeStart string
 	RangeEnd   string
+	// MaxTotal is the busiest cell's record count anywhere on the page —
+	// what the densest glyph (█) represents, shown as the legend's upper
+	// bound. The lightest glyph (░) always starts at 1, the smallest
+	// possible nonzero count, so it needs no field of its own.
+	MaxTotal int
 }
 
 // buildCourseActivity aggregates every student's task record history into a
@@ -303,7 +301,7 @@ func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[
 			}
 			row.Cells[i] = CourseActivityCell{
 				Total:   c.total,
-				FillRGB: lerpRGB(courseActivityFillAnchor, ratio),
+				Glyph:   courseActivityGlyph(ratio),
 				Tooltip: fmt.Sprintf("week of %s: %s", weekLabels[i], strings.Join(parts, ", ")),
 			}
 		}
@@ -314,6 +312,7 @@ func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[
 		Rows:       rows,
 		RangeStart: scaleStart.Format("2 Jan"),
 		RangeEnd:   scaleEnd.Format("2 Jan"),
+		MaxTotal:   maxTotal,
 	}
 }
 
