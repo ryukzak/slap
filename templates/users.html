@@ -1,17 +1,17 @@
-{{define "title"}}Users - SLAP{{end}}
-{{define "header"}}
+{{ define "title" }}Users - SLAP{{ end }}
+{{ define "header" }}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <span>//&nbsp;students</span>
-{{end}}
-{{define "footer_nav"}}
+{{ end }}
+{{ define "footer_nav" }}
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/teachers">[teachers]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/tags">[tags]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
-{{end}}
-{{define "content"}}
+{{ end }}
+{{ define "content" }}
 {{ if .Timeline }}
 <section class="mb-8">
   <details class="group">
@@ -44,7 +44,7 @@
             </div>
             {{ end }}
           </div>
-          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
+          <span class="shrink-0">l:{{ len .Lessons }}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
         </div>
       {{ else }}
         <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -63,7 +63,7 @@
             </div>
             {{ end }}
           </div>
-          <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
+          <span class="shrink-0">l:{{ len .Lessons }}&nbsp;q:{{ sub .Registered .Reviewed }}&nbsp;c:{{.Checked}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
         </div>
         {{ end }}
       </summary>
@@ -108,7 +108,7 @@
         </div>
         {{ end }}
       </div>
-      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
+      <span class="shrink-0">l:{{ len .Lessons }}&nbsp;q:{{.Registered}}&nbsp;c:{{.Reviewed}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
     </div>
   {{ else }}
     <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -127,7 +127,7 @@
         </div>
         {{ end }}
       </div>
-      <span class="shrink-0">l:{{len .Lessons}}&nbsp;q:{{sub .Registered .Reviewed}}&nbsp;c:{{.Checked}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
+      <span class="shrink-0">l:{{ len .Lessons }}&nbsp;q:{{ sub .Registered .Reviewed }}&nbsp;c:{{.Checked}}{{ if .Revoked }}&nbsp;d:{{.Revoked}}{{ end }}</span>
     </div>
     {{ end }}
   </div>
@@ -145,7 +145,7 @@
 {{ end }}
 {{ if .CourseActivity.Rows }}
 <section class="mb-8">
-  <details class="group">
+  <details class="group"{{ if .CourseActivity.Expanded }} open{{ end }}>
     <summary class="text-xs text-gray-500 mb-2 flex items-center cursor-pointer list-none">
       <span>// course activity</span>
       <span class="flex-1 mx-2 border-b border-dashed border-gray-700"></span>
@@ -153,35 +153,50 @@
       <span class="hidden group-open:inline">[-]</span>
     </summary>
     <div class="mt-2">
-      <div class="flex items-center gap-2 text-[10px] text-gray-700 mb-1">
-        <span class="w-24 shrink-0"></span>
-        <span>{{ .CourseActivity.RangeStart }}</span>
+      <div class="flex flex-wrap items-center gap-2 text-xs text-gray-600 mb-2">
+        <span>{{ .CourseActivity.RangeStart }} – {{ .CourseActivity.RangeEnd }}, one pair of symbols per week</span>
         <span class="flex-1"></span>
-        <span>{{ .CourseActivity.RangeEnd }}</span>
-      </div>
-      <div class="overflow-x-auto">
-        {{ range .CourseActivity.Rows }}
-        <div class="flex items-center gap-2 text-xs mb-0.5">
-          <span class="w-24 shrink-0 truncate text-gray-400" title="{{.TaskTitle}}">{{.TaskTitle}}</span>
-          <div class="flex gap-0.5 font-mono">
-            {{ range .Cells }}
-            {{ if .Total }}
-            <span class="w-4 text-center inline-block text-blue-400"
-                  title="{{.Tooltip}}">{{.Glyph}}</span>
-          {{ else }}
-            <span class="w-4 text-center inline-block text-gray-700">·</span>
-            {{ end }}
-            {{ end }}
-          </div>
-        </div>
+        <span class="text-gray-700">step:</span>
+        {{ range .CourseActivity.StepOptions }}
+        <a class="{{ if .Selected }}text-blue-300 font-bold{{ else }}text-blue-400 hover:text-blue-300{{ end }}"
+           href="{{.Href}}">{{.Label}}</a>
         {{ end }}
       </div>
-      <div class="flex items-center gap-2 text-xs text-gray-600 mt-2">
-        <span>less (1)</span>
-        <span class="font-mono text-blue-400">░ ▒ ▓ █</span>
-        <span>more ({{ .CourseActivity.MaxTotal }})</span>
+      <div class="overflow-x-auto">
+        <div class="table">
+          {{ range .CourseActivity.Rows }}
+          <div class="table-row">
+            <div class="table-cell align-middle pr-2 pb-0.5 text-xs text-gray-400 whitespace-nowrap">
+              {{.TaskTitle}}
+            </div>
+            <div class="table-cell align-middle pb-0.5">
+              <div class="flex gap-3 font-mono">
+                {{ range .Cells }}
+                <div class="flex items-center gap-0 shrink-0"
+                     {{ if .Tooltip }}
+                     title="{{.Tooltip}}"
+                     {{ end }}>
+                  <span class="w-3 text-center inline-block {{ if .SubmitGlyph }}text-blue-400{{ else }}text-gray-700{{ end }}">{{ if .SubmitGlyph }}{{.SubmitGlyph}}{{ else }}·{{ end }}</span>
+                  <span class="w-3 text-center inline-block {{ if .CheckGlyph }}text-green-400{{ else }}text-gray-700{{ end }}">{{ if .CheckGlyph }}{{.CheckGlyph}}{{ else }}·{{ end }}</span>
+                </div>
+                {{ end }}
+              </div>
+            </div>
+          </div>
+          {{ end }}
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-xs text-gray-600 mt-2">
+        <span class="flex items-center gap-1 font-mono">
+          {{ range .CourseActivity.Levels }}
+          <span class="text-gray-400">{{.Glyph}}</span><span class="text-gray-700">{{.Range}}</span>
+          {{ end }}
+        </span>
+        <span class="text-gray-700">·</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 bg-blue-400"></span> submitted</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 bg-green-400"></span> checked</span>
         <span class="flex-1"></span>
-        <span>hover a cell for the submit/queue/check/drop breakdown</span>
+        <span>hover a pair for the submit/queue/check/drop breakdown</span>
       </div>
     </div>
   </details>
@@ -230,7 +245,7 @@
       {{ if $ts.Pending }}<span class="text-blue-400">pending:{{$ts.Pending}}</span> {{ end }}
       {{ if $ts.Queued }}<span class="text-purple-400">queued:{{$ts.Queued}}</span> {{ end }}
       {{ if $ts.Checked }}<span class="text-teal-400">checked:{{$ts.Checked}}</span> {{ end }}
-      {{ if $ts.Scores }}<span class="text-gray-500">(min:{{$ts.Scores.Min}}&nbsp;avg:{{printf "%.1f" $ts.Scores.Avg}}&nbsp;med:{{printf "%.1f" $ts.Scores.Median}}&nbsp;max:{{$ts.Scores.Max}})</span>{{ end }}
+      {{ if $ts.Scores }}<span class="text-gray-500">(min:{{$ts.Scores.Min}}&nbsp;avg:{{ printf "%.1f" $ts.Scores.Avg }}&nbsp;med:{{ printf "%.1f" $ts.Scores.Median }}&nbsp;max:{{$ts.Scores.Max}})</span>{{ end }}
     </div>
   </div>
   {{ end }}
@@ -348,12 +363,12 @@
         {{ range $i, $user := .Users }}
         <tr class="border-b border-gray-800 hover:bg-gray-800">
           <td class="py-1 pr-2 text-gray-500">
-            {{add $i 1}}
+            {{ add $i 1 }}
           </td>
           <td class="py-1 pr-4 text-gray-500">
             <a class="hover:text-white"
                href="/user/{{$user.ID}}"
-               title="{{$user.ID}}">{{truncateID $user.ID}}</a>
+               title="{{$user.ID}}">{{ truncateID $user.ID }}</a>
           </td>
           <td class="py-1 pr-4">
             <a class="hover:text-white" href="/user/{{$user.ID}}">@{{$user.Username}}</a>
@@ -408,4 +423,4 @@
 </table>
 </div>
 </section>
-{{end}}
+{{ end }}

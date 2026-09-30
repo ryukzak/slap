@@ -149,24 +149,6 @@ func applyTimelineScale(summaries map[storage.TaskID]TaskSummary, start, end tim
 	}
 }
 
-// courseActivityGlyphs are Unicode shade blocks encoding a cell's activity
-// volume as glyph density instead of color — density reads the same
-// regardless of theme, and doesn't ask the viewer to calibrate "what does
-// this particular shade of blue mean" the way a continuous color gradient
-// did. Ordered lightest (quietest nonzero week) to densest (busiest).
-var courseActivityGlyphs = []string{"░", "▒", "▓", "█"}
-
-// courseActivityGlyph splits (0, 1] into as many equal buckets as there are
-// glyphs and returns the one for ratio (a cell's volume relative to the
-// page's busiest cell). ratio must be > 0; callers handle the Total == 0
-// case (no glyph at all) separately.
-func courseActivityGlyph(ratio float64) string {
-	n := len(courseActivityGlyphs)
-	idx := int(math.Ceil(ratio*float64(n))) - 1
-	idx = max(0, min(n-1, idx))
-	return courseActivityGlyphs[idx]
-}
-
 var courseActivityTypeLabel = map[storage.TaskRecordType]string{
 	storage.SubmitRecord:   "submitted",
 	storage.RegisterRecord: "queued",
@@ -174,21 +156,80 @@ var courseActivityTypeLabel = map[storage.TaskRecordType]string{
 	storage.RevokeRecord:   "dropped",
 }
 
-// courseActivityTypeOrder is a stable iteration order for the maps above, so
-// dominant-type ties and tooltip text are deterministic.
+// courseActivityTypeOrder is a stable iteration order for the map above, so
+// tooltip text is deterministic.
 var courseActivityTypeOrder = []storage.TaskRecordType{
 	storage.SubmitRecord, storage.RegisterRecord, storage.ReviewedRecord, storage.RevokeRecord,
 }
 
+// courseActivityGlyphs are Unicode shade blocks encoding a count as glyph
+// density instead of color or height — density reads the same regardless
+// of theme or how well a viewer distinguishes color/size differences.
+// Ordered lightest (lowest nonzero level) to densest (highest).
+var courseActivityGlyphs = []string{"░", "▒", "▓", "█"}
+
+// courseActivityGlyphForCount picks the glyph for count, where step is how
+// many counts each level spans: 1..step is the lightest glyph, step+1..2*step
+// the next, and so on, capping at the densest glyph for anything beyond the
+// second-to-last boundary. Returns "" for count <= 0 (no glyph at all).
+func courseActivityGlyphForCount(count, step int) string {
+	if count <= 0 || step <= 0 {
+		return ""
+	}
+	level := (count - 1) / step
+	level = min(level, len(courseActivityGlyphs)-1)
+	return courseActivityGlyphs[level]
+}
+
+// CourseActivityLevel is one legend entry: a glyph and the count range it
+// represents at the current step (e.g. "3–4" for the second level at
+// step 2, or "7+" for the last, open-ended level).
+type CourseActivityLevel struct {
+	Glyph string
+	Range string
+}
+
+// courseActivityLevels builds the legend entries for a given step.
+func courseActivityLevels(step int) []CourseActivityLevel {
+	levels := make([]CourseActivityLevel, len(courseActivityGlyphs))
+	for i, g := range courseActivityGlyphs {
+		lo := i*step + 1
+		if i == len(courseActivityGlyphs)-1 {
+			levels[i] = CourseActivityLevel{Glyph: g, Range: fmt.Sprintf("≥%d", lo)}
+		} else {
+			levels[i] = CourseActivityLevel{Glyph: g, Range: fmt.Sprintf("%d–%d", lo, (i+1)*step)}
+		}
+	}
+	return levels
+}
+
+// courseActivitySteps are the selectable counts-per-level offered by the
+// step selector. The default (used when the query param is absent,
+// non-numeric, or non-positive) is 2.
+var courseActivitySteps = []int{1, 2, 5, 10, 25}
+
+const courseActivityDefaultStep = 2
+
+// CourseActivityStepOption is one link in the step selector.
+type CourseActivityStepOption struct {
+	Label    string
+	Href     string
+	Selected bool
+}
+
 // CourseActivityCell is one task/week cell in the course-wide activity
-// heatmap: Total records of any type that week, rendered as a Unicode
-// shade block whose density reflects volume relative to the page-wide
-// busiest cell (see courseActivityGlyph). Tooltip carries the type
-// breakdown that the glyph itself doesn't encode.
+// heatmap, rendered as two glyphs: submissions on the left, teacher reviews
+// on the right, each independently bucketed by count (see
+// courseActivityGlyphForCount) — so the two are never forced onto a shared
+// scale the way a page-wide "busiest cell" comparison would. Tooltip
+// carries the full type breakdown, including queued/dropped, which don't
+// get their own glyph.
 type CourseActivityCell struct {
-	Total   int
-	Glyph   string // one of courseActivityGlyphs; empty when Total == 0
-	Tooltip string
+	SubmitCount int
+	CheckCount  int
+	SubmitGlyph string // one of courseActivityGlyphs; "" when SubmitCount == 0
+	CheckGlyph  string
+	Tooltip     string
 }
 
 // CourseActivityRow is one task's row in the heatmap: one cell per week
@@ -203,14 +244,17 @@ type CourseActivityRow struct {
 // teacher dashboard: rows are tasks, columns are weeks spanning the whole
 // course.
 type CourseActivity struct {
-	Rows       []CourseActivityRow
-	RangeStart string
-	RangeEnd   string
-	// MaxTotal is the busiest cell's record count anywhere on the page —
-	// what the densest glyph (█) represents, shown as the legend's upper
-	// bound. The lightest glyph (░) always starts at 1, the smallest
-	// possible nonzero count, so it needs no field of its own.
-	MaxTotal int
+	Rows        []CourseActivityRow
+	RangeStart  string
+	RangeEnd    string
+	Step        int
+	Levels      []CourseActivityLevel
+	StepOptions []CourseActivityStepOption
+	// Expanded keeps the section's <details> open across a step-link
+	// navigation (a plain page reload) instead of snapping shut — true
+	// whenever the request carries an activity_step param, which every
+	// step link includes.
+	Expanded bool
 }
 
 // buildCourseActivity aggregates every student's task record history into a
@@ -220,7 +264,9 @@ type CourseActivity struct {
 // scale is cfg.CourseStart/CourseEnd when both are set (see
 // computeTimelineScale for the same convention on the student page),
 // falling back to the earliest-to-latest record seen across every student.
-func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[storage.TaskID][]storage.TaskRecord) CourseActivity {
+// step is how many counts each glyph level spans (see
+// courseActivityGlyphForCount).
+func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[storage.TaskID][]storage.TaskRecord, step int) CourseActivity {
 	start, end := cfg.CourseStart, cfg.CourseEnd
 	var scaleStart, scaleEnd time.Time
 	if start != nil && end != nil {
@@ -240,14 +286,14 @@ func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[
 		}
 	}
 	if scaleStart.IsZero() || scaleEnd.IsZero() || !scaleStart.Before(scaleEnd) {
-		return CourseActivity{}
+		return CourseActivity{Step: step, Levels: courseActivityLevels(step)}
 	}
 
-	weeks := int(scaleEnd.Sub(scaleStart).Hours()/(24*7)) + 1
+	const bucketDays = 7
+	weeks := int(scaleEnd.Sub(scaleStart).Hours()/(24*bucketDays)) + 1
 
 	type cellCounts struct {
 		byType map[storage.TaskRecordType]int
-		total  int
 	}
 	grid := make(map[storage.TaskID][]cellCounts, len(cfg.Tasks))
 	for _, task := range cfg.Tasks {
@@ -258,7 +304,6 @@ func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[
 		grid[task.ID] = cells
 	}
 
-	maxTotal := 0
 	for _, byTask := range userRecords {
 		for taskID, records := range byTask {
 			cells, ok := grid[taskID]
@@ -266,43 +311,38 @@ func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[
 				continue // record belongs to a task no longer in config
 			}
 			for _, r := range records {
-				week := int(r.CreatedAt.Sub(scaleStart).Hours() / (24 * 7))
-				week = max(0, min(weeks-1, week))
-				cells[week].byType[r.Type]++
-				cells[week].total++
-				if cells[week].total > maxTotal {
-					maxTotal = cells[week].total
-				}
+				idx := int(r.CreatedAt.Sub(scaleStart).Hours() / (24 * bucketDays))
+				idx = max(0, min(weeks-1, idx))
+				cells[idx].byType[r.Type]++
 			}
 		}
 	}
 
 	weekLabels := make([]string, weeks)
 	for i := range weeks {
-		weekLabels[i] = scaleStart.AddDate(0, 0, i*7).Format("2 Jan")
+		weekLabels[i] = scaleStart.AddDate(0, 0, i*bucketDays).Format("2 Jan")
 	}
 
 	rows := make([]CourseActivityRow, 0, len(cfg.Tasks))
 	for _, task := range cfg.Tasks {
 		row := CourseActivityRow{TaskID: task.ID, TaskTitle: task.Title, Cells: make([]CourseActivityCell, weeks)}
 		for i, c := range grid[task.ID] {
-			if c.total == 0 {
-				continue
-			}
-			ratio := 0.0
-			if maxTotal > 0 {
-				ratio = float64(c.total) / float64(maxTotal)
-			}
+			submit, check := c.byType[storage.SubmitRecord], c.byType[storage.ReviewedRecord]
 			var parts []string
 			for _, t := range courseActivityTypeOrder {
 				if n := c.byType[t]; n > 0 {
 					parts = append(parts, fmt.Sprintf("%d %s", n, courseActivityTypeLabel[t]))
 				}
 			}
+			if len(parts) == 0 {
+				continue
+			}
 			row.Cells[i] = CourseActivityCell{
-				Total:   c.total,
-				Glyph:   courseActivityGlyph(ratio),
-				Tooltip: fmt.Sprintf("week of %s: %s", weekLabels[i], strings.Join(parts, ", ")),
+				SubmitCount: submit,
+				CheckCount:  check,
+				SubmitGlyph: courseActivityGlyphForCount(submit, step),
+				CheckGlyph:  courseActivityGlyphForCount(check, step),
+				Tooltip:     fmt.Sprintf("week of %s: %s", weekLabels[i], strings.Join(parts, ", ")),
 			}
 		}
 		rows = append(rows, row)
@@ -312,7 +352,8 @@ func buildCourseActivity(cfg *config.Config, userRecords map[storage.UserID]map[
 		Rows:       rows,
 		RangeStart: scaleStart.Format("2 Jan"),
 		RangeEnd:   scaleEnd.Format("2 Jan"),
-		MaxTotal:   maxTotal,
+		Step:       step,
+		Levels:     courseActivityLevels(step),
 	}
 }
 
@@ -955,7 +996,26 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	courseActivity := buildCourseActivity(AppConfig, userRecords)
+	activityStepParam := r.URL.Query().Get("activity_step")
+	activityStep := courseActivityDefaultStep
+	if v, err := strconv.Atoi(activityStepParam); err == nil && v > 0 {
+		activityStep = v
+	}
+
+	stepOptions := make([]CourseActivityStepOption, len(courseActivitySteps))
+	for i, s := range courseActivitySteps {
+		stepOptions[i] = CourseActivityStepOption{
+			Label:    strconv.Itoa(s),
+			Href:     fmt.Sprintf("?activity_step=%d", s),
+			Selected: s == activityStep,
+		}
+	}
+	courseActivity := buildCourseActivity(AppConfig, userRecords, activityStep)
+	courseActivity.StepOptions = stepOptions
+	// Every step link carries activity_step, so its presence means the user
+	// got here by clicking one — keep the section open rather than
+	// snapping shut on the resulting page reload.
+	courseActivity.Expanded = activityStepParam != ""
 
 	renderPage(w, "templates/users.html", struct {
 		SessionUserID  string

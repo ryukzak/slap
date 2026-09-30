@@ -11,7 +11,7 @@ import (
 func TestBuildCourseActivityEmptyWithoutRecords(t *testing.T) {
 	cfg := &config.Config{Tasks: []config.Task{{ID: "task1", Title: "Lab 1"}}}
 
-	activity := buildCourseActivity(cfg, map[storage.UserID]map[storage.TaskID][]storage.TaskRecord{})
+	activity := buildCourseActivity(cfg, map[storage.UserID]map[storage.TaskID][]storage.TaskRecord{}, 2)
 
 	if len(activity.Rows) != 0 {
 		t.Errorf("Rows = %v, want empty (no records, no configured course bounds)", activity.Rows)
@@ -25,17 +25,15 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 	userRecords := map[storage.UserID]map[storage.TaskID][]storage.TaskRecord{
 		"alice": {
 			"task1": {
-				// Week 0: two submits.
+				// Week 0: two submits, one review.
 				{Type: storage.SubmitRecord, AuthorID: "alice", StudentID: "alice", CreatedAt: base},
 				{Type: storage.SubmitRecord, AuthorID: "alice", StudentID: "alice", CreatedAt: base.Add(2 * 24 * time.Hour)},
+				{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "alice", CreatedAt: base.Add(3 * 24 * time.Hour)},
 			},
 		},
 		"bob": {
 			"task1": {
-				// Week 0: one more submit (adds to week 0's total).
-				{Type: storage.SubmitRecord, AuthorID: "bob", StudentID: "bob", CreatedAt: base.Add(24 * time.Hour)},
-				// Week 2 (14-20 days in): three reviews -- a different type mix,
-				// but tied with week 0 for busiest cell overall.
+				// Week 2 (14-20 days in): three reviews.
 				{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "bob", CreatedAt: base.AddDate(0, 0, 14)},
 				{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "bob", CreatedAt: base.AddDate(0, 0, 15)},
 				{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "bob", CreatedAt: base.AddDate(0, 0, 16)},
@@ -43,7 +41,7 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 		},
 	}
 
-	activity := buildCourseActivity(cfg, userRecords)
+	activity := buildCourseActivity(cfg, userRecords, 2) // step 2: 1-2=░, 3-4=▒, 5-6=▓, 7+=█
 
 	if len(activity.Rows) != 1 {
 		t.Fatalf("Rows = %d, want 1", len(activity.Rows))
@@ -52,8 +50,8 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 	if row.TaskID != "task1" || row.TaskTitle != "Lab 1" {
 		t.Errorf("row = %+v, want task1/Lab 1", row)
 	}
-	if activity.MaxTotal != 3 {
-		t.Errorf("MaxTotal = %d, want 3 (the legend's upper bound)", activity.MaxTotal)
+	if activity.Step != 2 {
+		t.Errorf("Step = %d, want 2", activity.Step)
 	}
 
 	// Course span is base .. base+16d, so 3 weekly buckets (0, 1, 2).
@@ -61,97 +59,47 @@ func TestBuildCourseActivityBucketsByWeek(t *testing.T) {
 		t.Fatalf("Cells = %d, want 3", len(row.Cells))
 	}
 
-	// week0 and week2 both have 3 events, tied for the busiest cell -> both
-	// get the densest glyph despite their different type mixes: the glyph
-	// encodes volume only, not type.
 	week0 := row.Cells[0]
-	if week0.Total != 3 {
-		t.Errorf("week0.Total = %d, want 3", week0.Total)
+	if week0.SubmitCount != 2 || week0.CheckCount != 1 {
+		t.Errorf("week0 submit/check = %d/%d, want 2/1", week0.SubmitCount, week0.CheckCount)
 	}
-	if week0.Glyph != "█" {
-		t.Errorf("week0.Glyph = %q, want the densest glyph (tied for busiest cell)", week0.Glyph)
+	if week0.SubmitGlyph != "░" { // 2 submits at step 2 -> level 0
+		t.Errorf("week0.SubmitGlyph = %q, want %q (2 submits at step 2)", week0.SubmitGlyph, "░")
 	}
-	if week0.Tooltip != "week of 5 Jan: 3 submitted" {
+	if week0.CheckGlyph != "░" { // 1 check at step 2 -> level 0
+		t.Errorf("week0.CheckGlyph = %q, want %q (1 check at step 2)", week0.CheckGlyph, "░")
+	}
+	if week0.Tooltip != "week of 5 Jan: 2 submitted, 1 checked" {
 		t.Errorf("week0.Tooltip = %q, want the type breakdown text", week0.Tooltip)
 	}
 
 	week1 := row.Cells[1]
-	if week1.Total != 0 {
-		t.Errorf("week1.Total = %d, want 0 (no activity that week)", week1.Total)
+	if week1.SubmitCount != 0 || week1.CheckCount != 0 {
+		t.Errorf("week1 submit/check = %d/%d, want 0/0 (no activity that week)", week1.SubmitCount, week1.CheckCount)
 	}
-	if week1.Glyph != "" {
-		t.Errorf("week1.Glyph = %q, want empty for an empty cell", week1.Glyph)
+	if week1.SubmitGlyph != "" || week1.CheckGlyph != "" {
+		t.Errorf("week1 glyphs = %q/%q, want empty for an empty cell", week1.SubmitGlyph, week1.CheckGlyph)
+	}
+	if week1.Tooltip != "" {
+		t.Errorf("week1.Tooltip = %q, want empty for an empty cell", week1.Tooltip)
 	}
 
 	week2 := row.Cells[2]
-	if week2.Total != 3 {
-		t.Errorf("week2.Total = %d, want 3", week2.Total)
+	if week2.SubmitCount != 0 || week2.CheckCount != 3 {
+		t.Errorf("week2 submit/check = %d/%d, want 0/3", week2.SubmitCount, week2.CheckCount)
 	}
-	if week2.Glyph != "█" {
-		t.Errorf("week2.Glyph = %q, want the densest glyph (tied for busiest cell, same as week0 despite a different type mix)", week2.Glyph)
+	if week2.CheckGlyph != "▒" { // 3 checks at step 2 -> level 1
+		t.Errorf("week2.CheckGlyph = %q, want %q (3 checks at step 2)", week2.CheckGlyph, "▒")
 	}
 	if week2.Tooltip != "week of 19 Jan: 3 checked" {
 		t.Errorf("week2.Tooltip = %q, want the type breakdown text", week2.Tooltip)
 	}
 }
 
-func TestCourseActivityGlyph(t *testing.T) {
-	tests := []struct {
-		ratio float64
-		want  string
-	}{
-		{0.01, "░"}, {0.25, "░"},
-		{0.26, "▒"}, {0.5, "▒"},
-		{0.51, "▓"}, {0.75, "▓"},
-		{0.76, "█"}, {1.0, "█"},
-	}
-	for _, tt := range tests {
-		if got := courseActivityGlyph(tt.ratio); got != tt.want {
-			t.Errorf("courseActivityGlyph(%v) = %q, want %q", tt.ratio, got, tt.want)
-		}
-	}
-}
-
-// TestBuildCourseActivityIntensityIsDistinct guards the actual bug this was
-// built to fix: a low-volume week and a high-volume week must resolve to
-// visibly different glyphs (not both collapse toward the same faint tone).
-// Unicode shade blocks were chosen over a color gradient specifically
-// because density reads the same regardless of theme or how well a viewer
-// distinguishes subtly different shades of one color.
-func TestBuildCourseActivityIntensityIsDistinct(t *testing.T) {
-	cfg := &config.Config{Tasks: []config.Task{{ID: "task1", Title: "Lab 1"}}}
-	base := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
-
-	records := []storage.TaskRecord{
-		{Type: storage.SubmitRecord, AuthorID: "alice", StudentID: "alice", CreatedAt: base}, // week 0: 1 event
-	}
-	// Week 3: 10 events -- the busiest cell.
-	for i := 0; i < 10; i++ {
-		records = append(records, storage.TaskRecord{
-			Type: storage.SubmitRecord, AuthorID: "alice", StudentID: "alice", CreatedAt: base.AddDate(0, 0, 21+i%3),
-		})
-	}
-
-	activity := buildCourseActivity(cfg, map[storage.UserID]map[storage.TaskID][]storage.TaskRecord{
-		"alice": {"task1": records},
-	})
-
-	row := activity.Rows[0]
-	low, high := row.Cells[0], row.Cells[3]
-	if low.Total != 1 || high.Total != 10 {
-		t.Fatalf("low/high totals = %d/%d, want 1/10", low.Total, high.Total)
-	}
-	if low.Glyph == high.Glyph {
-		t.Errorf("low-volume (1 event) and high-volume (10 events) cells share the same glyph %q -- intensity isn't distinguishable", low.Glyph)
-	}
-	if low.Glyph != "░" {
-		t.Errorf("low.Glyph = %q, want the lightest glyph (ratio 0.1)", low.Glyph)
-	}
-	if high.Glyph != "█" {
-		t.Errorf("high.Glyph = %q, want the densest glyph (the busiest cell)", high.Glyph)
-	}
-}
-
+// TestBuildCourseActivityUsesConfiguredCourseBounds checks that
+// course_start/course_end from config override the record-derived scale,
+// and that a record falling outside that window still clamps into the
+// nearest bucket rather than being dropped or panicking.
 func TestBuildCourseActivityUsesConfiguredCourseBounds(t *testing.T) {
 	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 1, 22, 0, 0, 0, 0, time.UTC) // 3 weeks later
@@ -171,7 +119,7 @@ func TestBuildCourseActivityUsesConfiguredCourseBounds(t *testing.T) {
 		},
 	}
 
-	activity := buildCourseActivity(cfg, userRecords)
+	activity := buildCourseActivity(cfg, userRecords, 2)
 
 	if activity.RangeStart != start.Format("2 Jan") {
 		t.Errorf("RangeStart = %q, want %q (from config, not the outlier record)", activity.RangeStart, start.Format("2 Jan"))
@@ -183,7 +131,44 @@ func TestBuildCourseActivityUsesConfiguredCourseBounds(t *testing.T) {
 	// the last bucket rather than being dropped or panicking.
 	row := activity.Rows[0]
 	lastCell := row.Cells[len(row.Cells)-1]
-	if lastCell.Total != 1 {
-		t.Errorf("last cell Total = %d, want 1 (out-of-range record clamped into it)", lastCell.Total)
+	if lastCell.SubmitCount != 1 {
+		t.Errorf("last cell SubmitCount = %d, want 1 (out-of-range record clamped into it)", lastCell.SubmitCount)
+	}
+}
+
+func TestCourseActivityGlyphForCount(t *testing.T) {
+	tests := []struct {
+		count, step int
+		want        string
+	}{
+		{0, 2, ""}, {-1, 2, ""},
+		{1, 2, "░"}, {2, 2, "░"},
+		{3, 2, "▒"}, {4, 2, "▒"},
+		{5, 2, "▓"}, {6, 2, "▓"},
+		{7, 2, "█"}, {100, 2, "█"}, // caps at the densest glyph
+		{1, 1, "░"}, {2, 1, "▒"}, {4, 1, "█"}, {50, 1, "█"},
+	}
+	for _, tt := range tests {
+		if got := courseActivityGlyphForCount(tt.count, tt.step); got != tt.want {
+			t.Errorf("courseActivityGlyphForCount(%d, %d) = %q, want %q", tt.count, tt.step, got, tt.want)
+		}
+	}
+}
+
+func TestCourseActivityLevels(t *testing.T) {
+	got := courseActivityLevels(2)
+	want := []CourseActivityLevel{
+		{Glyph: "░", Range: "1–2"},
+		{Glyph: "▒", Range: "3–4"},
+		{Glyph: "▓", Range: "5–6"},
+		{Glyph: "█", Range: "≥7"},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("len(levels) = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("levels[%d] = %+v, want %+v", i, got[i], want[i])
+		}
 	}
 }
