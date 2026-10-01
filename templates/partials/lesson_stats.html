@@ -25,12 +25,18 @@
     {{ end }}
   </div>
   {{ end }}
-  {{ if not .Stats.FirstCheckAt.IsZero }}
-  <div class="text-gray-500 mt-2">
-    {{ formatCheckRange .Stats.FirstCheckAt .Stats.LastCheckAt }}
-    {{ if .Stats.CheckIntervalCount }}
-    <span class="text-gray-600">·</span>
-    avg check: {{ formatUptime .Stats.AvgCheckInterval }}
+  {{ if .Stats.CheckTimingByTeacher }}
+  <div class="text-gray-500 mt-2 space-y-1">
+    {{ range .Stats.CheckTimingByTeacher }}
+    <div>
+      @{{.TeacherName}}: {{.Checked}} checked
+      <span class="text-gray-600">·</span>
+      {{ formatCheckRange .FirstCheckAt .LastCheckAt }}
+      {{ if .CheckIntervalCount }}
+      <span class="text-gray-600">·</span>
+      avg check: {{ formatUptime .AvgCheckInterval }}
+      {{ end }}
+    </div>
     {{ end }}
   </div>
   {{ end }}

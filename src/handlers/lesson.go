@@ -147,13 +147,21 @@ type LessonStats struct {
 	UnscoredChecked int
 	Scores          *ScoreStats
 	ScoreBreakdown  []LessonScoreBucket
-	// FirstCheckAt/LastCheckAt are the earliest and latest check timestamps
-	// (zero if there are no checked records yet).
-	FirstCheckAt time.Time
-	LastCheckAt  time.Time
-	// AvgCheckInterval is the trimmed mean of the gaps between consecutive
-	// checks (smallest/largest 5% of gaps discarded to reduce the effect of
-	// outliers). Only meaningful when CheckIntervalCount > 0.
+	// CheckTimingByTeacher breaks down first/last check date and avg check
+	// interval per reviewing teacher (sorted by name), since a lesson with
+	// multiple reviewers makes a single combined timing line meaningless —
+	// it would mix unrelated people's independent review sessions.
+	CheckTimingByTeacher []LessonTeacherCheckStats
+}
+
+// LessonTeacherCheckStats is one teacher's share of a lesson's checks: how
+// many they did, when their first and last happened, and the trimmed-mean
+// time between their own consecutive checks.
+type LessonTeacherCheckStats struct {
+	TeacherName        string
+	Checked            int
+	FirstCheckAt       time.Time
+	LastCheckAt        time.Time
 	AvgCheckInterval   time.Duration
 	CheckIntervalCount int
 }
@@ -192,7 +200,7 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 	var stats LessonStats
 	scoreCounts := map[int]int{}
 	var vals []int
-	var checkTimes []time.Time
+	checkTimesByTeacher := map[string][]time.Time{}
 
 	for _, r := range records {
 		switch r.Type {
@@ -204,13 +212,15 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 			stats.Checked++
 			// r.CreatedAt is the underlying registration record's timestamp, not
 			// when the review happened (see storage.ListLessonTaskRecords) — the
-			// actual review record, with its own CreatedAt, is ReviewRecords[0].
+			// actual review record, with its own CreatedAt and AuthorName, is
+			// ReviewRecords[0].
 			score := ""
 			if len(r.ReviewRecords) > 0 {
-				checkTimes = append(checkTimes, r.ReviewRecords[0].CreatedAt)
-				score = util.ExtractScore(r.ReviewRecords[0].Content)
+				rev := r.ReviewRecords[0]
+				checkTimesByTeacher[rev.AuthorName] = append(checkTimesByTeacher[rev.AuthorName], rev.CreatedAt)
+				score = util.ExtractScore(rev.Content)
 			} else {
-				checkTimes = append(checkTimes, r.CreatedAt)
+				checkTimesByTeacher[r.AuthorName] = append(checkTimesByTeacher[r.AuthorName], r.CreatedAt)
 			}
 			v, err := strconv.Atoi(score)
 			if score == "" || err != nil {
@@ -252,19 +262,30 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 		}
 	}
 
-	if len(checkTimes) > 0 {
-		sort.Slice(checkTimes, func(i, j int) bool { return checkTimes[i].Before(checkTimes[j]) })
-		stats.FirstCheckAt = checkTimes[0]
-		stats.LastCheckAt = checkTimes[len(checkTimes)-1]
+	teacherNames := make([]string, 0, len(checkTimesByTeacher))
+	for name := range checkTimesByTeacher {
+		teacherNames = append(teacherNames, name)
+	}
+	sort.Strings(teacherNames)
+	for _, name := range teacherNames {
+		times := checkTimesByTeacher[name]
+		sort.Slice(times, func(i, j int) bool { return times[i].Before(times[j]) })
 
-		if len(checkTimes) > 1 {
-			gaps := make([]time.Duration, 0, len(checkTimes)-1)
-			for i := 1; i < len(checkTimes); i++ {
-				gaps = append(gaps, checkTimes[i].Sub(checkTimes[i-1]))
-			}
-			stats.AvgCheckInterval = trimmedMeanDuration(gaps, checkIntervalTrim)
-			stats.CheckIntervalCount = len(gaps)
+		ts := LessonTeacherCheckStats{
+			TeacherName:  name,
+			Checked:      len(times),
+			FirstCheckAt: times[0],
+			LastCheckAt:  times[len(times)-1],
 		}
+		if len(times) > 1 {
+			gaps := make([]time.Duration, 0, len(times)-1)
+			for i := 1; i < len(times); i++ {
+				gaps = append(gaps, times[i].Sub(times[i-1]))
+			}
+			ts.AvgCheckInterval = trimmedMeanDuration(gaps, checkIntervalTrim)
+			ts.CheckIntervalCount = len(gaps)
+		}
+		stats.CheckTimingByTeacher = append(stats.CheckTimingByTeacher, ts)
 	}
 
 	return stats

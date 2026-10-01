@@ -13,88 +13,133 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 	// reviewed builds a Checked row the way buildLessonRecords does: the
 	// underlying TaskRecord.CreatedAt is the registration time (see
 	// storage.ListLessonTaskRecords), while the actual check happens at
-	// ReviewRecords[0].CreatedAt — the two are intentionally different here to
-	// catch regressions that read the wrong field.
-	reviewed := func(checkOffset time.Duration) TaskRecordWithInfo {
+	// ReviewRecords[0].CreatedAt/AuthorName — the two are intentionally
+	// different here to catch regressions that read the wrong field.
+	reviewed := func(teacher string, checkOffset time.Duration) TaskRecordWithInfo {
 		registeredAt := base.Add(checkOffset).Add(-time.Hour)
 		return TaskRecordWithInfo{
 			TaskRecord:    storage.TaskRecord{Type: storage.ReviewedRecord, CreatedAt: registeredAt},
-			ReviewRecords: []storage.TaskRecord{{Type: storage.ReviewedRecord, CreatedAt: base.Add(checkOffset)}},
+			ReviewRecords: []storage.TaskRecord{{Type: storage.ReviewedRecord, AuthorName: teacher, CreatedAt: base.Add(checkOffset)}},
 		}
 	}
 
 	t.Run("no checks", func(t *testing.T) {
 		stats := computeLessonStats(nil)
-		if !stats.FirstCheckAt.IsZero() || !stats.LastCheckAt.IsZero() {
-			t.Errorf("expected zero check times, got first=%v last=%v", stats.FirstCheckAt, stats.LastCheckAt)
-		}
-		if stats.CheckIntervalCount != 0 {
-			t.Errorf("expected no interval, got count=%d", stats.CheckIntervalCount)
+		if len(stats.CheckTimingByTeacher) != 0 {
+			t.Errorf("expected no per-teacher timing, got %+v", stats.CheckTimingByTeacher)
 		}
 	})
 
 	t.Run("single check has no interval", func(t *testing.T) {
-		stats := computeLessonStats([]TaskRecordWithInfo{reviewed(0)})
-		if !stats.FirstCheckAt.Equal(base) || !stats.LastCheckAt.Equal(base) {
-			t.Errorf("expected first=last=%v, got first=%v last=%v", base, stats.FirstCheckAt, stats.LastCheckAt)
+		stats := computeLessonStats([]TaskRecordWithInfo{reviewed("Mia", 0)})
+		if len(stats.CheckTimingByTeacher) != 1 {
+			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
 		}
-		if stats.CheckIntervalCount != 0 {
-			t.Errorf("expected no interval with a single check, got count=%d", stats.CheckIntervalCount)
+		ts := stats.CheckTimingByTeacher[0]
+		if ts.TeacherName != "Mia" || ts.Checked != 1 {
+			t.Errorf("got %+v, want TeacherName=Mia Checked=1", ts)
+		}
+		if !ts.FirstCheckAt.Equal(base) || !ts.LastCheckAt.Equal(base) {
+			t.Errorf("expected first=last=%v, got first=%v last=%v", base, ts.FirstCheckAt, ts.LastCheckAt)
+		}
+		if ts.CheckIntervalCount != 0 {
+			t.Errorf("expected no interval with a single check, got count=%d", ts.CheckIntervalCount)
 		}
 	})
 
-	t.Run("first/last and trimmed average across unsorted checks", func(t *testing.T) {
+	t.Run("first/last and trimmed average across unsorted checks for one teacher", func(t *testing.T) {
 		// 20 gaps: a zero-gap outlier at the low end, 18 one-minute gaps,
 		// then a 100-minute outlier at the high end. Trimming 5% off each end
 		// of 20 gaps drops exactly one from each side, so both outliers
 		// should be excluded and the average should land on exactly one
 		// minute.
 		records := []TaskRecordWithInfo{
-			reviewed(0), // r0
-			reviewed(0), // r1 (gap0 = 0, outlier)
+			reviewed("Mia", 0), // r0
+			reviewed("Mia", 0), // r1 (gap0 = 0, outlier)
 		}
 		for i := 1; i <= 18; i++ {
-			records = append(records, reviewed(time.Duration(i)*time.Minute)) // r2..r19
+			records = append(records, reviewed("Mia", time.Duration(i)*time.Minute)) // r2..r19
 		}
 		lastOffset := 18*time.Minute + 100*time.Minute
-		records = append(records, reviewed(lastOffset)) // r20 (last gap = 100m, outlier)
+		records = append(records, reviewed("Mia", lastOffset)) // r20 (last gap = 100m, outlier)
 
 		stats := computeLessonStats(records)
+		if len(stats.CheckTimingByTeacher) != 1 {
+			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
+		}
+		ts := stats.CheckTimingByTeacher[0]
 
 		wantFirst := base
 		wantLast := base.Add(lastOffset)
-		if !stats.FirstCheckAt.Equal(wantFirst) {
-			t.Errorf("FirstCheckAt = %v, want %v", stats.FirstCheckAt, wantFirst)
+		if !ts.FirstCheckAt.Equal(wantFirst) {
+			t.Errorf("FirstCheckAt = %v, want %v", ts.FirstCheckAt, wantFirst)
 		}
-		if !stats.LastCheckAt.Equal(wantLast) {
-			t.Errorf("LastCheckAt = %v, want %v", stats.LastCheckAt, wantLast)
+		if !ts.LastCheckAt.Equal(wantLast) {
+			t.Errorf("LastCheckAt = %v, want %v", ts.LastCheckAt, wantLast)
 		}
-		if stats.CheckIntervalCount != 20 {
-			t.Fatalf("CheckIntervalCount = %d, want 20", stats.CheckIntervalCount)
+		if ts.CheckIntervalCount != 20 {
+			t.Fatalf("CheckIntervalCount = %d, want 20", ts.CheckIntervalCount)
 		}
-		if stats.AvgCheckInterval != time.Minute {
-			t.Errorf("AvgCheckInterval = %v, want %v (outliers trimmed)", stats.AvgCheckInterval, time.Minute)
+		if ts.AvgCheckInterval != time.Minute {
+			t.Errorf("AvgCheckInterval = %v, want %v (outliers trimmed)", ts.AvgCheckInterval, time.Minute)
 		}
 	})
 
 	t.Run("uses the review record's timestamp, not the registration record's", func(t *testing.T) {
-		r := reviewed(3 * time.Hour)
+		r := reviewed("Mia", 3*time.Hour)
 		wantCheckAt := base.Add(3 * time.Hour)
 		if r.CreatedAt.Equal(wantCheckAt) {
 			t.Fatalf("test fixture is broken: TaskRecord.CreatedAt should differ from the review time")
 		}
 
 		stats := computeLessonStats([]TaskRecordWithInfo{r})
-		if !stats.FirstCheckAt.Equal(wantCheckAt) {
-			t.Errorf("FirstCheckAt = %v, want the review time %v (not registration time %v)", stats.FirstCheckAt, wantCheckAt, r.CreatedAt)
+		if len(stats.CheckTimingByTeacher) != 1 {
+			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
+		}
+		if got := stats.CheckTimingByTeacher[0].FirstCheckAt; !got.Equal(wantCheckAt) {
+			t.Errorf("FirstCheckAt = %v, want the review time %v (not registration time %v)", got, wantCheckAt, r.CreatedAt)
 		}
 	})
 
-	t.Run("falls back to CreatedAt when no review record is available", func(t *testing.T) {
-		r := TaskRecordWithInfo{TaskRecord: storage.TaskRecord{Type: storage.ReviewedRecord, CreatedAt: base}}
+	t.Run("falls back to CreatedAt/AuthorName when no review record is available", func(t *testing.T) {
+		r := TaskRecordWithInfo{TaskRecord: storage.TaskRecord{Type: storage.ReviewedRecord, AuthorName: "Mia", CreatedAt: base}}
 		stats := computeLessonStats([]TaskRecordWithInfo{r})
-		if !stats.FirstCheckAt.Equal(base) {
-			t.Errorf("FirstCheckAt = %v, want fallback CreatedAt %v", stats.FirstCheckAt, base)
+		if len(stats.CheckTimingByTeacher) != 1 {
+			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
+		}
+		ts := stats.CheckTimingByTeacher[0]
+		if ts.TeacherName != "Mia" || !ts.FirstCheckAt.Equal(base) {
+			t.Errorf("got %+v, want TeacherName=Mia FirstCheckAt=%v", ts, base)
+		}
+	})
+
+	t.Run("keeps each teacher's timing separate instead of mixing them", func(t *testing.T) {
+		// Anna's two checks are an hour apart; Mia's two checks are a minute
+		// apart. A combined-average bug would blend these into one meaningless
+		// number — each teacher's own stats must stay independent.
+		records := []TaskRecordWithInfo{
+			reviewed("Anna", 0),
+			reviewed("Anna", time.Hour),
+			reviewed("Mia", 10*time.Minute),
+			reviewed("Mia", 11*time.Minute),
+		}
+
+		stats := computeLessonStats(records)
+		if len(stats.CheckTimingByTeacher) != 2 {
+			t.Fatalf("expected 2 teacher entries, got %d: %+v", len(stats.CheckTimingByTeacher), stats.CheckTimingByTeacher)
+		}
+
+		// Sorted alphabetically: Anna before Mia.
+		anna, mia := stats.CheckTimingByTeacher[0], stats.CheckTimingByTeacher[1]
+		if anna.TeacherName != "Anna" || mia.TeacherName != "Mia" {
+			t.Fatalf("expected Anna then Mia, got %q then %q", anna.TeacherName, mia.TeacherName)
+		}
+
+		if anna.Checked != 2 || anna.AvgCheckInterval != time.Hour {
+			t.Errorf("Anna = %+v, want Checked=2 AvgCheckInterval=1h", anna)
+		}
+		if mia.Checked != 2 || mia.AvgCheckInterval != time.Minute {
+			t.Errorf("Mia = %+v, want Checked=2 AvgCheckInterval=1m", mia)
 		}
 	})
 }
