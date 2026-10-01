@@ -144,6 +144,7 @@ body contains "checked: 1"
 body contains "queued: 1"
 body contains "min:0"
 body contains "0:&nbsp;1"
+body contains "@Test Teacher: 1 checked"
 body matches "\\d{2}:\\d{2}\\(\\w+\\)/\\d{2}:\\d{2}\\(\\w+\\) - \\d{2}:\\d{2}\\(\\w+\\)/\\d{2}:\\d{2}\\(\\w+\\)"
 
 GET {{base_url}}/logout

@@ -109,11 +109,15 @@ Note: role assignment happens at signup and is re-evaluated from config on every
     lesson finished: counts of checked/queued/dropped task records, plus the score
     distribution (min/avg/median/max and a per-score breakdown) of the checked ones. A
     score of 0 is counted and shown here, unlike the min/avg/median/max summary on the
-    students page, which excludes it. When there is at least one checked record, the
-    panel also shows the date/time of the first and last check; with at least two, it
-    shows the average time between checks, trimmed by dropping the smallest and largest
-    5% of the gaps so a couple of outliers don't skew it. The panel refreshes live
-    alongside the task list whenever a review is submitted.
+    students page, which excludes it. Below that, the panel breaks down check timing
+    per reviewing teacher (one line each, e.g. "@Jane: 12 checked · 18:12(MSK)/17:12(CET)
+    - 20:33(MSK)/19:33(CET) · avg check: 8m") — how many they checked, their first and
+    last check time (a short day.month date is added to either end when they fall on
+    different days), and, once they have at least two checks, the average time between
+    their own checks, trimmed by dropping the smallest and largest 5% of the gaps so a
+    couple of outliers don't skew it. Keeping each teacher's timing separate avoids
+    blending independent reviewers' sessions into one meaningless combined number. The
+    panel refreshes live alongside the task list whenever a review is submitted.
 
 # Use Case: teacher views student dashboard
 
