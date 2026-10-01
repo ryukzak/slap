@@ -1,6 +1,6 @@
 {{ $total := add (add .Stats.Checked .Stats.Queued) .Stats.Dropped }}
 {{ if $total }}
-<div class="text-xs p-4 border border-gray-800 rounded max-w-2xl">
+<div class="text-xs p-4 border border-gray-800 rounded w-full">
   <div class="text-gray-400">
     <span class="text-teal-400">checked: {{.Stats.Checked}}</span>
     <span class="text-gray-600">·</span>
@@ -36,13 +36,15 @@
       <span class="text-gray-600">·</span>
       avg check: {{ formatUptime .AvgCheckInterval }}
       {{ end }}
+      <span class="text-gray-600">·</span>
+      duration: {{ formatUptime .Duration }}
     </div>
     {{ end }}
   </div>
   {{ end }}
 </div>
 {{ else }}
-<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded max-w-2xl">
+<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded w-full">
   No registered task records for this lesson yet.
 </p>
 {{ end }}

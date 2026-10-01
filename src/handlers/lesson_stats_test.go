@@ -24,14 +24,14 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 	}
 
 	t.Run("no checks", func(t *testing.T) {
-		stats := computeLessonStats(nil)
+		stats := computeLessonStats(nil, base)
 		if len(stats.CheckTimingByTeacher) != 0 {
 			t.Errorf("expected no per-teacher timing, got %+v", stats.CheckTimingByTeacher)
 		}
 	})
 
 	t.Run("single check has no interval", func(t *testing.T) {
-		stats := computeLessonStats([]TaskRecordWithInfo{reviewed("Mia", 0)})
+		stats := computeLessonStats([]TaskRecordWithInfo{reviewed("Mia", 0)}, base)
 		if len(stats.CheckTimingByTeacher) != 1 {
 			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
 		}
@@ -44,6 +44,9 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		}
 		if ts.CheckIntervalCount != 0 {
 			t.Errorf("expected no interval with a single check, got count=%d", ts.CheckIntervalCount)
+		}
+		if ts.Duration != 0 {
+			t.Errorf("Duration = %v, want 0 (check coincides with lesson start)", ts.Duration)
 		}
 	})
 
@@ -63,7 +66,7 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		lastOffset := 18*time.Minute + 100*time.Minute
 		records = append(records, reviewed("Mia", lastOffset)) // r20 (last gap = 100m, outlier)
 
-		stats := computeLessonStats(records)
+		stats := computeLessonStats(records, base)
 		if len(stats.CheckTimingByTeacher) != 1 {
 			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
 		}
@@ -83,6 +86,9 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		if ts.AvgCheckInterval != time.Minute {
 			t.Errorf("AvgCheckInterval = %v, want %v (outliers trimmed)", ts.AvgCheckInterval, time.Minute)
 		}
+		if ts.Duration != lastOffset {
+			t.Errorf("Duration = %v, want %v (last check minus lesson start)", ts.Duration, lastOffset)
+		}
 	})
 
 	t.Run("uses the review record's timestamp, not the registration record's", func(t *testing.T) {
@@ -92,7 +98,7 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 			t.Fatalf("test fixture is broken: TaskRecord.CreatedAt should differ from the review time")
 		}
 
-		stats := computeLessonStats([]TaskRecordWithInfo{r})
+		stats := computeLessonStats([]TaskRecordWithInfo{r}, base)
 		if len(stats.CheckTimingByTeacher) != 1 {
 			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
 		}
@@ -103,7 +109,7 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 
 	t.Run("falls back to CreatedAt/AuthorName when no review record is available", func(t *testing.T) {
 		r := TaskRecordWithInfo{TaskRecord: storage.TaskRecord{Type: storage.ReviewedRecord, AuthorName: "Mia", CreatedAt: base}}
-		stats := computeLessonStats([]TaskRecordWithInfo{r})
+		stats := computeLessonStats([]TaskRecordWithInfo{r}, base)
 		if len(stats.CheckTimingByTeacher) != 1 {
 			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
 		}
@@ -113,7 +119,7 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		}
 	})
 
-	t.Run("keeps each teacher's timing separate instead of mixing them", func(t *testing.T) {
+	t.Run("keeps each teacher's timing and duration separate instead of mixing them", func(t *testing.T) {
 		// Anna's two checks are an hour apart; Mia's two checks are a minute
 		// apart. A combined-average bug would blend these into one meaningless
 		// number — each teacher's own stats must stay independent.
@@ -124,7 +130,7 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 			reviewed("Mia", 11*time.Minute),
 		}
 
-		stats := computeLessonStats(records)
+		stats := computeLessonStats(records, base)
 		if len(stats.CheckTimingByTeacher) != 2 {
 			t.Fatalf("expected 2 teacher entries, got %d: %+v", len(stats.CheckTimingByTeacher), stats.CheckTimingByTeacher)
 		}
@@ -140,6 +146,24 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		}
 		if mia.Checked != 2 || mia.AvgCheckInterval != time.Minute {
 			t.Errorf("Mia = %+v, want Checked=2 AvgCheckInterval=1m", mia)
+		}
+
+		// Duration is each teacher's own LastCheckAt minus the lesson start —
+		// Anna's last check is 1h after lessonStart, Mia's is 11m after.
+		if anna.Duration != time.Hour {
+			t.Errorf("Anna.Duration = %v, want 1h", anna.Duration)
+		}
+		if mia.Duration != 11*time.Minute {
+			t.Errorf("Mia.Duration = %v, want 11m", mia.Duration)
+		}
+	})
+
+	t.Run("Duration is relative to the lesson's scheduled start, not the first check", func(t *testing.T) {
+		lessonStart := base.Add(-30 * time.Minute)
+		stats := computeLessonStats([]TaskRecordWithInfo{reviewed("Mia", 0)}, lessonStart)
+		ts := stats.CheckTimingByTeacher[0]
+		if ts.Duration != 30*time.Minute {
+			t.Errorf("Duration = %v, want 30m (check happened 30m after lesson start)", ts.Duration)
 		}
 	})
 }
