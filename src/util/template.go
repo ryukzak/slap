@@ -95,3 +95,25 @@ func formatDateTimeWithClock(fstName string, fstLoc *time.Location, sndName stri
 		)
 	}
 }
+
+// FormatCheckRange renders a compact "first - last" range for two
+// timestamps: clock time only (e.g. "19:55(MSK)/18:55(CET)") when both fall
+// on the same calendar day in fstLoc, or with a short "day.month" date
+// prefix on each end when they don't \u2014 unambiguous without the verbosity of
+// a full FormatDateTime on both ends.
+func FormatCheckRange(fstName string, fstLoc *time.Location, sndName string, sndLoc *time.Location) func(first, last time.Time) string {
+	return func(first, last time.Time) string {
+		sameDay := first.In(fstLoc).Format("2006-01-02") == last.In(fstLoc).Format("2006-01-02")
+		render := func(t time.Time) string {
+			clock := fmt.Sprintf("%s(%s)/%s(%s)",
+				t.In(fstLoc).Format("15:04"), fstName,
+				t.In(sndLoc).Format("15:04"), sndName,
+			)
+			if sameDay {
+				return clock
+			}
+			return t.In(fstLoc).Format("2.1") + " " + clock
+		}
+		return render(first) + " - " + render(last)
+	}
+}
