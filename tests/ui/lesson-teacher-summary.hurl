@@ -144,6 +144,8 @@ body contains "checked: 1"
 body contains "queued: 1"
 body contains "min:0"
 body contains "0:&nbsp;1"
+body contains "first check:"
+body contains "last check:"
 
 GET {{base_url}}/logout
 HTTP 303
