@@ -28,9 +28,12 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		if len(stats.CheckTimingByTeacher) != 0 {
 			t.Errorf("expected no per-teacher timing, got %+v", stats.CheckTimingByTeacher)
 		}
+		if stats.CheckSpan != 0 {
+			t.Errorf("expected zero CheckSpan, got %v", stats.CheckSpan)
+		}
 	})
 
-	t.Run("single check has no interval", func(t *testing.T) {
+	t.Run("single check has no interval and zero span", func(t *testing.T) {
 		stats := computeLessonStats([]TaskRecordWithInfo{reviewed("Mia", 0)})
 		if len(stats.CheckTimingByTeacher) != 1 {
 			t.Fatalf("expected one teacher entry, got %d", len(stats.CheckTimingByTeacher))
@@ -44,6 +47,9 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		}
 		if ts.CheckIntervalCount != 0 {
 			t.Errorf("expected no interval with a single check, got count=%d", ts.CheckIntervalCount)
+		}
+		if stats.CheckSpan != 0 {
+			t.Errorf("CheckSpan = %v, want 0 for a single check", stats.CheckSpan)
 		}
 	})
 
@@ -140,6 +146,34 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		}
 		if mia.Checked != 2 || mia.AvgCheckInterval != time.Minute {
 			t.Errorf("Mia = %+v, want Checked=2 AvgCheckInterval=1m", mia)
+		}
+
+		// CheckSpan is the overall earliest-to-latest across every teacher.
+		// Here it happens to equal Anna's own span (0 to 1h), since that
+		// contains Mia's entirely — see the next test for a case where the
+		// overall span's endpoints come from two different teachers.
+		wantSpan := time.Hour
+		if stats.CheckSpan != wantSpan {
+			t.Errorf("CheckSpan = %v, want %v (earliest overall to latest overall)", stats.CheckSpan, wantSpan)
+		}
+	})
+
+	t.Run("CheckSpan combines the earliest and latest across different teachers", func(t *testing.T) {
+		// Anna's own span is 0-10m; Mia's own span is 50m-60m. Neither
+		// teacher's own range covers the whole window, so a correct overall
+		// span (60m) can only come from combining Anna's first with Mia's
+		// last, not from either one alone.
+		records := []TaskRecordWithInfo{
+			reviewed("Anna", 0),
+			reviewed("Anna", 10*time.Minute),
+			reviewed("Mia", 50*time.Minute),
+			reviewed("Mia", 60*time.Minute),
+		}
+
+		stats := computeLessonStats(records)
+		wantSpan := 60 * time.Minute
+		if stats.CheckSpan != wantSpan {
+			t.Errorf("CheckSpan = %v, want %v", stats.CheckSpan, wantSpan)
 		}
 	})
 }

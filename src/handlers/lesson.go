@@ -152,6 +152,10 @@ type LessonStats struct {
 	// multiple reviewers makes a single combined timing line meaningless —
 	// it would mix unrelated people's independent review sessions.
 	CheckTimingByTeacher []LessonTeacherCheckStats
+	// CheckSpan is how long checking this lesson took overall: the earliest
+	// check by any teacher to the latest, across all of them. Zero if there
+	// are no checked records yet.
+	CheckSpan time.Duration
 }
 
 // LessonTeacherCheckStats is one teacher's share of a lesson's checks: how
@@ -267,6 +271,7 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 		teacherNames = append(teacherNames, name)
 	}
 	sort.Strings(teacherNames)
+	var overallFirst, overallLast time.Time
 	for _, name := range teacherNames {
 		times := checkTimesByTeacher[name]
 		sort.Slice(times, func(i, j int) bool { return times[i].Before(times[j]) })
@@ -286,6 +291,16 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 			ts.CheckIntervalCount = len(gaps)
 		}
 		stats.CheckTimingByTeacher = append(stats.CheckTimingByTeacher, ts)
+
+		if overallFirst.IsZero() || ts.FirstCheckAt.Before(overallFirst) {
+			overallFirst = ts.FirstCheckAt
+		}
+		if overallLast.IsZero() || ts.LastCheckAt.After(overallLast) {
+			overallLast = ts.LastCheckAt
+		}
+	}
+	if !overallFirst.IsZero() {
+		stats.CheckSpan = overallLast.Sub(overallFirst)
 	}
 
 	return stats

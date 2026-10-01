@@ -1,12 +1,16 @@
 {{ $total := add (add .Stats.Checked .Stats.Queued) .Stats.Dropped }}
 {{ if $total }}
-<div class="text-xs p-4 border border-gray-800 rounded max-w-2xl">
+<div class="text-xs p-4 border border-gray-800 rounded w-full">
   <div class="text-gray-400">
     <span class="text-teal-400">checked: {{.Stats.Checked}}</span>
     <span class="text-gray-600">·</span>
     <span class="text-purple-400">queued: {{.Stats.Queued}}</span>
     <span class="text-gray-600">·</span>
     <span class="text-red-400">dropped: {{.Stats.Dropped}}</span>
+    {{ if .Stats.CheckTimingByTeacher }}
+    <span class="text-gray-600">·</span>
+    <span class="text-gray-400">duration: {{ formatUptime .Stats.CheckSpan }}</span>
+    {{ end }}
   </div>
   {{ if .Stats.Checked }}
   <div class="text-gray-500 mt-2">
@@ -42,7 +46,7 @@
   {{ end }}
 </div>
 {{ else }}
-<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded max-w-2xl">
+<p class="text-xs text-gray-400 p-4 border border-gray-800 rounded w-full">
   No registered task records for this lesson yet.
 </p>
 {{ end }}
