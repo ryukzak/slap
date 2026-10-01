@@ -152,15 +152,12 @@ type LessonStats struct {
 	// multiple reviewers makes a single combined timing line meaningless —
 	// it would mix unrelated people's independent review sessions.
 	CheckTimingByTeacher []LessonTeacherCheckStats
-	// CheckSpan is how long checking this lesson took overall: the earliest
-	// check by any teacher to the latest, across all of them. Zero if there
-	// are no checked records yet.
-	CheckSpan time.Duration
 }
 
 // LessonTeacherCheckStats is one teacher's share of a lesson's checks: how
-// many they did, when their first and last happened, and the trimmed-mean
-// time between their own consecutive checks.
+// many they did, when their first and last happened, the trimmed-mean time
+// between their own consecutive checks, and how long after the lesson
+// started they kept checking.
 type LessonTeacherCheckStats struct {
 	TeacherName        string
 	Checked            int
@@ -168,6 +165,9 @@ type LessonTeacherCheckStats struct {
 	LastCheckAt        time.Time
 	AvgCheckInterval   time.Duration
 	CheckIntervalCount int
+	// Duration is this teacher's LastCheckAt minus the lesson's scheduled
+	// start time — how long checking stretched past the start of the lesson.
+	Duration time.Duration
 }
 
 // checkIntervalTrim is the fraction of the smallest and largest gaps between
@@ -199,8 +199,9 @@ func trimmedMeanDuration(gaps []time.Duration, trimFraction float64) time.Durati
 
 // computeLessonStats aggregates a lesson's registrations, regardless of the
 // showRevoked/sort display filters, so the summary always reflects the
-// lesson's full history.
-func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
+// lesson's full history. lessonStart is the lesson's scheduled DateTime, used
+// to compute each teacher's check Duration.
+func computeLessonStats(records []TaskRecordWithInfo, lessonStart time.Time) LessonStats {
 	var stats LessonStats
 	scoreCounts := map[int]int{}
 	var vals []int
@@ -271,7 +272,6 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 		teacherNames = append(teacherNames, name)
 	}
 	sort.Strings(teacherNames)
-	var overallFirst, overallLast time.Time
 	for _, name := range teacherNames {
 		times := checkTimesByTeacher[name]
 		sort.Slice(times, func(i, j int) bool { return times[i].Before(times[j]) })
@@ -282,6 +282,9 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 			FirstCheckAt: times[0],
 			LastCheckAt:  times[len(times)-1],
 		}
+		if !lessonStart.IsZero() {
+			ts.Duration = ts.LastCheckAt.Sub(lessonStart)
+		}
 		if len(times) > 1 {
 			gaps := make([]time.Duration, 0, len(times)-1)
 			for i := 1; i < len(times); i++ {
@@ -291,16 +294,6 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 			ts.CheckIntervalCount = len(gaps)
 		}
 		stats.CheckTimingByTeacher = append(stats.CheckTimingByTeacher, ts)
-
-		if overallFirst.IsZero() || ts.FirstCheckAt.Before(overallFirst) {
-			overallFirst = ts.FirstCheckAt
-		}
-		if overallLast.IsZero() || ts.LastCheckAt.After(overallLast) {
-			overallLast = ts.LastCheckAt
-		}
-	}
-	if !overallFirst.IsZero() {
-		stats.CheckSpan = overallLast.Sub(overallFirst)
 	}
 
 	return stats
@@ -423,7 +416,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		return submitAtOrCreated(allRecords[i]).Before(submitAtOrCreated(allRecords[j]))
 	})
 
-	stats := computeLessonStats(allRecords)
+	stats := computeLessonStats(allRecords, lesson.DateTime)
 
 	totalRecords := len(allRecords)
 	var visible []TaskRecordWithInfo
