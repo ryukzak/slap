@@ -10,9 +10,16 @@ import (
 func TestComputeLessonStatsCheckTiming(t *testing.T) {
 	base := time.Date(2026, 7, 5, 9, 0, 0, 0, time.UTC)
 
-	reviewed := func(offset time.Duration) TaskRecordWithInfo {
+	// reviewed builds a Checked row the way buildLessonRecords does: the
+	// underlying TaskRecord.CreatedAt is the registration time (see
+	// storage.ListLessonTaskRecords), while the actual check happens at
+	// ReviewRecords[0].CreatedAt — the two are intentionally different here to
+	// catch regressions that read the wrong field.
+	reviewed := func(checkOffset time.Duration) TaskRecordWithInfo {
+		registeredAt := base.Add(checkOffset).Add(-time.Hour)
 		return TaskRecordWithInfo{
-			TaskRecord: storage.TaskRecord{Type: storage.ReviewedRecord, CreatedAt: base.Add(offset)},
+			TaskRecord:    storage.TaskRecord{Type: storage.ReviewedRecord, CreatedAt: registeredAt},
+			ReviewRecords: []storage.TaskRecord{{Type: storage.ReviewedRecord, CreatedAt: base.Add(checkOffset)}},
 		}
 	}
 
@@ -67,6 +74,27 @@ func TestComputeLessonStatsCheckTiming(t *testing.T) {
 		}
 		if stats.AvgCheckInterval != time.Minute {
 			t.Errorf("AvgCheckInterval = %v, want %v (outliers trimmed)", stats.AvgCheckInterval, time.Minute)
+		}
+	})
+
+	t.Run("uses the review record's timestamp, not the registration record's", func(t *testing.T) {
+		r := reviewed(3 * time.Hour)
+		wantCheckAt := base.Add(3 * time.Hour)
+		if r.CreatedAt.Equal(wantCheckAt) {
+			t.Fatalf("test fixture is broken: TaskRecord.CreatedAt should differ from the review time")
+		}
+
+		stats := computeLessonStats([]TaskRecordWithInfo{r})
+		if !stats.FirstCheckAt.Equal(wantCheckAt) {
+			t.Errorf("FirstCheckAt = %v, want the review time %v (not registration time %v)", stats.FirstCheckAt, wantCheckAt, r.CreatedAt)
+		}
+	})
+
+	t.Run("falls back to CreatedAt when no review record is available", func(t *testing.T) {
+		r := TaskRecordWithInfo{TaskRecord: storage.TaskRecord{Type: storage.ReviewedRecord, CreatedAt: base}}
+		stats := computeLessonStats([]TaskRecordWithInfo{r})
+		if !stats.FirstCheckAt.Equal(base) {
+			t.Errorf("FirstCheckAt = %v, want fallback CreatedAt %v", stats.FirstCheckAt, base)
 		}
 	})
 }

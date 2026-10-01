@@ -27,12 +27,10 @@
   {{ end }}
   {{ if not .Stats.FirstCheckAt.IsZero }}
   <div class="text-gray-500 mt-2">
-    first check: {{ formatDateTime .Stats.FirstCheckAt }}
-    <span class="text-gray-600">·</span>
-    last check: {{ formatDateTime .Stats.LastCheckAt }}
+    {{ formatCheckRange .Stats.FirstCheckAt .Stats.LastCheckAt }}
     {{ if .Stats.CheckIntervalCount }}
     <span class="text-gray-600">·</span>
-    avg between checks: {{ formatUptime .Stats.AvgCheckInterval }}
+    avg check: {{ formatUptime .Stats.AvgCheckInterval }}
     {{ end }}
   </div>
   {{ end }}

@@ -202,10 +202,15 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 			stats.Dropped++
 		case storage.ReviewedRecord:
 			stats.Checked++
-			checkTimes = append(checkTimes, r.CreatedAt)
+			// r.CreatedAt is the underlying registration record's timestamp, not
+			// when the review happened (see storage.ListLessonTaskRecords) — the
+			// actual review record, with its own CreatedAt, is ReviewRecords[0].
 			score := ""
 			if len(r.ReviewRecords) > 0 {
+				checkTimes = append(checkTimes, r.ReviewRecords[0].CreatedAt)
 				score = util.ExtractScore(r.ReviewRecords[0].Content)
+			} else {
+				checkTimes = append(checkTimes, r.CreatedAt)
 			}
 			v, err := strconv.Atoi(score)
 			if score == "" || err != nil {
