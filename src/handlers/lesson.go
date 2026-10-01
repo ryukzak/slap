@@ -147,6 +147,42 @@ type LessonStats struct {
 	UnscoredChecked int
 	Scores          *ScoreStats
 	ScoreBreakdown  []LessonScoreBucket
+	// FirstCheckAt/LastCheckAt are the earliest and latest check timestamps
+	// (zero if there are no checked records yet).
+	FirstCheckAt time.Time
+	LastCheckAt  time.Time
+	// AvgCheckInterval is the trimmed mean of the gaps between consecutive
+	// checks (smallest/largest 5% of gaps discarded to reduce the effect of
+	// outliers). Only meaningful when CheckIntervalCount > 0.
+	AvgCheckInterval   time.Duration
+	CheckIntervalCount int
+}
+
+// checkIntervalTrim is the fraction of the smallest and largest gaps between
+// checks discarded from each end before averaging.
+const checkIntervalTrim = 0.05
+
+// trimmedMeanDuration returns the mean of gaps after dropping the smallest
+// and largest trimFraction of values from each end (no trimming if that
+// would leave nothing).
+func trimmedMeanDuration(gaps []time.Duration, trimFraction float64) time.Duration {
+	if len(gaps) == 0 {
+		return 0
+	}
+	sorted := slices.Clone(gaps)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+
+	trim := int(float64(len(sorted)) * trimFraction)
+	if trim*2 >= len(sorted) {
+		trim = 0
+	}
+	sorted = sorted[trim : len(sorted)-trim]
+
+	var sum time.Duration
+	for _, d := range sorted {
+		sum += d
+	}
+	return sum / time.Duration(len(sorted))
 }
 
 // computeLessonStats aggregates a lesson's registrations, regardless of the
@@ -156,6 +192,7 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 	var stats LessonStats
 	scoreCounts := map[int]int{}
 	var vals []int
+	var checkTimes []time.Time
 
 	for _, r := range records {
 		switch r.Type {
@@ -165,6 +202,7 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 			stats.Dropped++
 		case storage.ReviewedRecord:
 			stats.Checked++
+			checkTimes = append(checkTimes, r.CreatedAt)
 			score := ""
 			if len(r.ReviewRecords) > 0 {
 				score = util.ExtractScore(r.ReviewRecords[0].Content)
@@ -206,6 +244,21 @@ func computeLessonStats(records []TaskRecordWithInfo) LessonStats {
 		sort.Ints(scores)
 		for _, s := range scores {
 			stats.ScoreBreakdown = append(stats.ScoreBreakdown, LessonScoreBucket{Score: s, Count: scoreCounts[s]})
+		}
+	}
+
+	if len(checkTimes) > 0 {
+		sort.Slice(checkTimes, func(i, j int) bool { return checkTimes[i].Before(checkTimes[j]) })
+		stats.FirstCheckAt = checkTimes[0]
+		stats.LastCheckAt = checkTimes[len(checkTimes)-1]
+
+		if len(checkTimes) > 1 {
+			gaps := make([]time.Duration, 0, len(checkTimes)-1)
+			for i := 1; i < len(checkTimes); i++ {
+				gaps = append(gaps, checkTimes[i].Sub(checkTimes[i-1]))
+			}
+			stats.AvgCheckInterval = trimmedMeanDuration(gaps, checkIntervalTrim)
+			stats.CheckIntervalCount = len(gaps)
 		}
 	}
 

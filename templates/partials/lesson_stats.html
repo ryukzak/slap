@@ -25,6 +25,18 @@
     {{ end }}
   </div>
   {{ end }}
+  {{ if not .Stats.FirstCheckAt.IsZero }}
+  <div class="text-gray-500 mt-2">
+    first check: {{ formatDateTime .Stats.FirstCheckAt }}
+    <span class="text-gray-600">·</span>
+    last check: {{ formatDateTime .Stats.LastCheckAt }}
+    {{ if .Stats.CheckIntervalCount }}
+    <span class="text-gray-600">·</span>
+    avg between checks: {{ formatUptime .Stats.AvgCheckInterval }}
+    {{ end }}
+  </div>
+  {{ end }}
+  {{ end }}
 </div>
 {{ else }}
 <p class="text-xs text-gray-400 p-4 border border-gray-800 rounded max-w-2xl">

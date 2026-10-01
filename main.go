@@ -150,6 +150,7 @@ func init() {
 		"uptime": func() string {
 			return util.FormatUptime(time.Since(handlers.StartTime))
 		},
+		"formatUptime": util.FormatUptime,
 	}
 
 	templates = template.Must(template.New("").Funcs(funcMap).ParseGlob("templates/partials/*.html"))
