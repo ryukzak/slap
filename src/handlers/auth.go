@@ -23,12 +23,14 @@ var numericIDRegexp = regexp.MustCompile(`^\d+$`)
 // Set to true in production (HTTPS). Configurable via SLAP_SECURE_COOKIES env var.
 var SecureCookies bool
 
+// setAuthCookie sets the session cookie to live exactly as long as the JWT
+// it carries, so a cookie never outlives (or expires before) its token.
 func setAuthCookie(w http.ResponseWriter, tokenString string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "user_data",
 		Value:    tokenString,
 		Path:     "/",
-		MaxAge:   86400,
+		MaxAge:   int(JwtAuth.TokenDuration.Seconds()),
 		HttpOnly: true,
 		Secure:   SecureCookies,
 		SameSite: http.SameSiteStrictMode,
