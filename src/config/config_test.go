@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -131,5 +132,54 @@ tasks:
 `)
 	if _, err := LoadConfig(path); err == nil {
 		t.Fatal("expected error for negative waiting_period_hours, got nil")
+	}
+}
+
+func TestGetTokenDuration(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		want time.Duration
+	}{
+		{"unset defaults to 24h", Config{}, DefaultTokenDuration},
+		{"explicit 1h", Config{TokenDurationHours: intPtr(1)}, time.Hour},
+		{"explicit 720h (30 days)", Config{TokenDurationHours: intPtr(720)}, 720 * time.Hour},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cfg.GetTokenDuration(); got != tt.want {
+				t.Errorf("GetTokenDuration() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_TokenDurationHours(t *testing.T) {
+	path := writeTempConfig(t, `
+token_duration_hours: 2
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`)
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if got := cfg.GetTokenDuration(); got != 2*time.Hour {
+		t.Errorf("GetTokenDuration() = %v, want 2h", got)
+	}
+}
+
+func TestLoadConfig_TokenDurationHoursRejectsNonPositive(t *testing.T) {
+	for _, v := range []int{0, -5} {
+		path := writeTempConfig(t, fmt.Sprintf(`
+token_duration_hours: %d
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`, v))
+		if _, err := LoadConfig(path); err == nil {
+			t.Fatalf("expected error for token_duration_hours=%d, got nil", v)
+		}
 	}
 }

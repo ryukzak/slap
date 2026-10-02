@@ -73,6 +73,7 @@ tasks:
   - **tags** — this task's allow-list of tag names shown on the lesson page. Only a teacher can tag a task record, by writing `#tag` (and remove one with `-#tag`) anywhere in a review — a student writing `#tag` in their own submission has no effect. The task page always shows every active tag, but the lesson page only shows tags listed here — so a tag can be used freely and "promoted" to the lesson page later just by adding it to this task's list. Scoped per task, so a tag meant for one task (e.g. a group tag on a presentation task) can't unexpectedly show up as "allowed" on another task's lesson-page rows.
 - **default_lesson_description** — pre-filled text when creating a new lesson
 - **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page (every student's timeline is then plotted on the same window, so positions are directly comparable across students) and by the teacher dashboard's course activity heatmap (its weekly columns then span this window instead of the earliest-to-latest record seen). When unset, both fall back to the earliest-to-latest task activity actually recorded.
+- **token_duration_hours** — how many hours a signed-in session (JWT + cookie) stays valid before requiring sign-in again; defaults to `24`. Must be positive.
 
 ### Environment variables
 

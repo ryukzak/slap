@@ -20,6 +20,7 @@ import (
 )
 
 var jwtAuth *auth.JWTConfig
+var jwtSecret string
 var templates *template.Template
 var db *storage.DB
 var appConfig *config.Config
@@ -157,11 +158,10 @@ func init() {
 	templates = template.Must(template.New("").Funcs(funcMap).ParseGlob("templates/partials/*.html"))
 	handlers.BaseTemplates = templates
 
-	jwtSecret := os.Getenv("SLAP_JWT_SECRET")
+	jwtSecret = os.Getenv("SLAP_JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("SLAP_JWT_SECRET environment variable is required")
 	}
-	jwtAuth = auth.NewJWTConfig([]byte(jwtSecret), 24*time.Hour)
 
 	handlers.SecureCookies = os.Getenv("SLAP_SECURE_COOKIES") == "true"
 
@@ -176,7 +176,6 @@ func init() {
 	}
 
 	handlers.Templates = templates
-	handlers.JwtAuth = jwtAuth
 	handlers.DB = db
 	handlers.Version = version
 }
@@ -231,6 +230,9 @@ func main() {
 
 	// Update handlers package AppConfig with the loaded config
 	handlers.AppConfig = appConfig
+
+	jwtAuth = auth.NewJWTConfig([]byte(jwtSecret), appConfig.GetTokenDuration())
+	handlers.JwtAuth = jwtAuth
 
 	printStartupInfo(*configPath)
 

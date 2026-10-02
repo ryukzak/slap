@@ -16,6 +16,10 @@ const DefaultWaitingPeriod = 24 * time.Hour
 // DefaultName is the instance name used when `name` is not set in the config.
 const DefaultName = "slap"
 
+// DefaultTokenDuration is how long a JWT session token (and its cookie)
+// stays valid when `token_duration_hours` is not set in the config.
+const DefaultTokenDuration = 24 * time.Hour
+
 // Config represents the application configuration
 type Config struct {
 	// Name identifies this SLAP instance (e.g. "csa.2026.2") and is shown in
@@ -34,6 +38,10 @@ type Config struct {
 	// falls back to that student's own earliest-to-latest task activity.
 	CourseStart *time.Time `yaml:"course_start,omitempty"`
 	CourseEnd   *time.Time `yaml:"course_end,omitempty"`
+	// TokenDurationHours is how long a signed-in session (JWT + cookie) stays
+	// valid before requiring sign-in again. When unset, DefaultTokenDuration
+	// applies. Must be positive when set.
+	TokenDurationHours *int `yaml:"token_duration_hours,omitempty"`
 }
 
 // ScoreRule defines a rule that adds effect to student's total score
@@ -110,6 +118,15 @@ func (t *Task) GetWaitingPeriod() time.Duration {
 	return DefaultWaitingPeriod
 }
 
+// GetTokenDuration returns how long a session token should stay valid,
+// defaulting to DefaultTokenDuration.
+func (c *Config) GetTokenDuration() time.Duration {
+	if c.TokenDurationHours != nil {
+		return time.Duration(*c.TokenDurationHours) * time.Hour
+	}
+	return DefaultTokenDuration
+}
+
 // LoadConfig loads the configuration from the specified YAML file
 func LoadConfig(filePath string) (*Config, error) {
 	if filePath == "" {
@@ -148,6 +165,10 @@ func LoadConfig(filePath string) (*Config, error) {
 
 	if config.CourseStart != nil && config.CourseEnd != nil && !config.CourseStart.Before(*config.CourseEnd) {
 		return nil, fmt.Errorf("course_start must be before course_end")
+	}
+
+	if config.TokenDurationHours != nil && *config.TokenDurationHours <= 0 {
+		return nil, fmt.Errorf("token_duration_hours must be positive")
 	}
 
 	// Check all tasks are exist
