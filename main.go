@@ -96,7 +96,6 @@ func init() {
 		"markdown":              util.RenderMarkdown,
 		"formatDateTime":        util.FormatDateTime(primaryTZName, primaryLoc, "CET", secondaryLoc),
 		"formatDateTimeSeconds": util.FormatDateTimeSeconds(primaryTZName, primaryLoc, "CET", secondaryLoc),
-		"formatCheckRange":      util.FormatCheckRange(primaryTZName, primaryLoc, "CET", secondaryLoc),
 		"sub": func(a, b int) int {
 			return a - b
 		},
