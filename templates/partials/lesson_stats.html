@@ -22,15 +22,23 @@
   <table class="text-xs border-collapse mt-2">
     <thead>
       <tr class="border-b border-gray-700">
-        <th class="text-left text-gray-400 py-1 pr-4 font-normal">score</th>
-        <th class="text-right text-gray-400 py-1 pl-2 font-normal">count</th>
+        <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+          score
+        </th>
+        <th class="text-right text-gray-400 py-1 pl-2 font-normal">
+          count
+        </th>
       </tr>
     </thead>
     <tbody>
       {{ range .Stats.ScoreBreakdown }}
       <tr class="border-b border-gray-800">
-        <td class="py-1 pr-4 text-gray-300">{{.Score}}</td>
-        <td class="py-1 pl-2 text-right text-gray-300">{{.Count}}</td>
+        <td class="py-1 pr-4 text-gray-300">
+          {{.Score}}
+        </td>
+        <td class="py-1 pl-2 text-right text-gray-300">
+          {{.Count}}
+        </td>
       </tr>
       {{ end }}
     </tbody>
@@ -40,25 +48,47 @@
   <table class="w-full text-xs border-collapse mt-2">
     <thead>
       <tr class="border-b border-gray-700">
-        <th class="text-left text-gray-400 py-1 pr-4 font-normal">teacher</th>
-        <th class="text-right text-gray-400 py-1 px-2 font-normal">checked</th>
-        <th class="text-left text-gray-400 py-1 px-2 font-normal">first</th>
-        <th class="text-left text-gray-400 py-1 px-2 font-normal">last</th>
-        <th class="text-right text-gray-400 py-1 px-2 font-normal">avg check</th>
-        <th class="text-right text-gray-400 py-1 pl-2 font-normal">duration</th>
+        <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+          teacher
+        </th>
+        <th class="text-right text-gray-400 py-1 px-2 font-normal">
+          checked
+        </th>
+        <th class="text-left text-gray-400 py-1 px-2 font-normal">
+          first
+        </th>
+        <th class="text-left text-gray-400 py-1 px-2 font-normal">
+          last
+        </th>
+        <th class="text-right text-gray-400 py-1 px-2 font-normal">
+          avg check
+        </th>
+        <th class="text-right text-gray-400 py-1 pl-2 font-normal">
+          duration
+        </th>
       </tr>
     </thead>
     <tbody>
       {{ range .Stats.CheckTimingByTeacher }}
       <tr class="border-b border-gray-800">
-        <td class="py-1 pr-4 text-gray-300">@{{.TeacherName}}</td>
-        <td class="py-1 px-2 text-right text-gray-300">{{.Checked}}</td>
-        <td class="py-1 px-2 text-gray-400 whitespace-nowrap">{{ formatDateTime .FirstCheckAt }}</td>
-        <td class="py-1 px-2 text-gray-400 whitespace-nowrap">{{ formatDateTime .LastCheckAt }}</td>
-        <td class="py-1 px-2 text-right text-gray-400">
-          {{ if .CheckIntervalCount }}{{ formatUptime .AvgCheckInterval }}{{ else }}—{{ end }}
+        <td class="py-1 pr-4 text-gray-300">
+          @{{.TeacherName}}
         </td>
-        <td class="py-1 pl-2 text-right text-gray-400">{{ formatUptime .Duration }}</td>
+        <td class="py-1 px-2 text-right text-gray-300">
+          {{.Checked}}
+        </td>
+        <td class="py-1 px-2 text-gray-400 whitespace-nowrap">
+          {{ formatDateTime .FirstCheckAt }}
+        </td>
+        <td class="py-1 px-2 text-gray-400 whitespace-nowrap">
+          {{ formatDateTime .LastCheckAt }}
+        </td>
+        <td class="py-1 px-2 text-right text-gray-400">
+        {{ if .CheckIntervalCount }}{{ formatUptime .AvgCheckInterval }}{{ else }}—{{ end }}
+        </td>
+        <td class="py-1 pl-2 text-right text-gray-400">
+          {{ formatUptime .Duration }}
+        </td>
       </tr>
       {{ end }}
     </tbody>

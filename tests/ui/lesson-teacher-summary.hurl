@@ -143,10 +143,10 @@ HTTP 200
 body contains "checked: 1"
 body contains "queued: 1"
 body contains "min:0"
-body matches "(?s)<td class=\"py-1 pr-4 text-gray-300\">0</td>\\s*<td class=\"py-1 pl-2 text-right text-gray-300\">1</td>"
+body matches "(?s)<td class=\"py-1 pr-4 text-gray-300\">\\s*0\\s*</td>\\s*<td class=\"py-1 pl-2 text-right text-gray-300\">\\s*1\\s*</td>"
 body contains "@Test Teacher"
-body contains ">teacher<"
-body contains ">duration<"
+body matches "(?s)>\\s*teacher\\s*<"
+body matches "(?s)>\\s*duration\\s*<"
 
 GET {{base_url}}/logout
 HTTP 303
