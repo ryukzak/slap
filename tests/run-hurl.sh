@@ -209,6 +209,10 @@ run_test tests/ui/course-activity-heatmap.hurl \
     --variable "student_id=${TIMESTAMP}42" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/lesson-summary-refresh.hurl \
+    --variable "student_id=${TIMESTAMP}43" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

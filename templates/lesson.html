@@ -27,7 +27,7 @@
   </div>
   <div id="lesson-stats"
        hx-get="/lesson/{{.Lesson.ID}}/stats"
-       hx-trigger="lessonRecordsRefresh"
+       hx-trigger="lessonRecordsRefresh from:body"
        hx-swap="innerHTML">
     {{template "lesson_stats.html" .}}
   </div>
