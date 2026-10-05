@@ -95,7 +95,7 @@ POST {{base_url}}/user/{{student_id}}/task/task1/journal
 Cookie: user_data={{teacher_token}}
 HX-Request: true
 [FormParams]
-role: review
+lesson_id: {{lesson_id}}
 content: 8 solid work
 
 HTTP 204

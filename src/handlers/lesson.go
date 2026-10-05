@@ -112,6 +112,7 @@ func lessonTags(studentID, taskID string) []storage.Tag {
 
 // lessonRecordsData is the data passed to the lesson_task_records partial.
 type lessonRecordsData struct {
+	LessonID         string
 	TaskRecords      []TaskRecordWithInfo
 	ShowRevoked      bool
 	TotalRecords     int
@@ -141,12 +142,19 @@ type LessonScoreBucket struct {
 // score of 0 counts here — a lesson summary should show zero-scored work
 // rather than hide it.
 type LessonStats struct {
-	Checked         int
-	Queued          int
-	Dropped         int
-	UnscoredChecked int
-	Scores          *ScoreStats
-	ScoreBreakdown  []LessonScoreBucket
+	Checked int
+	Queued  int
+	Dropped int
+	// CheckedElsewhere counts registrations whose check was taken outside this
+	// lesson: the teacher dropped the registration and reviewed the task from
+	// the task page, so the work is done but this lesson neither held the
+	// student in its queue nor did the checking. Kept apart from both Checked
+	// and Dropped, which would otherwise credit the lesson with someone else's
+	// check or report a withdrawal that never happened.
+	CheckedElsewhere int
+	UnscoredChecked  int
+	Scores           *ScoreStats
+	ScoreBreakdown   []LessonScoreBucket
 	// CheckTimingByTeacher breaks down first/last check date and avg check
 	// interval per reviewing teacher (sorted by name), since a lesson with
 	// multiple reviewers makes a single combined timing line meaningless —
@@ -213,6 +221,8 @@ func computeLessonStats(records []TaskRecordWithInfo, lessonStart time.Time) Les
 			stats.Queued++
 		case storage.RevokeRecord:
 			stats.Dropped++
+		case storage.CheckedElsewhereRecord:
+			stats.CheckedElsewhere++
 		case storage.ReviewedRecord:
 			stats.Checked++
 			// r.CreatedAt is the underlying registration record's timestamp, not
@@ -395,7 +405,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 		})
 	}
 	for _, pr := range previousTaskRecords {
-		if pr.Type != storage.RevokeRecord {
+		if pr.Type != storage.RevokeRecord && pr.Type != storage.CheckedElsewhereRecord {
 			continue
 		}
 		task := AppConfig.GetTask(pr.TaskID)
@@ -421,7 +431,9 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 	totalRecords := len(allRecords)
 	var visible []TaskRecordWithInfo
 	for _, r := range allRecords {
-		if showRevoked || r.Type != storage.RevokeRecord {
+		// Both a drop and a check taken elsewhere leave the lesson's queue, so
+		// they are hidden together behind showRevoked.
+		if showRevoked || (r.Type != storage.RevokeRecord && r.Type != storage.CheckedElsewhereRecord) {
 			visible = append(visible, r)
 		}
 	}
@@ -477,6 +489,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	renderPage(w, "templates/lesson.html", struct {
 		Lesson           *storage.Lesson
+		LessonID         string
 		TeacherID        string
 		SessionUserID    string
 		SessionIsTeacher bool
@@ -491,6 +504,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		Stats            LessonStats
 	}{
 		Lesson:           lesson,
+		LessonID:         lesson.ID,
 		TeacherID:        lesson.TeacherID,
 		SessionUserID:    user.ID,
 		SessionIsTeacher: user.IsTeacher,
@@ -531,6 +545,7 @@ func LessonTaskRecordsPartialHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := lessonRecordsData{
+		LessonID:         lesson.ID,
 		TaskRecords:      visibleTaskRecords,
 		ShowRevoked:      showRevoked,
 		TotalRecords:     totalRecords,
