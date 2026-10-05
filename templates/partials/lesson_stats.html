@@ -1,4 +1,4 @@
-{{ $total := add (add .Stats.Checked .Stats.Queued) .Stats.Dropped }}
+{{ $total := add (add (add .Stats.Checked .Stats.Queued) .Stats.Dropped) .Stats.CheckedElsewhere }}
 {{ if $total }}
 <div class="text-xs p-4 border border-gray-800 rounded w-full">
   <div class="text-gray-400">
@@ -7,6 +7,10 @@
     <span class="text-purple-400">queued: {{.Stats.Queued}}</span>
     <span class="text-gray-600">·</span>
     <span class="text-red-400">dropped: {{.Stats.Dropped}}</span>
+    {{ if .Stats.CheckedElsewhere }}
+    <span class="text-gray-600">·</span>
+    <span class="text-teal-600">checked outside: {{.Stats.CheckedElsewhere}}</span>
+    {{ end }}
   </div>
   {{ if .Stats.Checked }}
   <div class="text-gray-500 mt-2">

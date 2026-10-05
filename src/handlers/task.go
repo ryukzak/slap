@@ -60,6 +60,10 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		QueueTotal       int
 		WaitingMessage   string
 		Tags             []storage.Tag
+		// CheckCountsForLesson tells a teacher looking at a queued task whether
+		// reviewing it here would count as the lesson's check or drop it from the
+		// lesson queue first. Uses the same predicate as the review handler.
+		CheckCountsForLesson bool
 	}
 
 	model := TaskViewModel{
@@ -89,6 +93,9 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				model.RegisteredLesson = lesson
 				model.QueuePosition, model.QueueTotal = queuePosition(lesson, userIDFromURL, taskID, SortBySubmitOrd)
+				if user.IsTeacher {
+					model.CheckCountsForLesson = belongsToLesson(rawRecords[0].LessonID, "", user.ID)
+				}
 			}
 		}
 	}
@@ -223,6 +230,35 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// A teacher's review of a task that is still queued for a lesson belongs to
+	// that lesson only when it was left from the lesson page, or from the task
+	// page while the teacher's own lesson is running. Any other check was taken
+	// outside the lesson, so drop the registration first: that severs the link
+	// AppendTaskRecord follows, leaving the lesson neither holding the student in
+	// its queue nor claiming the check.
+	origin := "direct"
+	if record.Type == storage.ReviewedRecord {
+		if latest, err := DB.LatestTaskRecord(userIDFromURL, storage.TaskID(taskID)); err == nil && latest != nil && latest.Type == storage.RegisterRecord && latest.LessonID != "" {
+			if belongsToLesson(latest.LessonID, r.PostForm.Get("lesson_id"), user.ID) {
+				origin = "lesson"
+			} else {
+				origin = "outside_lesson"
+				if rerr := DB.DropFromLessonAsTeacher(latest.LessonID, latest.TaskID, latest.StudentID, user.ID, user.Username); rerr != nil {
+					log.Printf("action=drop_for_outside_lesson_check teacher=%s student=%s task=%s lesson=%s error=%v", user.ID, userIDFromURL, taskID, latest.LessonID, rerr)
+					origin = "lesson"
+				} else {
+					log.Printf("action=drop_for_outside_lesson_check teacher=%s student=%s task=%s lesson=%s", user.ID, userIDFromURL, taskID, latest.LessonID)
+				}
+			}
+		}
+	}
+
+	// Stamp the record only now: reads order an event log by CreatedAt, and any
+	// auto-revoke or outside-lesson drop above happened before this record, so a
+	// timestamp taken earlier would sort the review ahead of the drop that
+	// preceded it.
+	record.CreatedAt = time.Now()
+
 	if err := DB.AppendTaskRecord(record); err != nil {
 		log.Printf("action=add_task_record author=%s student=%s task=%s type=%s error=%v", user.ID, userIDFromURL, taskID, record.Type, err)
 		http.Error(w, "Failed to save journal record", http.StatusInternalServerError)
@@ -234,6 +270,7 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		"task_id":    taskID,
 		"student_id": userIDFromURL,
 		"role":       record.Type,
+		"origin":     origin,
 	})
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Set("HX-Trigger", "lessonRecordsRefresh")
@@ -241,6 +278,38 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/user/"+userIDFromURL+"/task/"+taskID, http.StatusSeeOther)
+}
+
+// belongsToLesson reports whether a teacher's review counts as the work of the
+// lesson the task is queued for. formLessonID is the lesson the review form
+// declared, naming it the lesson page's own review form; a task-page review
+// declares nothing and qualifies only while the teacher's own lesson is within
+// the configured check window. On a lesson read error it returns true, so a
+// transient failure leaves the registration alone rather than dropping it.
+func belongsToLesson(registeredLessonID, formLessonID string, teacherID storage.UserID) bool {
+	if formLessonID != "" && formLessonID == registeredLessonID {
+		return true
+	}
+	lesson, err := DB.GetLesson(storage.LessonID(registeredLessonID))
+	if err != nil {
+		log.Printf("Error fetching lesson %s to classify a check: %v", registeredLessonID, err)
+		return true
+	}
+	if lesson.TeacherID != teacherID {
+		return false
+	}
+	before, after := AppConfig.GetLessonCheckWindow()
+	return withinLessonCheckWindow(time.Now(), lesson.DateTime, before, after)
+}
+
+// withinLessonCheckWindow reports whether now falls in
+// [lessonStart-before, lessonStart+after]. A zero-length side disables that
+// side of the window.
+func withinLessonCheckWindow(now, lessonStart time.Time, before, after time.Duration) bool {
+	if lessonStart.IsZero() {
+		return false
+	}
+	return !now.Before(lessonStart.Add(-before)) && !now.After(lessonStart.Add(after))
 }
 
 func queuePosition(lesson *storage.Lesson, studentID storage.UserID, taskID storage.TaskID, sortMode SortMode) (int, int) {

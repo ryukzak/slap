@@ -74,6 +74,7 @@ tasks:
 - **default_lesson_description** — pre-filled text when creating a new lesson
 - **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page (every student's timeline is then plotted on the same window, so positions are directly comparable across students) and by the teacher dashboard's course activity heatmap (its weekly columns then span this window instead of the earliest-to-latest record seen). When unset, both fall back to the earliest-to-latest task activity actually recorded.
 - **token_duration_hours** — how many hours a signed-in session (JWT + cookie) stays valid before requiring sign-in again; defaults to `24`. Must be positive.
+- **lesson_check_window_before_hours** / **lesson_check_window_after_hours** — how far before and after a lesson's scheduled start a check left from the *task page* still counts as that lesson's work, provided the acting teacher owns the lesson; default to `1` and `6`. Outside that window the check is treated as taken outside the lesson: the registration is dropped first, so the lesson neither keeps the student queued nor is credited with the check. Reviews submitted from the lesson page itself always belong to that lesson and ignore the window, so setting both to `0` effectively requires the lesson page for a lesson check. Must not be negative.
 
 ### Environment variables
 

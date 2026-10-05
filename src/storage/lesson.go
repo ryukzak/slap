@@ -308,6 +308,16 @@ func (d *DB) ListLessonPreviousTaskRecords(lesson *Lesson) ([]*TaskRecord, error
 			if taskRecord.SubmitAt.IsZero() {
 				taskRecord.SubmitAt = enrolledTask.SubmitAt
 			}
+			// The record at TaskRecordID is the RegisterRecord, always authored by
+			// the student, so a revoked enrollment needs its RevokeRecord to say
+			// what became of it and who ended it.
+			if enrolledTask.Status == RevokeRecord {
+				if status, revoke := resolveRevokedEnrollment(b, lesson.ID, enrolledTask); revoke != nil {
+					taskRecord.Type = status
+					taskRecord.AuthorID = revoke.AuthorID
+					taskRecord.AuthorName = revoke.AuthorName
+				}
+			}
 			result = append(result, taskRecord)
 		}
 		return nil
@@ -317,4 +327,49 @@ func (d *DB) ListLessonPreviousTaskRecords(lesson *Lesson) ([]*TaskRecord, error
 	}
 	SortTaskRecordsOldestFirst(result)
 	return result, nil
+}
+
+// resolveRevokedEnrollment reports what actually became of a revoked enrollment,
+// plus the RevokeRecord that ended it.
+//
+// A revoke immediately followed by a review means the work was checked outside
+// this lesson (a teacher checking from the task page drops the registration
+// first, so the review is never credited to the lesson). A revoke followed by
+// anything else — or by nothing — is a genuine drop: the student withdrew, the
+// teacher cleared the queue, or the lesson was deleted. The author of the
+// revoke alone cannot tell these apart, since clearing a queue is also a
+// teacher action.
+//
+// Returns a nil record when the RevokeRecord cannot be located, leaving the
+// caller's status untouched.
+func resolveRevokedEnrollment(b *bolt.Bucket, lessonID LessonID, enrolled EnrolledTask) (TaskRecordType, *TaskRecord) {
+	keys, err := getIndex(b, "tasks:"+enrolled.StudentID+":"+enrolled.TaskID)
+	if err != nil || len(keys) == 0 {
+		return RevokeRecord, nil
+	}
+	records, err := readAndNormalizeRecords(b, keys)
+	if err != nil {
+		return RevokeRecord, nil
+	}
+
+	// records is oldest-first: find this enrollment's RegisterRecord, then the
+	// first revoke of it, then whatever came next.
+	start := 0
+	for i := range records {
+		if records[i].ID == enrolled.TaskRecordID {
+			start = i + 1
+			break
+		}
+	}
+	for i := start; i < len(records); i++ {
+		if records[i].Type != RevokeRecord || records[i].LessonID != lessonID {
+			continue
+		}
+		revoke := records[i]
+		if i+1 < len(records) && records[i+1].Type == ReviewedRecord {
+			return CheckedElsewhereRecord, &revoke
+		}
+		return RevokeRecord, &revoke
+	}
+	return RevokeRecord, nil
 }

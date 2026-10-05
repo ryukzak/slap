@@ -121,6 +121,19 @@ Note: role assignment happens at signup and is re-evaluated from config on every
     panel spans the full width of the page (it used to wrap unnecessarily at a fixed
     max-width) and refreshes live alongside the task list whenever a review is
     submitted.
+12. A check is only credited to the lesson the task was queued for when the teacher
+    reviewed it from the lesson page, or from the task page while their own lesson is
+    running (`lesson_check_window_before_hours` / `lesson_check_window_after_hours`
+    around the scheduled start, defaulting to 1h before and 6h after). Any other check
+    was taken outside the lesson, so the registration is dropped first — recorded as
+    removed by the teacher, not withdrawn by the student — and the review is appended
+    after it. The lesson then neither holds the student in its queue nor claims the
+    check: the summary reports it as "checked outside", kept apart from both "checked"
+    (which would credit the lesson, and the lesson teacher's timing row, with someone
+    else's work) and "dropped" (which would report a withdrawal that never happened).
+    The row itself is held back with the revoked ones behind `[show history]`, where it
+    is labelled "Checked outside". While a task is queued, the task page tells a teacher
+    which of the two a check left there would be, before they write it.
 
 # Use Case: teacher views student dashboard
 
