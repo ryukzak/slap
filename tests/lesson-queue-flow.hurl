@@ -96,6 +96,7 @@ body contains "Queued"
 POST {{base_url}}/user/{{student_id}}/task/{{task_id}}/journal
 Cookie: user_data={{teacher_token}}
 [FormParams]
+lesson_id: {{lesson_id}}
 content: Lesson review feedback
 
 HTTP 303

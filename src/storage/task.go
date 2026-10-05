@@ -26,6 +26,13 @@ const (
 	ReviewedRecord TaskRecordType = "reviewed"
 )
 
+// CheckedElsewhereRecord is a derived status, never written to disk: a lesson
+// enrollment that ended in a revoke immediately followed by a review means the
+// work was checked outside this lesson, which is neither the student dropping
+// out nor a check this lesson can claim. Only the lesson read path produces it,
+// from the records behind an archived enrollment.
+const CheckedElsewhereRecord TaskRecordType = "checked_elsewhere"
+
 type TaskRecord struct {
 	ID         string         `json:"id"`
 	TaskID     string         `json:"task_id"`
@@ -502,9 +509,30 @@ func (d *DB) UnregisterAllFromLesson(lessonID LessonID) (int, error) {
 	return count, err
 }
 
-func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID UserID) error {
-	if lessonID == "" || taskID == "" || authorID == "" {
-		return fmt.Errorf("lessonID, taskID, and authorID must be provided")
+// UnregisterFromLesson revokes a student's own registration: the resulting
+// RevokeRecord is authored by the student, as a withdrawal should be.
+func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, studentID UserID) error {
+	return d.unregisterFromLesson(lessonID, taskID, studentID, "", "")
+}
+
+// DropFromLessonAsTeacher revokes a student's registration on a teacher's
+// behalf, recording the teacher as the author so the drop is not mistaken for
+// a withdrawal by the student. Used when a check is taken outside the lesson
+// the task was queued for: the drop severs the registration, so the review
+// appended after it is never credited to that lesson.
+func (d *DB) DropFromLessonAsTeacher(lessonID LessonID, taskID TaskID, studentID, teacherID UserID, teacherName string) error {
+	if teacherID == "" || teacherName == "" {
+		return fmt.Errorf("teacherID and teacherName must be provided")
+	}
+	return d.unregisterFromLesson(lessonID, taskID, studentID, teacherID, teacherName)
+}
+
+// unregisterFromLesson moves an enrollment to the lesson's history and appends
+// a RevokeRecord for it. actorID/actorName name whoever initiated the drop; when
+// empty, the student is recorded as the author.
+func (d *DB) unregisterFromLesson(lessonID LessonID, taskID TaskID, studentID, actorID UserID, actorName string) error {
+	if lessonID == "" || taskID == "" || studentID == "" {
+		return fmt.Errorf("lessonID, taskID, and studentID must be provided")
 	}
 
 	err := d.db.Update(func(tx *bolt.Tx) error {
@@ -517,7 +545,7 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 
 		existingIdx := -1
 		for i, enrolled := range lesson.EnrolledTasks {
-			if enrolled.TaskID == taskID && enrolled.StudentID == authorID {
+			if enrolled.TaskID == taskID && enrolled.StudentID == studentID {
 				existingIdx = i
 				break
 			}
@@ -537,11 +565,15 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 			return err
 		}
 
+		revokeAuthorID, revokeAuthorName := studentID, regRecord.AuthorName
+		if actorID != "" {
+			revokeAuthorID, revokeAuthorName = actorID, actorName
+		}
 		revokeRecord := TaskRecord{
 			TaskID:     taskID,
-			StudentID:  authorID,
-			AuthorID:   authorID,
-			AuthorName: regRecord.AuthorName,
+			StudentID:  studentID,
+			AuthorID:   revokeAuthorID,
+			AuthorName: revokeAuthorName,
 			Type:       RevokeRecord,
 			LessonID:   lessonID,
 			CreatedAt:  time.Now(),
@@ -559,7 +591,7 @@ func (d *DB) UnregisterFromLesson(lessonID LessonID, taskID TaskID, authorID Use
 		return setValue(b, lessonID, *lesson)
 	})
 	if err == nil {
-		d.invalidateTags(authorID, taskID)
+		d.invalidateTags(studentID, taskID)
 	}
 	return err
 }
