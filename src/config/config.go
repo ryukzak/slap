@@ -20,6 +20,10 @@ const DefaultName = "slap"
 // stays valid when `token_duration_hours` is not set in the config.
 const DefaultTokenDuration = 24 * time.Hour
 
+// DefaultLessonDuration is the length of a lesson's calendar event when
+// `lesson_duration_minutes` is not set in the config.
+const DefaultLessonDuration = 90 * time.Minute
+
 // Config represents the application configuration
 type Config struct {
 	// Name identifies this SLAP instance (e.g. "csa.2026.2") and is shown in
@@ -42,6 +46,10 @@ type Config struct {
 	// valid before requiring sign-in again. When unset, DefaultTokenDuration
 	// applies. Must be positive when set.
 	TokenDurationHours *int `yaml:"token_duration_hours,omitempty"`
+	// LessonDurationMinutes is the length of a lesson, used for the end time
+	// of its calendar (.ics) event. When unset, DefaultLessonDuration
+	// applies. Must be positive when set.
+	LessonDurationMinutes *int `yaml:"lesson_duration_minutes,omitempty"`
 }
 
 // ScoreRule defines a rule that adds effect to student's total score
@@ -127,6 +135,15 @@ func (c *Config) GetTokenDuration() time.Duration {
 	return DefaultTokenDuration
 }
 
+// GetLessonDuration returns how long a lesson lasts, defaulting to
+// DefaultLessonDuration.
+func (c *Config) GetLessonDuration() time.Duration {
+	if c.LessonDurationMinutes != nil {
+		return time.Duration(*c.LessonDurationMinutes) * time.Minute
+	}
+	return DefaultLessonDuration
+}
+
 // LoadConfig loads the configuration from the specified YAML file
 func LoadConfig(filePath string) (*Config, error) {
 	if filePath == "" {
@@ -169,6 +186,10 @@ func LoadConfig(filePath string) (*Config, error) {
 
 	if config.TokenDurationHours != nil && *config.TokenDurationHours <= 0 {
 		return nil, fmt.Errorf("token_duration_hours must be positive")
+	}
+
+	if config.LessonDurationMinutes != nil && *config.LessonDurationMinutes <= 0 {
+		return nil, fmt.Errorf("lesson_duration_minutes must be positive")
 	}
 
 	// Check all tasks are exist

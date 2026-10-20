@@ -29,6 +29,8 @@
       </div>
       <div>
         {{ formatDateTime .Lesson.DateTime }}
+        <a class="text-blue-400 hover:text-blue-300 text-xs ml-2"
+           href="/lesson/{{.Lesson.ID}}/calendar.ics">[add to calendar]</a>
       </div>
       <div class="text-gray-400">
         Enrolled:
