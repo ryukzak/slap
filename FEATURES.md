@@ -187,8 +187,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 2. The system serves an iCalendar file (`/lesson/{id}/calendar.ics`) with a single event:
    teacher name, start time, end time (start + `lesson_duration_minutes`, default 90), the
    lesson description and a link back to the lesson page.
-3. Times are written in UTC, so the calendar app (Apple Calendar on macOS/iOS, Google Calendar,
-   Outlook, ...) shows the lesson in the viewer's own timezone, regardless of the server's `SLAP_TZ`.
+3. Times are pinned to the server's primary timezone (`SLAP_TZ`, default `Europe/Moscow`) via
+   `TZID` plus a matching `VTIMEZONE` block, and the description starts with the lesson time in
+   that zone (e.g. `18:00 MSK`). The calendar app (Apple Calendar on macOS/iOS, Google Calendar,
+   Outlook, ...) shows the event in that zone and also converts it to the viewer's local time.
 4. The event has a stable UID per lesson, so adding the same lesson again updates the existing
    event instead of creating a duplicate.
 

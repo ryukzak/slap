@@ -21,16 +21,18 @@ func TestBuildLessonICS(t *testing.T) {
 	}
 	now := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 
-	ics := buildLessonICS(lesson, "slap", "example.com", "https://example.com/lesson/abc", 90*time.Minute, now)
+	ics := buildLessonICS(lesson, "slap", "example.com", "https://example.com/lesson/abc", 90*time.Minute, moscow, now)
 
 	for _, want := range []string{
 		"BEGIN:VCALENDAR\r\n",
 		"UID:abc@example.com\r\n",
 		"DTSTAMP:20261001T000000Z\r\n",
-		"DTSTART:20261021T150000Z\r\n",
-		"DTEND:20261021T163000Z\r\n",
+		"BEGIN:VTIMEZONE\r\nTZID:Europe/Moscow\r\nBEGIN:STANDARD\r\n",
+		"TZOFFSETTO:+0300\r\nTZNAME:MSK\r\n",
+		"DTSTART;TZID=Europe/Moscow:20261021T180000\r\n",
+		"DTEND;TZID=Europe/Moscow:20261021T193000\r\n",
 		"SUMMARY:slap lesson · @teacher\r\n",
-		`DESCRIPTION:Line one\, with\; chars\nLine two\n\n`,
+		`DESCRIPTION:2026-10-21 18:00 MSK (Europe/Moscow)\n\nLine one\, with\; chars`,
 		"END:VCALENDAR\r\n",
 	} {
 		if !strings.Contains(ics, want) {
@@ -40,6 +42,27 @@ func TestBuildLessonICS(t *testing.T) {
 	for _, line := range strings.Split(strings.TrimSuffix(ics, "\r\n"), "\r\n") {
 		if len(line) > 75 {
 			t.Errorf("line longer than 75 octets: %q", line)
+		}
+	}
+}
+
+func TestICSTimezoneDST(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A lesson spanning the 2026-10-25 switch from CEST to CET.
+	from := time.Date(2026, 10, 25, 1, 30, 0, 0, berlin)
+	to := time.Date(2026, 10, 25, 4, 0, 0, 0, berlin)
+	tz := strings.Join(icsTimezone(berlin, from, to), "\n")
+
+	for _, want := range []string{
+		"TZID:Europe/Berlin",
+		"BEGIN:DAYLIGHT\nDTSTART:20260329T030000\nTZOFFSETFROM:+0100\nTZOFFSETTO:+0200\nTZNAME:CEST\nEND:DAYLIGHT",
+		"BEGIN:STANDARD\nDTSTART:20261025T020000\nTZOFFSETFROM:+0200\nTZOFFSETTO:+0100\nTZNAME:CET\nEND:STANDARD",
+	} {
+		if !strings.Contains(tz, want) {
+			t.Errorf("VTIMEZONE missing %q:\n%s", want, tz)
 		}
 	}
 }
