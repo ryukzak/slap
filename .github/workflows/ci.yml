@@ -94,7 +94,6 @@ jobs:
 
   build-image:
     name: Build Image (${{ matrix.platform }})
-    needs: [lint-go, lint-templates, test-unit, test-integration]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -153,7 +152,7 @@ jobs:
 
   publish:
     name: Publish Docker Image
-    needs: build-image
+    needs: [build-image, lint-go, lint-templates, test-unit, test-integration]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
