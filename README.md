@@ -74,6 +74,7 @@ tasks:
 - **default_lesson_description** — pre-filled text when creating a new lesson
 - **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page (every student's timeline is then plotted on the same window, so positions are directly comparable across students) and by the teacher dashboard's course activity heatmap (its weekly columns then span this window instead of the earliest-to-latest record seen). When unset, both fall back to the earliest-to-latest task activity actually recorded.
 - **token_duration_hours** — how many hours a signed-in session (JWT + cookie) stays valid before requiring sign-in again; defaults to `24`. Must be positive.
+- **lesson_duration_minutes** — length of a lesson, used as the end time of the event in the lesson's `[add to calendar]` (`.ics`) file; defaults to `90`. Must be positive.
 
 ### Environment variables
 

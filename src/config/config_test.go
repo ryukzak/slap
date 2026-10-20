@@ -183,3 +183,35 @@ tasks:
 		}
 	}
 }
+
+func TestGetLessonDuration(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		want time.Duration
+	}{
+		{"unset defaults to 90m", Config{}, DefaultLessonDuration},
+		{"explicit 45m", Config{LessonDurationMinutes: intPtr(45)}, 45 * time.Minute},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cfg.GetLessonDuration(); got != tt.want {
+				t.Errorf("GetLessonDuration() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_LessonDurationMinutesRejectsNonPositive(t *testing.T) {
+	for _, v := range []int{0, -5} {
+		path := writeTempConfig(t, fmt.Sprintf(`
+lesson_duration_minutes: %d
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`, v))
+		if _, err := LoadConfig(path); err == nil {
+			t.Fatalf("expected error for lesson_duration_minutes=%d, got nil", v)
+		}
+	}
+}

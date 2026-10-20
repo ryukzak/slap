@@ -181,6 +181,17 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 4. Telegram (and other messengers) can generate a link preview from the page title and content.
 5. No task records, edit controls, or user-specific data are exposed.
 
+# Use Case: add a lesson to a calendar
+
+1. On a lesson page (or its public preview), the user clicks `[add to calendar]` next to the lesson date.
+2. The system serves an iCalendar file (`/lesson/{id}/calendar.ics`) with a single event:
+   teacher name, start time, end time (start + `lesson_duration_minutes`, default 90), the
+   lesson description and a link back to the lesson page.
+3. Times are written in UTC, so the calendar app (Apple Calendar on macOS/iOS, Google Calendar,
+   Outlook, ...) shows the lesson in the viewer's own timezone, regardless of the server's `SLAP_TZ`.
+4. The event has a stable UID per lesson, so adding the same lesson again updates the existing
+   event instead of creating a duplicate.
+
 # Use Case: task record visibility on lesson page
 
 1. When a student views a lesson page, only their own task records are shown.
