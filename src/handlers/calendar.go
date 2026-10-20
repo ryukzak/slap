@@ -11,10 +11,11 @@ import (
 	"github.com/ryukzak/slap/src/storage"
 )
 
-// icsTimeFormat renders a UTC timestamp for iCalendar. Times are always
-// emitted in UTC ("Z" suffix) so calendar apps convert the lesson to the
-// viewer's own timezone, without needing a VTIMEZONE block.
-const icsTimeFormat = "20060102T150405Z"
+// icsUTCFormat renders a UTC timestamp for iCalendar ("Z" suffix).
+const icsUTCFormat = "20060102T150405Z"
+
+// icsLocalFormat renders a wall-clock time to be paired with a TZID.
+const icsLocalFormat = "20060102T150405"
 
 // LessonCalendarHandler serves a lesson as a single-event iCalendar file, so
 // it can be added to Apple Calendar, Google Calendar, Outlook, etc. It is
@@ -35,7 +36,7 @@ func LessonCalendarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	lessonURL := fmt.Sprintf("%s://%s/lesson/%s", scheme, r.Host, lesson.ID)
 
-	ics := buildLessonICS(lesson, AppConfig.GetName(), r.Host, lessonURL, AppConfig.GetLessonDuration(), time.Now())
+	ics := buildLessonICS(lesson, AppConfig.GetName(), r.Host, lessonURL, AppConfig.GetLessonDuration(), PrimaryLoc, time.Now())
 
 	w.Header().Set("Content-Type", "text/calendar; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`inline; filename="lesson-%s.ics"`, lesson.ID))
@@ -43,10 +44,16 @@ func LessonCalendarHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildLessonICS renders the iCalendar (RFC 5545) document for a lesson.
-func buildLessonICS(lesson *storage.Lesson, instanceName, host, lessonURL string, duration time.Duration, now time.Time) string {
-	start := lesson.DateTime.UTC()
+// Start and end are pinned to loc (the server's primary timezone) via TZID
+// and a matching VTIMEZONE, so calendar apps show the lesson both in its own
+// zone and converted to the viewer's local time.
+func buildLessonICS(lesson *storage.Lesson, instanceName, host, lessonURL string, duration time.Duration, loc *time.Location, now time.Time) string {
+	start := lesson.DateTime.In(loc)
 	end := start.Add(duration)
-	description := strings.TrimSpace(lesson.Description) + "\n\n" + lessonURL
+	zoneName, _ := start.Zone()
+	description := fmt.Sprintf("%s %s (%s)\n\n%s\n\n%s",
+		start.Format("2006-01-02 15:04"), zoneName, loc.String(),
+		strings.TrimSpace(lesson.Description), lessonURL)
 
 	lines := []string{
 		"BEGIN:VCALENDAR",
@@ -54,17 +61,20 @@ func buildLessonICS(lesson *storage.Lesson, instanceName, host, lessonURL string
 		"PRODID:-//SLAP//Lesson Calendar//EN",
 		"CALSCALE:GREGORIAN",
 		"METHOD:PUBLISH",
+	}
+	lines = append(lines, icsTimezone(loc, start, end)...)
+	lines = append(lines,
 		"BEGIN:VEVENT",
-		"UID:" + icsEscape(lesson.ID+"@"+host),
-		"DTSTAMP:" + now.UTC().Format(icsTimeFormat),
-		"DTSTART:" + start.Format(icsTimeFormat),
-		"DTEND:" + end.Format(icsTimeFormat),
-		"SUMMARY:" + icsEscape(fmt.Sprintf("%s lesson · @%s", instanceName, lesson.TeacherName)),
-		"DESCRIPTION:" + icsEscape(description),
-		"URL:" + lessonURL,
+		"UID:"+icsEscape(lesson.ID+"@"+host),
+		"DTSTAMP:"+now.UTC().Format(icsUTCFormat),
+		"DTSTART;TZID="+loc.String()+":"+start.Format(icsLocalFormat),
+		"DTEND;TZID="+loc.String()+":"+end.Format(icsLocalFormat),
+		"SUMMARY:"+icsEscape(fmt.Sprintf("%s lesson · @%s", instanceName, lesson.TeacherName)),
+		"DESCRIPTION:"+icsEscape(description),
+		"URL:"+lessonURL,
 		"END:VEVENT",
 		"END:VCALENDAR",
-	}
+	)
 
 	var b strings.Builder
 	for _, line := range lines {
@@ -72,6 +82,50 @@ func buildLessonICS(lesson *storage.Lesson, instanceName, host, lessonURL string
 		b.WriteString("\r\n")
 	}
 	return b.String()
+}
+
+// icsTimezone renders a VTIMEZONE block for loc covering [from, to]. It
+// lists every offset period overlapping that range as an explicit
+// STANDARD/DAYLIGHT observance (no RRULE), derived from Go's tz database.
+func icsTimezone(loc *time.Location, from, to time.Time) []string {
+	lines := []string{"BEGIN:VTIMEZONE", "TZID:" + loc.String()}
+	for t := from.In(loc); ; {
+		name, offset := t.Zone()
+		begin, end := t.ZoneBounds()
+		kind := "STANDARD"
+		if t.IsDST() {
+			kind = "DAYLIGHT"
+		}
+		prevOffset := offset
+		dtstart := "19700101T000000"
+		if !begin.IsZero() {
+			_, prevOffset = begin.Add(-time.Second).Zone()
+			dtstart = begin.Format(icsLocalFormat)
+		}
+		lines = append(lines,
+			"BEGIN:"+kind,
+			"DTSTART:"+dtstart,
+			"TZOFFSETFROM:"+icsOffset(prevOffset),
+			"TZOFFSETTO:"+icsOffset(offset),
+			"TZNAME:"+name,
+			"END:"+kind,
+		)
+		if end.IsZero() || end.After(to) {
+			break
+		}
+		t = end.In(loc)
+	}
+	return append(lines, "END:VTIMEZONE")
+}
+
+// icsOffset renders a UTC offset in seconds as +HHMM / -HHMM.
+func icsOffset(seconds int) string {
+	sign := "+"
+	if seconds < 0 {
+		sign = "-"
+		seconds = -seconds
+	}
+	return fmt.Sprintf("%s%02d%02d", sign, seconds/3600, seconds%3600/60)
 }
 
 // icsEscape escapes a TEXT value per RFC 5545 §3.3.11.

@@ -1,9 +1,9 @@
 # Lesson Calendar (.ics) Test
 # The lesson page offers an [add to calendar] button linking to an iCalendar
-# file for the lesson. Times are emitted in UTC ("Z" suffix) so every calendar
-# shows the lesson in the viewer's own timezone. The lesson is created at
-# 18:00 in the server's primary timezone (SLAP_TZ, default Europe/Moscow,
-# UTC+3), so it must start at 15:00Z and last the default 90 minutes.
+# file for the lesson. Times are pinned to the server's primary timezone
+# (SLAP_TZ, default Europe/Moscow) via TZID + VTIMEZONE, so calendars show
+# both the lesson's own zone and the viewer's local time. The lesson is
+# created at 18:00 MSK and lasts the default 90 minutes.
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]) and default SLAP_TZ.
@@ -32,7 +32,7 @@ location: true
 [FormParams]
 date: 2099-12-31
 time: 18:00
-description: Calendar test lesson, with; special chars
+description: a, b; c
 
 HTTP 200
 [Captures]
@@ -66,10 +66,13 @@ header "Content-Type" contains "text/calendar"
 body contains "BEGIN:VCALENDAR\r\n"
 body contains "BEGIN:VEVENT\r\n"
 body contains "UID:{{lesson_id}}@"
-body contains "DTSTART:20991231T150000Z\r\n"
-body contains "DTEND:20991231T163000Z\r\n"
-body contains "/lesson/{{lesson_id}}"
-body contains "Calendar test lesson\\, with\\; special chars"
+body contains "BEGIN:VTIMEZONE\r\nTZID:Europe/Moscow\r\n"
+body contains "TZOFFSETTO:+0300\r\n"
+body contains "DTSTART;TZID=Europe/Moscow:20991231T180000\r\n"
+body contains "DTEND;TZID=Europe/Moscow:20991231T193000\r\n"
+body contains "18:00 MSK"
+body contains "URL:http"
+body contains "a\\, b\\; c"
 body contains "END:VCALENDAR\r\n"
 
 # Step 5: Unknown lesson returns 404
