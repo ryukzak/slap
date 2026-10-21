@@ -17,7 +17,7 @@ func TestBuildLessonICS(t *testing.T) {
 		ID:          "abc",
 		TeacherName: "teacher",
 		DateTime:    time.Date(2026, 10, 21, 18, 0, 0, 0, moscow),
-		Description: "Line one, with; chars\nLine two",
+		Description: "\n# Lab defence\nLine one, with; chars\nLine two",
 	}
 	now := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 
@@ -31,8 +31,8 @@ func TestBuildLessonICS(t *testing.T) {
 		"TZOFFSETTO:+0300\r\nTZNAME:MSK\r\n",
 		"DTSTART;TZID=Europe/Moscow:20261021T180000\r\n",
 		"DTEND;TZID=Europe/Moscow:20261021T193000\r\n",
-		"SUMMARY:slap lesson · @teacher\r\n",
-		`DESCRIPTION:2026-10-21 18:00 MSK (Europe/Moscow)\n\nLine one\, with\; chars`,
+		"SUMMARY:slap · @teacher · Lab defence\r\n",
+		`DESCRIPTION:2026-10-21 18:00 MSK (Europe/Moscow)\n\n# Lab defence\nLine on`,
 		"END:VCALENDAR\r\n",
 	} {
 		if !strings.Contains(ics, want) {

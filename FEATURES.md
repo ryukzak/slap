@@ -73,6 +73,8 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 
 1. Teacher schedules a lesson with a date, time, and student capacity limit.
 2. Teacher adds a short description of the lesson to set student expectations.
+   - The "add lesson" form is pre-filled with the last description the teacher used (remembered in
+     the browser's local storage), falling back to `default_lesson_description` from the config.
 3. Student registers for the lesson before it starts — registration is blocked once the lesson begins.
    - The student must have an existing `submit` record for the task they want to register.
    - A per-task waiting period applies: a student cannot re-register a task until a configured
@@ -185,8 +187,9 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 
 1. On a lesson page (or its public preview), the user clicks `[add to calendar]` next to the lesson date.
 2. The system serves an iCalendar file (`/lesson/{id}/calendar.ics`) with a single event:
-   teacher name, start time, end time (start + `lesson_duration_minutes`, default 90), the
-   lesson description and a link back to the lesson page.
+   title `<instance name> · @<teacher> · <first line of the description>` (a leading Markdown
+   `#` is stripped), start time, end time (start + `lesson_duration_minutes`, default 90), the
+   lesson description as raw Markdown and a link back to the lesson page.
 3. Times are pinned to the server's primary timezone (`SLAP_TZ`, default `Europe/Moscow`) via
    `TZID` plus a matching `VTIMEZONE` block, and the description starts with the lesson time in
    that zone (e.g. `18:00 MSK`). The calendar app (Apple Calendar on macOS/iOS, Google Calendar,

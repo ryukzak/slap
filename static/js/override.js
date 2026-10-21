@@ -156,4 +156,21 @@ document.addEventListener("DOMContentLoaded", function () {
     openRecords = {};
     savedTextareas = {};
   });
+
+  // Remember the last description used to create a lesson and prefill the
+  // "add lesson" form with it next time (overriding the configured default).
+  var lessonDescription = document.getElementById("lesson-description");
+  if (lessonDescription) {
+    try {
+      var lastDescription = localStorage.getItem("slap-lesson-description");
+      if (lastDescription) lessonDescription.value = lastDescription;
+    } catch (e) {}
+    if (lessonDescription.form) {
+      lessonDescription.form.addEventListener("submit", function () {
+        try {
+          localStorage.setItem("slap-lesson-description", lessonDescription.value);
+        } catch (e) {}
+      });
+    }
+  }
 });

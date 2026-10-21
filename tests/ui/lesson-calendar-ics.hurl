@@ -73,6 +73,7 @@ body contains "DTEND;TZID=Europe/Moscow:20991231T193000\r\n"
 body contains "18:00 MSK"
 body contains "URL:http"
 body contains "a\\, b\\; c"
+body matches "SUMMARY:[^\\r]+ · @[^\\r]+ · a\\\\, b\\\\; c\\r\\n"
 body contains "END:VCALENDAR\r\n"
 
 # Step 5: Unknown lesson returns 404
