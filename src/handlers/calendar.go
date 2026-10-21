@@ -69,7 +69,7 @@ func buildLessonICS(lesson *storage.Lesson, instanceName, host, lessonURL string
 		"DTSTAMP:"+now.UTC().Format(icsUTCFormat),
 		"DTSTART;TZID="+loc.String()+":"+start.Format(icsLocalFormat),
 		"DTEND;TZID="+loc.String()+":"+end.Format(icsLocalFormat),
-		"SUMMARY:"+icsEscape(fmt.Sprintf("%s lesson · @%s", instanceName, lesson.TeacherName)),
+		"SUMMARY:"+icsEscape(lessonSummary(lesson, instanceName)),
 		"DESCRIPTION:"+icsEscape(description),
 		"URL:"+lessonURL,
 		"END:VEVENT",
@@ -82,6 +82,21 @@ func buildLessonICS(lesson *storage.Lesson, instanceName, host, lessonURL string
 		b.WriteString("\r\n")
 	}
 	return b.String()
+}
+
+// lessonSummary builds the event title: instance name, teacher, and the
+// first non-empty line of the description with any Markdown heading marker
+// stripped (e.g. "slap · @teacher · Lab defence").
+func lessonSummary(lesson *storage.Lesson, instanceName string) string {
+	parts := []string{instanceName, "@" + lesson.TeacherName}
+	for _, line := range strings.Split(lesson.Description, "\n") {
+		line = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "#"))
+		if line != "" {
+			parts = append(parts, line)
+			break
+		}
+	}
+	return strings.Join(parts, " · ")
 }
 
 // icsTimezone renders a VTIMEZONE block for loc covering [from, to]. It
