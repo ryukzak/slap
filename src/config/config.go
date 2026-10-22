@@ -24,6 +24,14 @@ const DefaultTokenDuration = 24 * time.Hour
 // `lesson_duration_minutes` is not set in the config.
 const DefaultLessonDuration = 90 * time.Minute
 
+// DefaultLessonCheckWindowBefore and DefaultLessonCheckWindowAfter bound how
+// far from a lesson's start a teacher's check still counts as that lesson's
+// work when it is left from the task page instead of the lesson page.
+const (
+	DefaultLessonCheckWindowBefore = 1 * time.Hour
+	DefaultLessonCheckWindowAfter  = 6 * time.Hour
+)
+
 // Config represents the application configuration
 type Config struct {
 	// Name identifies this SLAP instance (e.g. "csa.2026.2") and is shown in
@@ -50,6 +58,30 @@ type Config struct {
 	// of its calendar (.ics) event. When unset, DefaultLessonDuration
 	// applies. Must be positive when set.
 	LessonDurationMinutes *int `yaml:"lesson_duration_minutes,omitempty"`
+
+	// LessonCheckWindowBeforeHours and LessonCheckWindowAfterHours bound the
+	// window around a lesson's start in which a check left from the task page
+	// still counts as that lesson's work, provided the acting teacher owns the
+	// lesson. Outside it the check is treated as taken outside the lesson: the
+	// registration is dropped first, so the lesson neither keeps the student
+	// queued nor claims the check. Reviews submitted from the lesson page itself
+	// are always that lesson's work and ignore the window. When unset, the
+	// Default* constants apply — read them through GetLessonCheckWindow.
+	LessonCheckWindowBeforeHours *int `yaml:"lesson_check_window_before_hours,omitempty"`
+	LessonCheckWindowAfterHours  *int `yaml:"lesson_check_window_after_hours,omitempty"`
+}
+
+// GetLessonCheckWindow returns how far before and after a lesson's start a
+// task-page check still belongs to that lesson.
+func (c *Config) GetLessonCheckWindow() (before, after time.Duration) {
+	before, after = DefaultLessonCheckWindowBefore, DefaultLessonCheckWindowAfter
+	if c.LessonCheckWindowBeforeHours != nil {
+		before = time.Duration(*c.LessonCheckWindowBeforeHours) * time.Hour
+	}
+	if c.LessonCheckWindowAfterHours != nil {
+		after = time.Duration(*c.LessonCheckWindowAfterHours) * time.Hour
+	}
+	return before, after
 }
 
 // ScoreRule defines a rule that adds effect to student's total score
@@ -190,6 +222,13 @@ func LoadConfig(filePath string) (*Config, error) {
 
 	if config.LessonDurationMinutes != nil && *config.LessonDurationMinutes <= 0 {
 		return nil, fmt.Errorf("lesson_duration_minutes must be positive")
+	}
+
+	if config.LessonCheckWindowBeforeHours != nil && *config.LessonCheckWindowBeforeHours < 0 {
+		return nil, fmt.Errorf("lesson_check_window_before_hours must not be negative (use 0 to disable)")
+	}
+	if config.LessonCheckWindowAfterHours != nil && *config.LessonCheckWindowAfterHours < 0 {
+		return nil, fmt.Errorf("lesson_check_window_after_hours must not be negative (use 0 to disable)")
 	}
 
 	// Check all tasks are exist

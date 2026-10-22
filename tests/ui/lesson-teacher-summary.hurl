@@ -89,6 +89,7 @@ HTTP 303
 POST {{base_url}}/user/{{student_id}}/task/task1/journal
 Cookie: user_data={{teacher_token}}
 [FormParams]
+lesson_id: {{lesson_id}}
 content: 0 needs a full rework
 
 HTTP 303

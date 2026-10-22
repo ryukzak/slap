@@ -77,7 +77,7 @@
         <a class="text-yellow-400 hover:text-yellow-300"
            href="/lesson/{{$record.LessonID}}">Queued</a>
         {{ else if eq $record.Type "revoke" }}
-        <span class="text-red-400">Dropped</span>
+        <span class="text-red-400">{{ if ne $record.AuthorID $record.StudentID }}Removed{{ else }}Dropped{{ end }}</span>
         {{ else if eq $record.Type "reviewed" }}
         <span class="text-green-400">Checked</span>
         {{ end }}
@@ -145,13 +145,18 @@
         #{{ $.QueuePosition }} of {{ $.QueueTotal }} in queue
       </div>
       {{ end }}
-    </li>
-  </ul>
+      {{ if and $.IsTeacher (ne $.StudentID $.SessionUserID) }}
+    <div class="text-xs px-1 pb-1 {{ if $.CheckCountsForLesson }}text-gray-400{{ else }}text-orange-400{{ end }}">
+    {{ if $.CheckCountsForLesson }}A check left here counts as this lesson's check.{{ else }}A check left here is outside this lesson: it drops the task from the queue first, and the lesson will not be credited with it.{{ end }}
+    </div>
+    {{ end }}
+  </li>
+</ul>
 {{ else }}
-  <p class="text-gray-500 text-xs">
-    Only student can register own submitted task to the lesson.
-  </p>
-  {{ end }}
+<p class="text-gray-500 text-xs">
+  Only student can register own submitted task to the lesson.
+</p>
+{{ end }}
 </section>
 {{ end }}
 <section class="mb-8">
