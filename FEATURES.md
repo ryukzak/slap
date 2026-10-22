@@ -73,8 +73,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 
 1. Teacher schedules a lesson with a date, time, and student capacity limit.
 2. Teacher adds a short description of the lesson to set student expectations.
-   - The "add lesson" form is pre-filled with the last description the teacher used (remembered in
-     the browser's local storage), falling back to `default_lesson_description` from the config.
+   - The "add lesson" form remembers the last 5 descriptions the teacher used (in the browser's
+     local storage). It is pre-filled with the latest one, and a `recent:` row under the field
+     offers all of them as presets — labelled by their first line — plus `[default]` for
+     `default_lesson_description` from the config. Clicking a preset replaces the field content.
 3. Student registers for the lesson before it starts — registration is blocked once the lesson begins.
    - The student must have an existing `submit` record for the task they want to register.
    - A per-task waiting period applies: a student cannot re-register a task until a configured

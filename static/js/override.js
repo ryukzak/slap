@@ -88,6 +88,63 @@ document.addEventListener("click", function (e) {
   }
 });
 
+// Recently used lesson descriptions, newest first, kept in localStorage so
+// the "add lesson" form can offer them as presets.
+var RECENT_LESSON_DESCRIPTIONS_KEY = "slap-lesson-descriptions";
+var RECENT_LESSON_DESCRIPTIONS_MAX = 5;
+
+function loadRecentLessonDescriptions() {
+  try {
+    var list = JSON.parse(localStorage.getItem(RECENT_LESSON_DESCRIPTIONS_KEY));
+    if (Array.isArray(list)) return list.filter(function (d) { return typeof d === "string" && d.trim(); });
+    // migrate the single description remembered by earlier versions
+    var last = localStorage.getItem("slap-lesson-description");
+    return last && last.trim() ? [last] : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveRecentLessonDescription(description) {
+  if (!description.trim()) return;
+  var list = loadRecentLessonDescriptions().filter(function (d) { return d !== description; });
+  list.unshift(description);
+  try {
+    localStorage.setItem(RECENT_LESSON_DESCRIPTIONS_KEY,
+      JSON.stringify(list.slice(0, RECENT_LESSON_DESCRIPTIONS_MAX)));
+    localStorage.removeItem("slap-lesson-description");
+  } catch (e) {}
+}
+
+function lessonPresetLabel(description) {
+  var line = description.trim().split("\n")[0].replace(/^#+\s*/, "").trim();
+  return line.length > 40 ? line.slice(0, 39) + "…" : line;
+}
+
+function renderLessonPresets(textarea, recent, configDefault) {
+  var container = document.getElementById("lesson-presets");
+  if (!container || !recent.length) return;
+  function addPreset(label, description) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "text-blue-400 hover:text-blue-300 text-xs";
+    button.textContent = "[" + label + "]";
+    button.title = description;
+    button.addEventListener("click", function () {
+      textarea.value = description;
+      textarea.focus();
+    });
+    container.appendChild(button);
+  }
+  recent.forEach(function (description) {
+    addPreset(lessonPresetLabel(description), description);
+  });
+  if (configDefault.trim() && recent.indexOf(configDefault) === -1) {
+    addPreset("default", configDefault);
+  }
+  container.classList.remove("hidden");
+}
+
 // Initialize all accordions when the DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
   applyTheme(currentTheme());
@@ -157,19 +214,18 @@ document.addEventListener("DOMContentLoaded", function () {
     savedTextareas = {};
   });
 
-  // Remember the last description used to create a lesson and prefill the
-  // "add lesson" form with it next time (overriding the configured default).
+  // Remember the last few descriptions used to create a lesson: prefill the
+  // "add lesson" form with the latest one (overriding the configured default)
+  // and offer all of them as presets.
   var lessonDescription = document.getElementById("lesson-description");
   if (lessonDescription) {
-    try {
-      var lastDescription = localStorage.getItem("slap-lesson-description");
-      if (lastDescription) lessonDescription.value = lastDescription;
-    } catch (e) {}
+    var configDefault = lessonDescription.defaultValue;
+    var recent = loadRecentLessonDescriptions();
+    if (recent.length) lessonDescription.value = recent[0];
+    renderLessonPresets(lessonDescription, recent, configDefault);
     if (lessonDescription.form) {
       lessonDescription.form.addEventListener("submit", function () {
-        try {
-          localStorage.setItem("slap-lesson-description", lessonDescription.value);
-        } catch (e) {}
+        saveRecentLessonDescription(lessonDescription.value);
       });
     }
   }
