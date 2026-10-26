@@ -35,6 +35,16 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    - Records with status `review` are teacher feedback entries, shown inline below the submission they belong to.
    - A compact summary of record counts by status is shown next to the task status (e.g. `p:2 f:1 c:1`).
 
+# Use Case: student sees their task variant
+
+1. The teacher assigns variants in a `;`-separated CSV (`id;<task-id>;...` header, one row per
+   student) and points `variants_file` in the config at it.
+2. On the task page, a student with an assigned variant sees a `// variant` section between
+   `// register` and `// description`. Teachers see the same section on that student's task page.
+3. On the lesson page, the variant is shown in the expanded details of the student's queue row,
+   under the submitted/registered times — to teachers and to the student themselves only.
+4. A task with no variant for the student (empty cell or no row) shows nothing.
+
 # Use Case: student task overview
 
 1. On a student's profile page, the "// your tasks" list shows, per task, in

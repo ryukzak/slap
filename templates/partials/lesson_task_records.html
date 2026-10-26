@@ -118,6 +118,10 @@
     submitted: {{ if $record.CreatedAt.IsZero }}-{{ else }}{{ formatDateTime $record.CreatedAt }}{{ end }}
       <br />
     registered: {{ if $record.SubmitAt.IsZero }}-{{ else }}{{ formatDateTime $record.SubmitAt }}{{ end }}
+      {{ if $record.Variant }}
+      <br />
+      variant: <span class="lesson-record-variant text-gray-300">{{$record.Variant}}</span>
+      {{ end }}
     </div>
   </div>
   {{ if $record.ReviewRecords }}

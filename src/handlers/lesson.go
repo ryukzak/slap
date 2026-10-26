@@ -84,6 +84,9 @@ type TaskRecordWithInfo struct {
 	// Tags are this record's active tags allow-listed for lesson-page display
 	// (see config.Task.IsAllowedTag).
 	Tags []storage.Tag
+	// Variant is the student's assigned variant for the task from the
+	// config's variants file, or "" when none is assigned.
+	Variant string
 	// TaskVisible mirrors config.Task.Visible: when true, non-owner students
 	// viewing this lesson see a content excerpt instead of the "hidden" notice.
 	TaskVisible bool
@@ -401,6 +404,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			JournalSummary:  strings.Join(summaryParts, " "),
 			Notes:           getNotes(taskRecord.StudentID),
 			Tags:            lessonTags(taskRecord.StudentID, taskRecord.TaskID),
+			Variant:         AppConfig.GetVariant(taskRecord.StudentID, taskRecord.TaskID),
 			TaskVisible:     task != nil && task.Visible,
 		})
 	}
@@ -418,6 +422,7 @@ func buildLessonRecords(lesson *storage.Lesson, showRevoked bool, sortMode SortM
 			TaskTitle:   taskTitle,
 			Notes:       getNotes(pr.StudentID),
 			Tags:        lessonTags(pr.StudentID, pr.TaskID),
+			Variant:     AppConfig.GetVariant(pr.StudentID, pr.TaskID),
 			TaskVisible: task != nil && task.Visible,
 		})
 	}
