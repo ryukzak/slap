@@ -72,6 +72,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 # Use Case: teacher prepares queue for the lesson
 
 1. Teacher schedules a lesson with a date, time, and student capacity limit.
+   - If plans change, the teacher can move the lesson to another date and time using the
+     "edit date" form on the lesson page (only the lesson's own teacher sees it). Registrations
+     are kept. A registration deadline set via "extend registration" stays as it is; otherwise
+     registration closes at the new start time.
 2. Teacher adds a short description of the lesson to set student expectations.
    - The "add lesson" form remembers the last 5 descriptions the teacher used (in the browser's
      local storage). It is pre-filled with the latest one, and a `recent:` row under the field
