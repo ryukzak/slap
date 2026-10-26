@@ -254,6 +254,21 @@ func (d *DB) SetLessonCapacity(lessonID LessonID, capacity int) error {
 	})
 }
 
+func (d *DB) SetLessonDateTime(lessonID LessonID, datetime time.Time) error {
+	if datetime.IsZero() {
+		return fmt.Errorf("lesson datetime cannot be empty")
+	}
+	return d.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(d.bucketName)
+		lesson, err := getValue[Lesson](b, lessonID)
+		if err != nil {
+			return err
+		}
+		lesson.DateTime = datetime
+		return setValue(b, lessonID, *lesson)
+	})
+}
+
 func (d *DB) SetLessonDeadline(lessonID LessonID, deadline time.Time) error {
 	return d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)

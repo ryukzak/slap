@@ -497,6 +497,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		ShowRevoked      bool
 		TotalRecords     int
 		DefaultDateTime  time.Time
+		LessonLocalTime  time.Time
 		TZName           string
 		SortMode         SortMode
 		Capacity         int
@@ -512,6 +513,7 @@ func LessonDetailHandler(w http.ResponseWriter, r *http.Request) {
 		ShowRevoked:      showRevoked,
 		TotalRecords:     totalRecords,
 		DefaultDateTime:  time.Now().In(PrimaryLoc).Add(15 * time.Minute),
+		LessonLocalTime:  lesson.DateTime.In(PrimaryLoc),
 		TZName:           PrimaryTZName,
 		SortMode:         sortMode,
 		Capacity:         lesson.Capacity,
@@ -714,6 +716,51 @@ func ExtendLessonDeadlineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("action=extend_deadline user=%s lesson=%s deadline=%s", user.ID, lessonID, deadline.Format("2006-01-02T15:04"))
+	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
+}
+
+func UpdateLessonDateTimeHandler(w http.ResponseWriter, r *http.Request) {
+	user := teacherSession(w, r)
+	if user == nil {
+		return
+	}
+
+	lessonID := mux.Vars(r)["lessonID"]
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		return
+	}
+
+	dateStr := r.FormValue("date")
+	timeStr := r.FormValue("time")
+	if dateStr == "" || timeStr == "" {
+		http.Error(w, "Date and time are required", http.StatusBadRequest)
+		return
+	}
+
+	datetime, err := time.ParseInLocation("2006-01-02 15:04", dateStr+" "+timeStr, PrimaryLoc)
+	if err != nil {
+		http.Error(w, "Invalid date/time format", http.StatusBadRequest)
+		return
+	}
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+	if lesson.TeacherID != user.ID {
+		http.Error(w, "Only the lesson's teacher can change the date", http.StatusForbidden)
+		return
+	}
+
+	if err := DB.SetLessonDateTime(lessonID, datetime); err != nil {
+		log.Printf("action=update_lesson_datetime user=%s lesson=%s error=%v", user.ID, lessonID, err)
+		http.Error(w, "Failed to update date", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("action=update_lesson_datetime user=%s lesson=%s datetime=%s", user.ID, lessonID, datetime.Format("2006-01-02T15:04"))
 	http.Redirect(w, r, "/lesson/"+lessonID, http.StatusSeeOther)
 }
 

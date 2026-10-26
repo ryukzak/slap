@@ -124,6 +124,34 @@
 </section>
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
+    // edit date
+  </div>
+  <form class="space-y-2 max-w-2xl"
+        action="/api/lesson/{{.Lesson.ID}}/datetime"
+        method="post">
+    <div class="flex items-center space-x-2">
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
+             type="date"
+             name="date"
+             value="{{.LessonLocalTime.Format "2006-01-02"}}"
+             required />
+      <input class="bg-gray-800 border border-gray-700 text-gray-300 text-xs px-3 py-2 rounded h-8"
+             type="time"
+             name="time"
+             lang="en-GB"
+             value="{{.LessonLocalTime.Format "15:04"}}"
+             step="60"
+             required />
+      <span class="text-xs text-gray-400">{{.TZName}}</span>
+      <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-2 rounded h-8"
+              type="submit">
+        [set date]
+      </button>
+    </div>
+  </form>
+</section>
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
     // edit capacity
   </div>
   <form class="space-y-2 max-w-2xl"
