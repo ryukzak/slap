@@ -225,6 +225,10 @@ run_test tests/ui/lesson-datetime-edit.hurl \
     --variable "student_id=${TIMESTAMP}46" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/task-variant-display.hurl \
+    --variable "student_id=${TIMESTAMP}47" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

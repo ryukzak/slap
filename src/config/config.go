@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -69,6 +70,13 @@ type Config struct {
 	// Default* constants apply — read them through GetLessonCheckWindow.
 	LessonCheckWindowBeforeHours *int `yaml:"lesson_check_window_before_hours,omitempty"`
 	LessonCheckWindowAfterHours  *int `yaml:"lesson_check_window_after_hours,omitempty"`
+
+	// VariantsFile is a `;`-separated CSV assigning each student a variant per
+	// task (header `id;<task-id>;...`). A relative path is resolved against
+	// the config file's directory. Loaded into Variants; read through
+	// GetVariant.
+	VariantsFile string   `yaml:"variants_file,omitempty"`
+	Variants     Variants `yaml:"-"`
 }
 
 // GetLessonCheckWindow returns how far before and after a lesson's start a
@@ -235,6 +243,18 @@ func LoadConfig(filePath string) (*Config, error) {
 	taskExists := make(map[storage.TaskID]bool)
 	for _, task := range config.Tasks {
 		taskExists[task.ID] = true
+	}
+
+	if config.VariantsFile != "" {
+		path := config.VariantsFile
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(filepath.Dir(filePath), path)
+		}
+		variants, err := loadVariants(path, taskExists)
+		if err != nil {
+			return nil, err
+		}
+		config.Variants = variants
 	}
 
 	// Validate score rules

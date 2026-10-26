@@ -159,6 +159,16 @@
 {{ end }}
 </section>
 {{ end }}
+{{ if .Variant }}
+<section class="mb-8">
+  <div class="text-xs text-gray-500 mb-2">
+    // variant
+  </div>
+  <div class="text-xs">
+    <span class="task-variant">{{.Variant}}</span>
+  </div>
+</section>
+{{ end }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
     // description

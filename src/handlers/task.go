@@ -60,6 +60,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		QueueTotal       int
 		WaitingMessage   string
 		Tags             []storage.Tag
+		Variant          string
 		// CheckCountsForLesson tells a teacher looking at a queued task whether
 		// reviewing it here would count as the lesson's check or drop it from the
 		// lesson queue first. Uses the same predicate as the review handler.
@@ -73,6 +74,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SessionUserID: user.ID,
 		TaskID:        taskID,
 		IsTeacher:     user.IsTeacher,
+		Variant:       AppConfig.GetVariant(userIDFromURL, taskID),
 	}
 
 	if userData != nil {

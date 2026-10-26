@@ -10,6 +10,12 @@ teacher_ids:
   - "123"
   - "12345"
 
+# Per-student task variants: a `;`-separated CSV whose header is
+# `id;<task-id>;...` and whose rows are `<student-id>;<variant>;...`.
+# Empty cells mean no variant. Relative paths resolve against this file's
+# directory. Shown on the task page and on lesson queue rows.
+variants_file: variants.csv
+
 # Default description pre-filled when creating a new lesson
 default_lesson_description: |
   ## Agenda
