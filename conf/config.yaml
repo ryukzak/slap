@@ -16,6 +16,13 @@ teacher_ids:
 # directory. Shown on the task page and on lesson queue rows.
 variants_file: variants.csv
 
+# Token that lets a script fetch the students CSV report (/users/csv) with
+# `Authorization: Bearer <token>` instead of a teacher session, e.g. to sync
+# it into a Google Sheet. At least 32 characters; generate one with
+# `openssl rand -hex 32`. Omit to keep the report teacher-only.
+# This is a dev-only value — never reuse it in production.
+report_token: "dev-report-token-0123456789abcdef"
+
 # Default description pre-filled when creating a new lesson
 default_lesson_description: |
   ## Agenda

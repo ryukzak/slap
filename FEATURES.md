@@ -183,6 +183,9 @@ Note: role assignment happens at signup and is re-evaluated from config on every
    Interaction`, is when the student last submitted work or a teacher last checked it, across all
    tasks (lesson registrations and revokes don't count), as `YYYY-MM-DD HH:MM` in the primary
    timezone; empty if neither ever happened. It shows at a glance which students have gone quiet.
+7. When `report_token` is configured, a script can fetch the same CSV (`/users/csv`) without a
+   teacher session by sending `Authorization: Bearer <token>`, e.g. to sync it into a Google
+   Sheet on a schedule. A missing or wrong token gets no data.
 
 # Use Case: teacher views teacher directory
 

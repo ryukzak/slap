@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	"encoding/csv"
 	"fmt"
 	"log"
@@ -1042,6 +1043,18 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// hasReportToken reports whether the request carries the configured
+// report_token as `Authorization: Bearer <token>`. Always false when no token
+// is configured.
+func hasReportToken(r *http.Request) bool {
+	want := AppConfig.ReportToken
+	if want == "" {
+		return false
+	}
+	got, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	return ok && subtle.ConstantTimeCompare([]byte(got), []byte(want)) == 1
+}
+
 // lastInteraction returns when the student last submitted work or a teacher
 // last checked it, across all tasks; zero when neither ever happened.
 // Lesson registrations and revokes don't count.
@@ -1069,10 +1082,10 @@ func formatCSVTime(t time.Time) string {
 	return t.In(PrimaryLoc).Format("2006-01-02 15:04")
 }
 
-// UserListCSVHandler returns a CSV of students with their scores per task. Teacher-only.
+// UserListCSVHandler returns a CSV of students with their scores per task.
+// Teacher-only, or a client presenting the configured report_token.
 func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
-	sessionUser := teacherSession(w, r)
-	if sessionUser == nil {
+	if !hasReportToken(r) && teacherSession(w, r) == nil {
 		return
 	}
 
