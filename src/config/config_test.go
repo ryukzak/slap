@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -213,5 +214,34 @@ tasks:
 		if _, err := LoadConfig(path); err == nil {
 			t.Fatalf("expected error for lesson_duration_minutes=%d, got nil", v)
 		}
+	}
+}
+
+func TestLoadConfig_ReportToken(t *testing.T) {
+	token := strings.Repeat("a", MinReportTokenLen)
+	path := writeTempConfig(t, fmt.Sprintf(`
+report_token: %q
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`, token))
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.ReportToken != token {
+		t.Errorf("ReportToken = %q, want %q", cfg.ReportToken, token)
+	}
+}
+
+func TestLoadConfig_ReportTokenRejectsShort(t *testing.T) {
+	path := writeTempConfig(t, `
+report_token: "short"
+tasks:
+  - id: "task1"
+    title: "Lab 1"
+`)
+	if _, err := LoadConfig(path); err == nil {
+		t.Fatal("expected error for a short report_token, got nil")
 	}
 }

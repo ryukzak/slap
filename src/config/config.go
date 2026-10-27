@@ -77,7 +77,18 @@ type Config struct {
 	// GetVariant.
 	VariantsFile string   `yaml:"variants_file,omitempty"`
 	Variants     Variants `yaml:"-"`
+
+	// ReportToken, when set, lets a non-browser client (e.g. a Google Apps
+	// Script syncing a spreadsheet) fetch the students CSV report by sending
+	// `Authorization: Bearer <token>` instead of a teacher session. Must be
+	// at least MinReportTokenLen characters. When unset, the report stays
+	// reachable only through a teacher session.
+	ReportToken string `yaml:"report_token,omitempty"`
 }
+
+// MinReportTokenLen is the shortest report_token accepted, so a guessable
+// token can't expose every student's scores.
+const MinReportTokenLen = 32
 
 // GetLessonCheckWindow returns how far before and after a lesson's start a
 // task-page check still belongs to that lesson.
@@ -237,6 +248,10 @@ func LoadConfig(filePath string) (*Config, error) {
 	}
 	if config.LessonCheckWindowAfterHours != nil && *config.LessonCheckWindowAfterHours < 0 {
 		return nil, fmt.Errorf("lesson_check_window_after_hours must not be negative (use 0 to disable)")
+	}
+
+	if config.ReportToken != "" && len(config.ReportToken) < MinReportTokenLen {
+		return nil, fmt.Errorf("report_token must be at least %d characters (generate one with `openssl rand -hex 32`)", MinReportTokenLen)
 	}
 
 	// Check all tasks are exist

@@ -58,6 +58,8 @@ default_lesson_description: |
 
 variants_file: assigned-vars.csv
 
+report_token: "<output of: openssl rand -hex 32>"
+
 tasks:
   - id: "task1"
     title: "Lab 1"
@@ -74,6 +76,7 @@ tasks:
   - **visible** — when `true`, students see a short excerpt and tags of other students' submissions for this task on a shared lesson page (not just their own), so they can spot duplicate topics before the lesson; defaults to `false`. Full content stays restricted to the author and teachers.
   - **tags** — this task's allow-list of tag names shown on the lesson page. Only a teacher can tag a task record, by writing `#tag` (and remove one with `-#tag`) anywhere in a review — a student writing `#tag` in their own submission has no effect. The task page always shows every active tag, but the lesson page only shows tags listed here — so a tag can be used freely and "promoted" to the lesson page later just by adding it to this task's list. Scoped per task, so a tag meant for one task (e.g. a group tag on a presentation task) can't unexpectedly show up as "allowed" on another task's lesson-page rows.
 - **variants_file** — optional `;`-separated CSV assigning each student a variant per task. The first row is `id;<task-id>;<task-id>;...`, every other row is `<student-id>;<variant>;...`; an empty cell means no variant for that task. A relative path is resolved against the config file's directory, and the file is read once at startup. The variant is shown on the student's task page and in the student's queue row details on the lesson page (to teachers and the student only). Every task column must name a configured task, and a student may appear only once.
+- **report_token** — optional secret that lets a script fetch the students CSV report (`/users/csv`) by sending `Authorization: Bearer <token>` instead of signing in as a teacher, e.g. to [sync it into a Google Sheet](#syncing-the-report-to-google-sheets). Must be at least 32 characters; generate one with `openssl rand -hex 32`. Anyone holding it can read every student's scores, so keep it out of version control and rotate it by changing the value and restarting. When unset, the report is teacher-only.
 - **default_lesson_description** — pre-filled text when creating a new lesson; once a teacher has created a lesson, their browser remembers the last 5 descriptions used, pre-fills the latest and offers all of them (plus this default) as presets
 - **course_start** / **course_end** — optional; when both are set, they bound the shared time scale used by the activity timeline on a student's profile page (every student's timeline is then plotted on the same window, so positions are directly comparable across students) and by the teacher dashboard's course activity heatmap (its weekly columns then span this window instead of the earliest-to-latest record seen). When unset, both fall back to the earliest-to-latest task activity actually recorded.
 - **token_duration_hours** — how many hours a signed-in session (JWT + cookie) stays valid before requiring sign-in again; defaults to `24`. Must be positive.
@@ -92,6 +95,38 @@ tasks:
 | `SLAP_SECURE_COOKIES` | no | `false` | Set to `true` for HTTPS deployments |
 | `SLAP_POSTHOG_KEY` | no | built-in | PostHog analytics API key |
 | `SLAP_POSTHOG_HOST` | no | `https://eu.i.posthog.com` | PostHog host URL |
+
+### Syncing the report to Google Sheets
+
+With `report_token` set, a Google Apps Script bound to a spreadsheet can pull `/users/csv` on a schedule. The report has one row per student: ID, name, a score per task, the bonus/penalty total, and `Last Interaction` (the student's latest submission or teacher check, in `SLAP_TZ`). The script runs on Google's servers, so SLAP must be reachable from the internet.
+
+1. Set `report_token` in the config and restart SLAP. Check it works:
+   ```sh
+   curl -H "Authorization: Bearer $TOKEN" https://slap.example.com/users/csv
+   ```
+2. Create a Google Sheet and add a tab named `Students`. The script overwrites this tab on every run, so keep your own notes and formulas on other tabs (look rows up by ID with `XLOOKUP`/`VLOOKUP`).
+3. Open **Extensions → Apps Script** and paste:
+   ```js
+   function syncSlapReport() {
+     const props = PropertiesService.getScriptProperties();
+     const resp = UrlFetchApp.fetch(props.getProperty('SLAP_URL') + '/users/csv', {
+       headers: { Authorization: 'Bearer ' + props.getProperty('SLAP_REPORT_TOKEN') },
+       followRedirects: false,
+       muteHttpExceptions: true,
+     });
+     if (resp.getResponseCode() !== 200) {
+       throw new Error('SLAP returned ' + resp.getResponseCode());
+     }
+     const rows = Utilities.parseCsv(resp.getContentText());
+     const sheet = SpreadsheetApp.getActive().getSheetByName('Students');
+     sheet.clearContents();
+     sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+     sheet.getRange(1, rows[0].length + 2).setValue('synced ' + new Date().toISOString());
+   }
+   ```
+4. In **Project Settings → Script Properties**, add `SLAP_URL` (e.g. `https://slap.example.com`, no trailing slash) and `SLAP_REPORT_TOKEN`. The token stays out of the script code, so sharing the sheet doesn't share it, though sheet editors can still open the script settings.
+5. Click **Run** once and grant the permissions Google asks for (the script reads and writes this spreadsheet and fetches external URLs). No Google Cloud project or service account is needed: the script runs as you.
+6. In **Triggers** (the clock icon), add a trigger: function `syncSlapReport`, event source *Time-driven*, e.g. every hour. Failed runs are emailed to you.
 
 ## Documentation
 
