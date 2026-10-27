@@ -1042,6 +1042,33 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// lastInteraction returns when the student last submitted work or a teacher
+// last checked it, across all tasks; zero when neither ever happened.
+// Lesson registrations and revokes don't count.
+func lastInteraction(allRecords map[storage.TaskID][]storage.TaskRecord) time.Time {
+	var last time.Time
+	for _, records := range allRecords {
+		for _, rec := range records {
+			if rec.Type != storage.SubmitRecord && rec.Type != storage.ReviewedRecord {
+				continue
+			}
+			if rec.CreatedAt.After(last) {
+				last = rec.CreatedAt
+			}
+		}
+	}
+	return last
+}
+
+// formatCSVTime renders t for the CSV report in the primary timezone, in a
+// form spreadsheets parse as a date-time; empty for the zero time.
+func formatCSVTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.In(PrimaryLoc).Format("2006-01-02 15:04")
+}
+
 // UserListCSVHandler returns a CSV of students with their scores per task. Teacher-only.
 func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	sessionUser := teacherSession(w, r)
@@ -1066,7 +1093,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 	for _, task := range AppConfig.Tasks {
 		header = append(header, "Score "+task.Title)
 	}
-	header = append(header, "Bonus/Penalty")
+	header = append(header, "Bonus/Penalty", "Last Interaction")
 	if err := cw.Write(header); err != nil {
 		log.Printf("Error writing CSV header: %v", err)
 		return
@@ -1086,7 +1113,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			for range AppConfig.Tasks {
 				row = append(row, "")
 			}
-			row = append(row, "0")
+			row = append(row, "0", "")
 			if err := cw.Write(row); err != nil {
 				log.Printf("Error writing CSV row: %v", err)
 			}
@@ -1117,7 +1144,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error calculating total effect for user %s: %v", u.ID, err)
 			totalEffect = 0
 		}
-		row = append(row, fmt.Sprintf("%d", totalEffect))
+		row = append(row, fmt.Sprintf("%d", totalEffect), formatCSVTime(lastInteraction(allRecords)))
 
 		if err := cw.Write(row); err != nil {
 			log.Printf("Error writing CSV row: %v", err)

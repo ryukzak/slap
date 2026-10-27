@@ -156,6 +156,9 @@ test-hurl:
 	hurl --test $(HURL_VARS) \
 		--variable student_id=$$(date +%s)47 \
 		tests/ui/task-variant-display.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)48 \
+		tests/ui/users-csv-last-interaction.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]

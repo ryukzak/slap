@@ -229,6 +229,10 @@ run_test tests/ui/task-variant-display.hurl \
     --variable "student_id=${TIMESTAMP}47" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/users-csv-last-interaction.hurl \
+    --variable "student_id=${TIMESTAMP}48" \
+    --variable "teacher_id=$TEACHER_ID"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

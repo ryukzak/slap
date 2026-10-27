@@ -179,7 +179,10 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 5. **Students table** — all registered users with per-task columns. Each cell shows:
    - Score (if the teacher started a review with a number) and status badge.
    - Compact status summary (e.g. `p:2 q:1 c:1`).
-6. Teacher can download the table as CSV via `[download csv]`.
+6. Teacher can download the table as CSV via `[download csv]`. The last column, `Last
+   Interaction`, is when the student last submitted work or a teacher last checked it, across all
+   tasks (lesson registrations and revokes don't count), as `YYYY-MM-DD HH:MM` in the primary
+   timezone; empty if neither ever happened. It shows at a glance which students have gone quiet.
 
 # Use Case: teacher views teacher directory
 
