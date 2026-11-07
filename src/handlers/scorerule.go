@@ -95,7 +95,7 @@ type EvaluationDebug struct {
 	CheckedBefore *time.Time       `json:"checked_before,omitempty"`
 	MinRequired   int              `json:"min_required,omitempty"`
 	Tasks         []TaskCheckDebug `json:"tasks"`
-	AfterTasks    []TaskCheckDebug `json:"after_tasks,omitempty"` // checked_after_task references (Pass unused)
+	AfterTasks    []TaskCheckDebug `json:"after_tasks,omitempty"` // checked_after_task references
 	Count         int              `json:"count"`                 // number of tasks that passed the per-task predicate
 	IsActive      bool             `json:"is_active"`
 	Applies       bool             `json:"applies"`
@@ -117,8 +117,7 @@ func checkedBefore(t *time.Time, cutoff time.Time) bool {
 	return t != nil && t.Before(cutoff)
 }
 
-// earliestChecked returns the earliest checked time among tasks, or nil if none
-// was checked.
+// earliestChecked returns the earliest checked time, or nil if none.
 func earliestChecked(tasks []TaskCheckDebug) *time.Time {
 	var first *time.Time
 	for _, tc := range tasks {
@@ -174,9 +173,7 @@ func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, now time.Time, get
 
 	c := rule.Condition
 	switch {
-	// Penalty if a task is checked after any of the reference tasks, or is still
-	// unchecked once one of them is checked. References never checked are
-	// ignored. Active while a task is unchecked and nothing broke the order yet.
+	// Penalty if a task is checked after any reference task, or unchecked once one is.
 	case len(c.CheckedAfterTask) > 0:
 		dbg.ConditionKind = "after_task"
 		for _, taskID := range c.CheckedAfterTask {

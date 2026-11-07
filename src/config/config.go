@@ -113,11 +113,9 @@ type ScoreRule struct {
 
 // Condition defines when the rule applies
 type Condition struct {
-	CheckedAfter     *time.Time `yaml:"checked_after,omitempty"`
-	CheckedBefore    *time.Time `yaml:"checked_before,omitempty"`
-	MinCheckedBefore int        `yaml:"min_checked_before,omitempty"`
-	// CheckedAfterTask applies the rule when a rule task is checked after any
-	// of these tasks, or is still unchecked once one of them is checked.
+	CheckedAfter     *time.Time       `yaml:"checked_after,omitempty"`
+	CheckedBefore    *time.Time       `yaml:"checked_before,omitempty"`
+	MinCheckedBefore int              `yaml:"min_checked_before,omitempty"`
 	CheckedAfterTask []storage.TaskID `yaml:"checked_after_task,omitempty"`
 }
 
@@ -301,7 +299,6 @@ func LoadConfig(filePath string) (*Config, error) {
 			condCount++
 		}
 
-		// checked_after_task compares tasks with each other, not with dates
 		if hasAfterTask && condCount > 0 {
 			return nil, fmt.Errorf("score rule %s: checked_after_task cannot be combined with other conditions", rule.Name)
 		}

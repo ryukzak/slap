@@ -252,8 +252,7 @@ score_rules:
       checked_before: "2026-05-01T23:59:00+03:00"
     effect: -2
 
-  # Task checked after any listed task (or still unchecked once one is) →
-  # penalty, once per rule. Listed tasks that are never checked are ignored.
+  # Task checked after any listed task → penalty.
   - name: "Lab 2 before Labs 3-4"
     task_ids: ["task2"]
     condition:
