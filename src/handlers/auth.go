@@ -48,6 +48,9 @@ func optionalUserSession(r *http.Request) *auth.UserClaims {
 		return nil
 	}
 
+	// Teacher status is determined by config, not the token, so config
+	// changes apply to existing sessions immediately.
+	userClaim.IsTeacher = AppConfig.IsTeacher(userClaim.ID)
 	return userClaim
 }
 

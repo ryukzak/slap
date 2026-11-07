@@ -88,7 +88,7 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 
 	teachers := make(map[storage.UserID]*TeacherRow)
 	for _, u := range users {
-		if !u.IsTeacher {
+		if !AppConfig.IsTeacher(u.ID) {
 			continue
 		}
 		teachers[u.ID] = &TeacherRow{ID: u.ID, Username: u.Username}
