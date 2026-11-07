@@ -227,6 +227,16 @@
             <span>{{ formatDateTime .Condition.CheckedBefore }}</span>
           </div>
           {{ end }}
+          {{ else if .Condition.CheckedAfterTask }}
+          <div class="grid grid-cols-[65px_1fr] gap-x-4 gap-y-1">
+            <span class="text-blue-400">after</span>
+            <div class="flex flex-col space-y-1">
+              {{ range .Condition.CheckedAfterTask }}
+              {{ $title := index $.TaskTitles . }}
+              <span>{{ if $title }}{{ $title }}{{ else }}{{ . }}{{ end }}</span>
+              {{ end }}
+            </div>
+          </div>
         {{ else }}
           <div>
             always

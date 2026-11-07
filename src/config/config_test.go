@@ -245,3 +245,75 @@ tasks:
 		t.Fatal("expected error for a short report_token, got nil")
 	}
 }
+
+func TestLoadConfig_ScoreRuleCheckedAfterTask(t *testing.T) {
+	const tasks = `
+tasks:
+  - id: "scheme"
+    title: "Scheme"
+  - id: "vliw"
+    title: "VLIW"
+  - id: "wasm"
+    title: "WASM"
+`
+	tests := []struct {
+		name    string
+		rule    string
+		wantErr string
+	}{
+		{
+			name: "valid",
+			rule: `
+    task_ids: ["scheme"]
+    condition:
+      checked_after_task: ["vliw", "wasm"]`,
+		},
+		{
+			name: "combined with a date",
+			rule: `
+    task_ids: ["scheme"]
+    condition:
+      checked_after_task: ["vliw"]
+      checked_before: "2026-05-01T23:59:00+03:00"`,
+			wantErr: "cannot be combined",
+		},
+		{
+			name: "unknown task",
+			rule: `
+    task_ids: ["scheme"]
+    condition:
+      checked_after_task: ["lab4"]`,
+			wantErr: "non-existent task: lab4",
+		},
+		{
+			name: "task in both lists",
+			rule: `
+    task_ids: ["scheme"]
+    condition:
+      checked_after_task: ["scheme", "vliw"]`,
+			wantErr: "in both task_ids and checked_after_task",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := writeTempConfig(t, tasks+`
+score_rules:
+  - name: "Scheme first"
+    effect: -4`+tt.rule+"\n")
+			cfg, err := LoadConfig(path)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("LoadConfig: %v", err)
+				}
+				got := cfg.ScoreRules[0].Condition.CheckedAfterTask
+				if len(got) != 2 || got[0] != "vliw" || got[1] != "wasm" {
+					t.Errorf("CheckedAfterTask = %v, want [vliw wasm]", got)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("LoadConfig error = %v, want containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}

@@ -77,7 +77,7 @@ HTTP 200
 header "Content-Type" contains "application/json"
 jsonpath "$.user_id" == "{{student_id}}"
 jsonpath "$.username" == "ScoreDebug Student"
-jsonpath "$.rules" count == 6
+jsonpath "$.rules" count == 7
 jsonpath "$.rules[0].rule" exists
 jsonpath "$.rules[0].condition_kind" exists
 jsonpath "$.rules[0].tasks" exists

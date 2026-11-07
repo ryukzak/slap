@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/ryukzak/slap/src/config"
@@ -88,13 +89,14 @@ type TaskCheckDebug struct {
 // EvaluationDebug is a self-describing trace of a single rule evaluation.
 type EvaluationDebug struct {
 	Rule          string           `json:"rule"`
-	ConditionKind string           `json:"condition_kind"` // min_checked_before | after | before | interval | none
+	ConditionKind string           `json:"condition_kind"` // min_checked_before | after | before | interval | after_task | none
 	Now           time.Time        `json:"now"`
 	CheckedAfter  *time.Time       `json:"checked_after,omitempty"`
 	CheckedBefore *time.Time       `json:"checked_before,omitempty"`
 	MinRequired   int              `json:"min_required,omitempty"`
 	Tasks         []TaskCheckDebug `json:"tasks"`
-	Count         int              `json:"count"` // number of tasks that passed the per-task predicate
+	AfterTasks    []TaskCheckDebug `json:"after_tasks,omitempty"` // checked_after_task references
+	Count         int              `json:"count"`                 // number of tasks that passed the per-task predicate
 	IsActive      bool             `json:"is_active"`
 	Applies       bool             `json:"applies"`
 	Status        string           `json:"status"`
@@ -113,6 +115,17 @@ func NewEvaluator(cfg *config.Config) *Evaluator {
 // checkedBefore reports whether a task's checked time exists and is before cutoff.
 func checkedBefore(t *time.Time, cutoff time.Time) bool {
 	return t != nil && t.Before(cutoff)
+}
+
+// earliestChecked returns the earliest checked time, or nil if none.
+func earliestChecked(tasks []TaskCheckDebug) *time.Time {
+	var first *time.Time
+	for _, tc := range tasks {
+		if tc.CheckedAt != nil && (first == nil || tc.CheckedAt.Before(*first)) {
+			first = tc.CheckedAt
+		}
+	}
+	return first
 }
 
 // markPasses sets Pass on each task to pred(checkedTime) and returns the number
@@ -160,6 +173,21 @@ func (e *Evaluator) EvaluateForStudent(rule config.ScoreRule, now time.Time, get
 
 	c := rule.Condition
 	switch {
+	// Penalty if a task is checked after any reference task, or unchecked once one is.
+	case len(c.CheckedAfterTask) > 0:
+		dbg.ConditionKind = "after_task"
+		for _, taskID := range c.CheckedAfterTask {
+			t, err := getCheckedTime(taskID)
+			if err != nil {
+				return Evaluation{}, fmt.Errorf("failed to get checked time for task %s: %w", taskID, err)
+			}
+			dbg.AfterTasks = append(dbg.AfterTasks, TaskCheckDebug{TaskID: taskID, CheckedAt: t})
+		}
+		first := earliestChecked(dbg.AfterTasks)
+		inOrder := markPasses(tasks, func(t *time.Time) bool { return first == nil || checkedBefore(t, *first) })
+		eval.Applies = inOrder < len(tasks)
+		eval.IsActive = !eval.Applies && slices.ContainsFunc(tasks, func(tc TaskCheckDebug) bool { return tc.CheckedAt == nil })
+
 	// Penalty if fewer than N of the tasks are checked before the deadline.
 	case c.MinCheckedBefore > 0:
 		dbg.ConditionKind = "min_checked_before"

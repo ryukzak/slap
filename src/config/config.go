@@ -113,9 +113,10 @@ type ScoreRule struct {
 
 // Condition defines when the rule applies
 type Condition struct {
-	CheckedAfter     *time.Time `yaml:"checked_after,omitempty"`
-	CheckedBefore    *time.Time `yaml:"checked_before,omitempty"`
-	MinCheckedBefore int        `yaml:"min_checked_before,omitempty"`
+	CheckedAfter     *time.Time       `yaml:"checked_after,omitempty"`
+	CheckedBefore    *time.Time       `yaml:"checked_before,omitempty"`
+	MinCheckedBefore int              `yaml:"min_checked_before,omitempty"`
+	CheckedAfterTask []storage.TaskID `yaml:"checked_after_task,omitempty"`
 }
 
 // Task represents a task in the system
@@ -284,6 +285,7 @@ func LoadConfig(filePath string) (*Config, error) {
 		hasMin := rule.Condition.MinCheckedBefore > 0
 		hasAfter := rule.Condition.CheckedAfter != nil
 		hasBefore := rule.Condition.CheckedBefore != nil
+		hasAfterTask := len(rule.Condition.CheckedAfterTask) > 0
 
 		// Count conditions
 		condCount := 0
@@ -297,8 +299,12 @@ func LoadConfig(filePath string) (*Config, error) {
 			condCount++
 		}
 
+		if hasAfterTask && condCount > 0 {
+			return nil, fmt.Errorf("score rule %s: checked_after_task cannot be combined with other conditions", rule.Name)
+		}
+
 		// No conditions
-		if condCount == 0 {
+		if condCount == 0 && !hasAfterTask {
 			return nil, fmt.Errorf("score rule %s: at least one condition is required", rule.Name)
 		}
 
@@ -342,6 +348,14 @@ func LoadConfig(filePath string) (*Config, error) {
 		for _, taskID := range rule.TaskIDs {
 			if !taskExists[taskID] {
 				return nil, fmt.Errorf("score rule %s references non-existent task: %s", rule.Name, taskID)
+			}
+		}
+		for _, taskID := range rule.Condition.CheckedAfterTask {
+			if !taskExists[taskID] {
+				return nil, fmt.Errorf("score rule %s: checked_after_task references non-existent task: %s", rule.Name, taskID)
+			}
+			if slices.Contains(rule.TaskIDs, taskID) {
+				return nil, fmt.Errorf("score rule %s: task %s is in both task_ids and checked_after_task", rule.Name, taskID)
 			}
 		}
 	}
