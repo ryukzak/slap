@@ -86,6 +86,9 @@ func ScoreRulesDebugHandler(w http.ResponseWriter, r *http.Request) {
 		for i := range eval.Debug.Tasks {
 			eval.Debug.Tasks[i].State = stateCache[eval.Debug.Tasks[i].TaskID]
 		}
+		for i := range eval.Debug.AfterTasks {
+			eval.Debug.AfterTasks[i].State = stateCache[eval.Debug.AfterTasks[i].TaskID]
+		}
 		resp.Rules = append(resp.Rules, eval.Debug)
 		resp.TotalEffect += eval.Debug.AppliedEffect
 	}
@@ -140,6 +143,12 @@ func renderScoreDebugText(resp ScoreRulesDebugResponse) string {
 		if rule.CheckedBefore != nil {
 			fmt.Fprintf(&b, "  checked_before: %s\n", fmtDebugTime(rule.CheckedBefore))
 		}
+		if len(rule.AfterTasks) > 0 {
+			b.WriteString("  checked_after_task:\n")
+			for _, tc := range rule.AfterTasks {
+				fmt.Fprintf(&b, "    %-31s state=%-40s actual=%s\n", tc.TaskID, tc.State, fmtDebugTime(tc.CheckedAt))
+			}
+		}
 
 		b.WriteString("  tasks:\n")
 		for _, tc := range rule.Tasks {
@@ -159,6 +168,8 @@ func renderScoreDebugText(resp ScoreRulesDebugResponse) string {
 		switch {
 		case rule.Applies:
 			fmt.Fprintf(&b, "  => APPLIED: %+d point(s)\n\n", rule.AppliedEffect)
+		case rule.IsActive && rule.ConditionKind == "after_task":
+			b.WriteString("  => not applied yet (task not checked yet)\n\n")
 		case rule.IsActive:
 			b.WriteString("  => not applied yet (deadline still open)\n\n")
 		default:
@@ -180,6 +191,11 @@ func expectedDesc(rule EvaluationDebug, tc TaskCheckDebug) string {
 		return "before " + fmtDebugTime(rule.CheckedAfter) + " (else late)"
 	case "interval":
 		return "between " + fmtDebugTime(rule.CheckedAfter) + " and " + fmtDebugTime(rule.CheckedBefore)
+	case "after_task":
+		if first := earliestChecked(rule.AfterTasks); first != nil {
+			return "before " + fmtDebugTime(first)
+		}
+		return "any time (no checked_after_task checked)"
 	default:
 		return "n/a"
 	}
