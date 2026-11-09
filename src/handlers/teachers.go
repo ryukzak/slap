@@ -50,6 +50,65 @@ type ScoreLogEntry struct {
 	CreatedAt   time.Time
 }
 
+// CheckedTaskEntry is one review a teacher left on a student's task, shown
+// newest-first on that teacher's profile page. Score is "" for a review
+// without a numeric score. RecordNumber is the review's "#N" position in the
+// task page's journal, used to link straight to it.
+type CheckedTaskEntry struct {
+	StudentID    string
+	StudentName  string
+	TaskID       string
+	TaskTitle    string
+	RecordNumber int
+	Score        string
+	CreatedAt    time.Time
+}
+
+// listCheckedTasks returns every review teacherID left on another user's
+// task, newest first, limited to taskID unless it is empty.
+func listCheckedTasks(teacherID storage.UserID, taskID storage.TaskID) ([]CheckedTaskEntry, error) {
+	users, err := DB.ListUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	var checked []CheckedTaskEntry
+	for _, u := range users {
+		if !u.IsStudent || u.ID == teacherID {
+			continue
+		}
+		for _, task := range AppConfig.Tasks {
+			if taskID != "" && task.ID != taskID {
+				continue
+			}
+			records, err := DB.ListTaskRecords(u.ID, task.ID)
+			if err != nil {
+				log.Printf("Error fetching task records for user %s task %s: %v", u.ID, task.ID, err)
+				continue
+			}
+			for i, rec := range records {
+				if rec.Type != storage.ReviewedRecord || rec.AuthorID != teacherID {
+					continue
+				}
+				checked = append(checked, CheckedTaskEntry{
+					StudentID:    u.ID,
+					StudentName:  u.Username,
+					TaskID:       string(task.ID),
+					TaskTitle:    task.Title,
+					RecordNumber: len(records) - i,
+					Score:        util.ExtractScore(rec.Content),
+					CreatedAt:    rec.CreatedAt,
+				})
+			}
+		}
+	}
+
+	sort.Slice(checked, func(i, j int) bool {
+		return checked[i].CreatedAt.After(checked[j].CreatedAt)
+	})
+	return checked, nil
+}
+
 // allowedLogLimits are the selectable score-log sizes, in display order.
 var allowedLogLimits = []int{10, 100, 500}
 

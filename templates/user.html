@@ -302,4 +302,73 @@
   </details>
 </section>
 {{ end }}
+{{ if and .SessionIsTeacher .IsTeacher }}
+<section class="mb-8" id="checked-tasks">
+  <div class="text-xs text-gray-500 mb-2">
+    // checked tasks ({{ len .CheckedTasks }})
+  </div>
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-2">
+    {{ if .CheckedTask }}
+    <a class="text-blue-400 hover:text-blue-300"
+       href="?{{ if .ShowPastLessons }}showPast=true{{ end }}#checked-tasks">[all]</a>
+  {{ else }}
+    <span class="text-gray-200">[all]</span>
+    {{ end }}
+    {{ range .Tasks }}
+    {{ if eq .ID $.CheckedTask }}
+    <span class="text-gray-200">[{{.Title}}]</span>
+  {{ else }}
+    <a class="text-blue-400 hover:text-blue-300"
+       href="?{{ if $.ShowPastLessons }}showPast=true&{{ end }}checkedTask={{.ID}}#checked-tasks">[{{.Title}}]</a>
+    {{ end }}
+    {{ end }}
+  </div>
+  {{ if .CheckedTasks }}
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs border-collapse">
+      <thead>
+        <tr class="border-b border-gray-700">
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            time
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            student
+          </th>
+          <th class="text-left text-gray-400 py-1 pr-4 font-normal">
+            task
+          </th>
+          <th class="text-right text-gray-400 py-1 pl-2 font-normal">
+            score
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range .CheckedTasks }}
+        <tr class="border-b border-gray-800 hover:bg-gray-800">
+          <td class="py-1 pr-4 whitespace-nowrap">
+            <a class="text-blue-400 hover:text-blue-300"
+               href="/user/{{.StudentID}}/task/{{.TaskID}}#record-{{.RecordNumber}}">{{ formatDateTimeSeconds .CreatedAt }}</a>
+          </td>
+          <td class="py-1 pr-4">
+            <a class="text-blue-400 hover:text-blue-300" href="/user/{{.StudentID}}">@{{.StudentName}}</a>
+          </td>
+          <td class="py-1 pr-4">
+            <a class="text-blue-400 hover:text-blue-300"
+               href="/user/{{.StudentID}}/task/{{.TaskID}}">{{.TaskTitle}}</a>
+          </td>
+          <td class="py-1 pl-2 text-right text-green-300">
+            {{ if .Score }}{{.Score}}{{ else }}<span class="text-gray-700">—</span>{{ end }}
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+{{ else }}
+  <p class="text-gray-400 text-xs">
+    No checked tasks.
+  </p>
+  {{ end }}
+</section>
+{{ end }}
 {{ end }}
