@@ -165,6 +165,9 @@ test-hurl:
 	hurl --test $(HURL_VARS) \
 		--variable student_id=$$(date +%s)50 \
 		tests/ui/score-rule-task-order.hurl
+	hurl --test $(HURL_VARS) \
+		--variable student_id=$$(date +%s)51 \
+		tests/ui/teacher-checked-tasks.hurl
 
 # Build, start server with a temp DB, run Hurl tests, stop server.
 # Usage: make test-hurl-ci [TEST_PORT=18080] [TEACHER_ID=123]

@@ -470,6 +470,15 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		taskTitles[task.ID] = task.Title
 	}
 
+	var checkedTasks []CheckedTaskEntry
+	checkedTask := r.URL.Query().Get("checkedTask")
+	if sessionUser.IsTeacher && dbUser.IsTeacher {
+		checkedTasks, err = listCheckedTasks(profileUserID, checkedTask)
+		if err != nil {
+			log.Printf("Error listing checked tasks for teacher %s: %v", profileUserID, err)
+		}
+	}
+
 	user = User{
 		Username:                 dbUser.Username,
 		ID:                       dbUser.ID,
@@ -494,6 +503,8 @@ func UserInfoHandler(w http.ResponseWriter, r *http.Request) {
 		TotalEffect:              totalEffect,
 		TaskTitles:               taskTitles,
 		Notes:                    dbUser.Notes,
+		CheckedTasks:             checkedTasks,
+		CheckedTask:              checkedTask,
 	}
 
 	// Load lessons for all users

@@ -45,6 +45,11 @@ type User struct {
 	TotalEffect              int
 	TaskTitles               map[storage.TaskID]string
 	Notes                    []storage.UserNote
+	// CheckedTasks lists the reviews left by this profile's teacher, newest
+	// first, narrowed to CheckedTask unless it is empty; empty unless a
+	// teacher views a teacher.
+	CheckedTasks []CheckedTaskEntry
+	CheckedTask  storage.TaskID
 }
 
 var JwtAuth *auth.JWTConfig

@@ -64,7 +64,8 @@
   <ul class="space-y-1">
     {{$total := len .TaskRecords}}
     {{ range $i, $record := .TaskRecords }}
-    <li class="border-b border-gray-800 py-1">
+    <li class="border-b border-gray-800 py-1 target:bg-gray-800"
+        id="record-{{ sub $total $i }}">
       <div class="text-xs flex items-center justify-between mb-1">
         <div class="flex items-center space-x-2">
           <span class="text-gray-600">#{{ sub $total $i }}</span>
