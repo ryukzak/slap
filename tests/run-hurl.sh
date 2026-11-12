@@ -247,6 +247,9 @@ run_test tests/ui/teacher-checked-tasks.hurl \
     --variable "student_id=${TIMESTAMP}51" \
     --variable "teacher_id=$TEACHER_ID"
 
+run_test tests/ui/teacher-task-access.hurl \
+    --variable "student_id=${TIMESTAMP}52"
+
 # Stop server
 kill "$SERVER_PID" 2>/dev/null
 rm -f "$TEST_DB"

@@ -55,6 +55,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		Score            string
 		JournalSummary   string
 		IsTeacher        bool
+		CanCheck         bool
 		RegisteredLesson *storage.Lesson
 		QueuePosition    int
 		QueueTotal       int
@@ -74,6 +75,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 		SessionUserID: user.ID,
 		TaskID:        taskID,
 		IsTeacher:     user.IsTeacher,
+		CanCheck:      !user.IsTeacher || AppConfig.CanCheck(user.ID, taskID),
 		Variant:       AppConfig.GetVariant(userIDFromURL, taskID),
 	}
 
@@ -220,6 +222,10 @@ func AddTaskRecordHandler(w http.ResponseWriter, r *http.Request) {
 		record.Type = storage.ReviewedRecord
 	} else {
 		record.Type = storage.SubmitRecord
+	}
+	if record.Type == storage.ReviewedRecord && !AppConfig.CanCheck(user.ID, taskID) {
+		http.Error(w, "Forbidden: you are not allowed to check this task", http.StatusForbidden)
+		return
 	}
 
 	// When a student submits new content while registered to a lesson, auto-revoke

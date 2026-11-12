@@ -38,12 +38,16 @@ type Config struct {
 	// Name identifies this SLAP instance (e.g. "csa.2026.2") and is shown in
 	// the page header so several courses can be told apart. When unset,
 	// DefaultName applies — read it through GetName.
-	Name                     string      `yaml:"name"`
-	Tasks                    []Task      `yaml:"tasks"`
-	TeacherIDs               []string    `yaml:"teacher_ids"`
-	TitleMaxLen              int         `yaml:"title_max_len"`
-	DefaultLessonDescription string      `yaml:"default_lesson_description"`
-	ScoreRules               []ScoreRule `yaml:"score_rules"`
+	Name       string   `yaml:"name"`
+	Tasks      []Task   `yaml:"tasks"`
+	TeacherIDs []string `yaml:"teacher_ids"`
+	// TeacherTasks limits which tasks a teacher may check, keyed by teacher
+	// ID. A teacher without an entry may check every task. Read through
+	// CanCheck.
+	TeacherTasks             map[string]TeacherTasks `yaml:"teacher_tasks,omitempty"`
+	TitleMaxLen              int                     `yaml:"title_max_len"`
+	DefaultLessonDescription string                  `yaml:"default_lesson_description"`
+	ScoreRules               []ScoreRule             `yaml:"score_rules"`
 	// CourseStart and CourseEnd bound the shared time scale used by the
 	// student page's task activity timeline. When both are set, every
 	// student's timeline is plotted on this same scale, so positions are
@@ -140,6 +144,26 @@ type Task struct {
 	// exists and shows on the task page — it just isn't surfaced on the
 	// lesson page until added here. See IsAllowedTag.
 	Tags []string `yaml:"tags,omitempty"`
+}
+
+// TeacherTasks is a teacher's task white list (Allow, empty means every task)
+// and black list (Deny, applied on top of Allow).
+type TeacherTasks struct {
+	Allow []storage.TaskID `yaml:"allow,omitempty"`
+	Deny  []storage.TaskID `yaml:"deny,omitempty"`
+}
+
+// CanCheck reports whether the teacher may review taskID: leave a check on
+// it and have students register it to the teacher's lessons.
+func (c *Config) CanCheck(teacherID string, taskID storage.TaskID) bool {
+	tt, ok := c.TeacherTasks[teacherID]
+	if !ok {
+		return true
+	}
+	if len(tt.Allow) > 0 && !slices.Contains(tt.Allow, taskID) {
+		return false
+	}
+	return !slices.Contains(tt.Deny, taskID)
 }
 
 func (c *Config) IsTeacher(userID string) bool {
@@ -259,6 +283,17 @@ func LoadConfig(filePath string) (*Config, error) {
 	taskExists := make(map[storage.TaskID]bool)
 	for _, task := range config.Tasks {
 		taskExists[task.ID] = true
+	}
+
+	for teacherID, tt := range config.TeacherTasks {
+		if !config.IsTeacher(teacherID) {
+			return nil, fmt.Errorf("teacher_tasks: %s is not in teacher_ids", teacherID)
+		}
+		for _, taskID := range slices.Concat(tt.Allow, tt.Deny) {
+			if !taskExists[taskID] {
+				return nil, fmt.Errorf("teacher_tasks: teacher %s references non-existent task: %s", teacherID, taskID)
+			}
+		}
 	}
 
 	if config.VariantsFile != "" {

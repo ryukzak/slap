@@ -317,3 +317,54 @@ score_rules:
 		})
 	}
 }
+
+func TestCanCheck(t *testing.T) {
+	c := Config{TeacherTasks: map[string]TeacherTasks{
+		"allow": {Allow: []string{"t1"}},
+		"deny":  {Deny: []string{"t2"}},
+		"both":  {Allow: []string{"t1", "t2"}, Deny: []string{"t2"}},
+	}}
+	tests := []struct {
+		teacher, task string
+		want          bool
+	}{
+		{"free", "t1", true},
+		{"allow", "t1", true},
+		{"allow", "t2", false},
+		{"deny", "t1", true},
+		{"deny", "t2", false},
+		{"both", "t1", true},
+		{"both", "t2", false},
+		{"both", "t3", false},
+	}
+	for _, tt := range tests {
+		if got := c.CanCheck(tt.teacher, tt.task); got != tt.want {
+			t.Errorf("CanCheck(%q, %q) = %v, want %v", tt.teacher, tt.task, got, tt.want)
+		}
+	}
+}
+
+func TestLoadConfig_TeacherTasksValidation(t *testing.T) {
+	base := "tasks:\n  - id: t1\n    title: T1\nteacher_ids: [\"123\"]\n"
+	tests := []struct {
+		name, extra, wantErr string
+	}{
+		{"valid", "teacher_tasks:\n  \"123\":\n    deny: [t1]\n", ""},
+		{"unknown teacher", "teacher_tasks:\n  \"999\":\n    deny: [t1]\n", "not in teacher_ids"},
+		{"unknown task", "teacher_tasks:\n  \"123\":\n    allow: [nope]\n", "non-existent task"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := LoadConfig(writeTempConfig(t, base+tt.extra))
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("error = %v, want containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}

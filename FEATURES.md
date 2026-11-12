@@ -80,6 +80,9 @@ Note: changing or resetting a password signs the account out of every session st
    - If the review text starts with a number, it is extracted as the score for that task.
 4. Student sees the teacher feedback on their task page, shown inline below their submission.
 5. Teacher can submit multiple feedback entries; all are shown concatenated with a separator.
+6. If `teacher_tasks` doesn't allow the teacher to check the task (outside the `allow` white list, or
+   in the `deny` black list), the feedback form is hidden and a review is rejected. Students can't
+   register such a task to that teacher's lessons: those lessons are left out of the register list.
 
 # Use Case: teacher prepares queue for the lesson
 
