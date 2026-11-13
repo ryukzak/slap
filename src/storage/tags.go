@@ -14,9 +14,10 @@ type Tag struct {
 // ComputeTags derives the current set of active tags for a task from its full
 // record history, applying #tag/-#tag operations found in each record's
 // Content in chronological (oldest-first) order, regardless of record order
-// passed in. Only teacher-authored records (AuthorID != StudentID) can add or
-// remove tags — a student cannot tag their own work, so #tag tokens in a
-// student's own submission are plain text and have no effect.
+// passed in. Only teacher reviews (a ReviewedRecord with AuthorID != StudentID)
+// can add or remove tags — a student cannot tag their own work, so #tag tokens
+// in a student's own submission are plain text and have no effect, even when
+// a teacher's drop copies that text into a record the teacher authors.
 func ComputeTags(records []TaskRecord) []Tag {
 	ordered := make([]TaskRecord, len(records))
 	copy(ordered, records)
@@ -28,7 +29,7 @@ func ComputeTags(records []TaskRecord) []Tag {
 	var order []string
 
 	for _, r := range ordered {
-		if r.AuthorID == r.StudentID {
+		if r.Type != ReviewedRecord || r.AuthorID == r.StudentID {
 			continue
 		}
 		for _, op := range util.ExtractTagOps(r.Content) {

@@ -7,7 +7,6 @@ import (
 
 	"github.com/ryukzak/slap/src/config"
 	"github.com/ryukzak/slap/src/storage"
-	"github.com/ryukzak/slap/src/util"
 )
 
 // taskStatusLabel maps a stored record type to the label shown in the UI.
@@ -40,25 +39,6 @@ func latestCheckedInfo(records []storage.TaskRecord) (*time.Time, string) {
 		if records[i].Type == storage.ReviewedRecord {
 			return &records[i].SubmitAt, "Checked"
 		}
-	}
-
-	// No accepted record. If a teacher left a scored review, treat the work as
-	// checked at the time of the student's latest submission.
-	scored := false
-	for i := range records {
-		r := records[i]
-		if r.AuthorID != r.StudentID && util.ExtractScore(r.Content) != "" {
-			scored = true
-			break
-		}
-	}
-	if scored {
-		for i := range records {
-			if records[i].AuthorID == records[i].StudentID {
-				return &records[i].SubmitAt, "scored without lesson (submission " + taskStatusLabel(records[i].Type) + ")"
-			}
-		}
-		return nil, "scored, but no student submission found"
 	}
 
 	return nil, "not checked (" + taskStatusLabel(records[0].Type) + ")"

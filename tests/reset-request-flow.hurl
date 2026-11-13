@@ -1,7 +1,7 @@
 # Reset Request Flow Test
 # Tests: student requests reset link → shares with teacher → teacher resets
 #        password via token link → student signs in with new password;
-#        reused token rejected after reset
+#        reused token rejected after reset; non-numeric IDs rejected
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -146,3 +146,12 @@ HTTP 200
 body contains "// reset password"
 body contains "Token Student"
 body not contains "Invalid or expired"
+
+# Step 14: POST /reset-request with a non-numeric ID is rejected, like signup
+POST {{base_url}}/reset-request
+[FormParams]
+id: abc
+
+HTTP 200
+[Asserts]
+body contains "ID must contain digits only"

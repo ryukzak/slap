@@ -115,7 +115,7 @@ func TaskDetailHandler(w http.ResponseWriter, r *http.Request) {
 
 	var pending, queued, dropped, checked int
 	for _, r := range rawRecords {
-		if r.AuthorID != r.StudentID {
+		if r.Type == storage.ReviewedRecord && r.AuthorID != r.StudentID {
 			if score := util.ExtractScore(r.Content); score != "" && model.Score == "" {
 				model.Score = score
 			}

@@ -42,6 +42,12 @@ func ResetRequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Same rule as signup, so only user IDs reach the lookup and write below.
+	if !numericIDRegexp.MatchString(userID) {
+		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"ID must contain digits only"})
+		return
+	}
+
 	if _, err := DB.GetUser(userID); err != nil {
 		renderPage(w, "templates/reset_request_form.html", struct{ Error string }{"User not found"})
 		return

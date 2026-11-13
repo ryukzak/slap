@@ -65,6 +65,17 @@ func TestLatestCheckedInfo(t *testing.T) {
 			wantState: "Checked",
 		},
 		{
+			// A drop copies the student's text into a record the teacher
+			// authors; it is not a check, whatever the text starts with.
+			name: "teacher drop is not a check",
+			records: []storage.TaskRecord{
+				rec(storage.RevokeRecord, "teacher", "s", "8 work", t1),
+				rec(storage.SubmitRecord, "s", "s", "8 work", t0),
+			},
+			wantAt:    nil,
+			wantState: "not checked (Dropped)",
+		},
+		{
 			name: "registered but not yet reviewed",
 			records: []storage.TaskRecord{
 				rec(storage.RegisterRecord, "s", "s", "work", t1),
