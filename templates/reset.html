@@ -29,8 +29,15 @@
   {{else if .UserID}}
   <p class="text-sm text-gray-400 mb-4">
     Set a new password for
-    <span class="text-gray-200">{{.Username}}</span>.
+    <span class="text-gray-200">{{.Username}}</span>
+    (ID {{.UserID}}).
   </p>
+  <div class="bg-yellow-900 border border-yellow-700 text-yellow-100 px-4 py-3 rounded mb-4">
+    <p>
+      Anyone can request a reset link for any ID. Before setting a password,
+      confirm in person that you are talking to the owner of this account.
+    </p>
+  </div>
   <form method="post" class="space-y-4">
     <div>
       <label for="password" class="block text-sm mb-1">

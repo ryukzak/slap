@@ -48,6 +48,13 @@ func optionalUserSession(r *http.Request) *auth.UserClaims {
 		return nil
 	}
 
+	// A password change or reset bumps the stored version, ending every
+	// session issued before it.
+	dbUser, err := DB.GetUser(userClaim.ID)
+	if err != nil || dbUser.TokenVersion != userClaim.TokenVersion {
+		return nil
+	}
+
 	// Teacher status is determined by config, not the token, so config
 	// changes apply to existing sessions immediately.
 	userClaim.IsTeacher = AppConfig.IsTeacher(userClaim.ID)
@@ -134,7 +141,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 
 	// All signups create students; teacher status is determined by config
 	isTeacher := AppConfig.IsTeacher(id)
-	tokenString, err := JwtAuth.GenerateToken(username, id, true, isTeacher)
+	tokenString, err := JwtAuth.GenerateToken(username, id, true, isTeacher, 0)
 	if err != nil {
 		renderAuthPageWithError(w, "Error generating token")
 		return
@@ -203,7 +210,7 @@ func SigninHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("action=signin user=%s error syncing teacher status: %v", user.ID, err)
 		}
 	}
-	tokenString, err := JwtAuth.GenerateToken(user.Username, user.ID, true, isTeacher)
+	tokenString, err := JwtAuth.GenerateToken(user.Username, user.ID, true, isTeacher, user.TokenVersion)
 	if err != nil {
 		renderAuthPageWithError(w, "Error generating token")
 		return

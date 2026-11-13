@@ -24,6 +24,8 @@ Note: role assignment happens at signup and is re-evaluated from config on every
 2. System validates credentials.
 3. User is redirected to their dashboard. The teacher dashboard includes a section for scheduling and managing lessons.
 
+Note: changing or resetting a password signs the account out of every session started before it; the session that changed the password stays signed in.
+
 # Use Case: student submits a task
 
 1. Student opens their profile page and selects a task.

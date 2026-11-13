@@ -1,6 +1,7 @@
 # Password Reset Flow Test
 # Tests: teacher sets new password for student via /user/{id}/reset →
-#        student signs in with new password; non-teachers blocked
+#        student signs in with new password; the student's existing session
+#        is signed out; non-teachers blocked
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -107,3 +108,12 @@ password: {{student_password}}
 HTTP 200
 [Asserts]
 body contains "Invalid ID or password"
+
+# Step 10: The reset signed out the session the student had before it
+GET {{base_url}}/logout
+HTTP 303
+
+GET {{base_url}}/user/{{student_id}}
+Cookie: user_data={{student_token}}
+
+HTTP 401

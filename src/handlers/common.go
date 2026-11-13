@@ -98,6 +98,10 @@ func UserLineHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get user", http.StatusInternalServerError)
 		return
 	}
+	if dbUser.TokenVersion != userClaim.TokenVersion {
+		invalidateCookie(w)
+		return
+	}
 
 	var roleList []string
 	if AppConfig.IsTeacher(dbUser.ID) {
