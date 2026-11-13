@@ -10,13 +10,17 @@ import (
 func TestComputeTags(t *testing.T) {
 	base := time.Now()
 	rec := func(offset time.Duration, authorID, studentID, content string) TaskRecord {
+		typ := SubmitRecord
+		if authorID != studentID {
+			typ = ReviewedRecord
+		}
 		return TaskRecord{
 			StudentID:  studentID,
 			AuthorID:   authorID,
 			AuthorName: authorID,
 			Content:    content,
 			CreatedAt:  base.Add(offset),
-			Type:       SubmitRecord,
+			Type:       typ,
 		}
 	}
 
@@ -27,6 +31,18 @@ func TestComputeTags(t *testing.T) {
 	t.Run("student cannot add a tag on their own submission", func(t *testing.T) {
 		tags := ComputeTags([]TaskRecord{
 			rec(0, "student", "student", "topic #group-3"),
+		})
+		assert.Empty(t, tags)
+	})
+
+	t.Run("teacher's drop of a registration adds no tag", func(t *testing.T) {
+		// A drop copies the student's text into a record the teacher authors.
+		drop := rec(time.Minute, "teacher", "student", "topic #group-3")
+		drop.Type = RevokeRecord
+		tags := ComputeTags([]TaskRecord{
+			rec(0, "student", "student", "topic #group-3"),
+			drop,
+			rec(2*time.Minute, "teacher", "student", "see comments"),
 		})
 		assert.Empty(t, tags)
 	})

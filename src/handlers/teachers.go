@@ -199,7 +199,7 @@ func TeacherListHandler(w http.ResponseWriter, r *http.Request) {
 				if t, ok := teachers[rec.AuthorID]; ok {
 					t.Reviews++
 				}
-				if score := util.ExtractScore(rec.Content); score != "" {
+				if score := util.ExtractScore(rec.Content); rec.Type == storage.ReviewedRecord && score != "" {
 					scoreLog = append(scoreLog, ScoreLogEntry{
 						TeacherID:   rec.AuthorID,
 						TeacherName: rec.AuthorName,

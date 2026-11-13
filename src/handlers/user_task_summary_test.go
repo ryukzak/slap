@@ -7,6 +7,28 @@ import (
 	"github.com/ryukzak/slap/src/storage"
 )
 
+// TestBuildTaskSummaryScoreIgnoresTeacherDrop checks that a teacher's drop of
+// a lesson registration, which copies the student's text into a record the
+// teacher authors, never replaces the score of the teacher's last review.
+func TestBuildTaskSummaryScoreIgnoresTeacherDrop(t *testing.T) {
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	at := func(days int) time.Time { return base.Add(time.Duration(days) * 24 * time.Hour) }
+
+	// Newest-first, as DB.ListTaskRecords returns them.
+	records := []storage.TaskRecord{
+		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(5), Content: "see comments"},
+		{Type: storage.RevokeRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(4), Content: "9 my solution"},
+		{Type: storage.RegisterRecord, AuthorID: "student", StudentID: "student", CreatedAt: at(3), Content: "9 my solution"},
+		{Type: storage.SubmitRecord, AuthorID: "student", StudentID: "student", CreatedAt: at(2), Content: "9 my solution"},
+		{Type: storage.ReviewedRecord, AuthorID: "teacher", StudentID: "student", CreatedAt: at(1), Content: "5 fix the tests"},
+		{Type: storage.SubmitRecord, AuthorID: "student", StudentID: "student", CreatedAt: at(0), Content: "first try"},
+	}
+
+	if got := buildTaskSummary(records).Score; got != "5" {
+		t.Errorf("Score = %q, want %q", got, "5")
+	}
+}
+
 // TestBuildTaskSummaryFeedbackCount locks down that FeedbackCount counts
 // "reviewed" records actually authored by someone other than the student —
 // matching task.go's JournalSummary "c:N" figure for correctly-typed data —

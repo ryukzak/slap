@@ -81,11 +81,11 @@ func (f TagScoreFilter) Allows(hasScore bool) bool {
 }
 
 // latestScore returns the current numeric score for a newest-first record
-// history: the leading number of the most recent teacher-authored record
-// that has one, or "" if none does. Mirrors the score shown on the task page.
+// history: the leading number of the most recent teacher review that has one,
+// or "" if none does. Mirrors the score shown on the task page.
 func latestScore(records []storage.TaskRecord) string {
 	for _, r := range records {
-		if r.AuthorID == r.StudentID {
+		if r.Type != storage.ReviewedRecord || r.AuthorID == r.StudentID {
 			continue
 		}
 		if s := util.ExtractScore(r.Content); s != "" {

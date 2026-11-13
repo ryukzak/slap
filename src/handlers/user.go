@@ -80,8 +80,8 @@ func buildTaskSummary(records []storage.TaskRecord) TaskSummary {
 			summary.FeedbackCount++
 		}
 		// Walking oldest-to-newest and overwriting on every match leaves
-		// the most recent teacher-authored score by the time the loop ends.
-		if r.AuthorID != r.StudentID {
+		// the most recent teacher review's score by the time the loop ends.
+		if r.Type == storage.ReviewedRecord && r.AuthorID != r.StudentID {
 			if s := util.ExtractScore(r.Content); s != "" {
 				summary.Score = s
 			}
@@ -739,7 +739,7 @@ func UserListHandler(w http.ResponseWriter, r *http.Request) {
 				var pending, queued, checked int
 				for _, rec := range records {
 					if rec.AuthorID != rec.StudentID {
-						if score := util.ExtractScore(rec.Content); score != "" && summary.Score == "" {
+						if score := util.ExtractScore(rec.Content); rec.Type == storage.ReviewedRecord && score != "" && summary.Score == "" {
 							summary.Score = score
 						}
 						dayKey := rec.CreatedAt.In(PrimaryLoc).Format("2006-01-02")
@@ -1153,7 +1153,7 @@ func UserListCSVHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			score := ""
 			for _, rec := range records {
-				if rec.AuthorID != rec.StudentID {
+				if rec.Type == storage.ReviewedRecord && rec.AuthorID != rec.StudentID {
 					if s := util.ExtractScore(rec.Content); s != "" && s != "0" {
 						score = s
 						break
