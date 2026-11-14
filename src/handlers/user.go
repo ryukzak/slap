@@ -568,7 +568,7 @@ func AddUserNoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("action=add_user_note teacher=%s user=%s", sessionUser.ID, profileUserID)
-	http.Redirect(w, r, "/user/"+profileUserID, http.StatusSeeOther)
+	http.Redirect(w, r, "/prompter/user/"+profileUserID, http.StatusSeeOther)
 }
 
 type ScoreStats struct {

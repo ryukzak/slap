@@ -1,0 +1,36 @@
+<div class="text-xs text-gray-500 mb-2">
+  // teacher notes ({{ len .Notes }}):
+  <a class="text-gray-300 hover:text-white"
+     href="/user/{{.ID}}"
+     target="_blank">@{{.Username}}</a>
+  {{ if .UserGroup }}· {{.UserGroup}}{{ end }}
+</div>
+{{ range .Notes }}
+<div class="text-xs p-3 border border-gray-800 rounded mb-1 max-w-2xl">
+  <div class="text-gray-500 mb-1">
+    @{{.AuthorName}} · {{ formatDateTime .CreatedAt }}
+  </div>
+  <div class="markdown">
+    {{ markdown .Content }}
+  </div>
+</div>
+{{ else }}
+<p class="text-xs text-gray-500 mb-1">
+  No notes about this student yet.
+</p>
+{{ end }}
+<form class="space-y-2 max-w-2xl mt-2"
+      hx-post="/user/{{.ID}}/note"
+      hx-target="#prompter">
+  <textarea class="bg-gray-800 border border-gray-700 text-gray-300 text-xs w-full p-2 rounded"
+            name="note"
+            rows="3"
+            required
+            placeholder="Add a note about this student (visible to teachers only)"></textarea>
+  <div>
+    <button class="bg-blue-800 hover:bg-blue-700 text-xs px-3 py-1 rounded"
+            type="submit">
+      [add note]
+    </button>
+  </div>
+</form>
