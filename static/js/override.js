@@ -230,3 +230,79 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 });
+
+// Prompter: teacher notes are never shown inline, so a teacher can screen-share
+// slap. A second, unshared window, the prompter (/prompter), shows the notes of
+// whichever student the other windows have in focus; they talk over a
+// BroadcastChannel. While no prompter answers, .prompter-hint buttons point at
+// it wherever notes exist.
+var prompterChannel = window.BroadcastChannel ? new BroadcastChannel("slap-prompter") : null;
+var prompterOpen = false;
+var prompterFocus = null;
+
+function prompterSend(msg) {
+  if (prompterChannel) prompterChannel.postMessage(msg);
+}
+
+function prompterSetFocus(studentID) {
+  if (!studentID) return;
+  prompterFocus = studentID;
+  prompterSend({ type: "focus", student: studentID });
+}
+
+function prompterUpdateHints() {
+  document.querySelectorAll(".prompter-hint").forEach(function (el) {
+    el.classList.toggle("hidden", prompterOpen);
+  });
+}
+
+document.addEventListener("click", function (e) {
+  var btn = e.target.closest("[data-action]");
+  if (btn && btn.getAttribute("data-action") === "open-prompter") {
+    window.open("/prompter", "slap-prompter", "popup,width=640,height=800");
+  }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  if (!prompterChannel) return;
+
+  if (document.getElementById("prompter")) {
+    // This is the prompter. Refocusing the shown student (lesson records
+    // refresh, a new shared tab) must not wipe a note being typed.
+    var shownStudent = null;
+    prompterChannel.onmessage = function (e) {
+      if (e.data.type === "ping") prompterSend({ type: "pong" });
+      if (e.data.type === "focus" && e.data.student !== shownStudent) {
+        shownStudent = e.data.student;
+        htmx.ajax("GET", "/prompter/user/" + encodeURIComponent(e.data.student), "#prompter");
+      }
+    };
+    window.addEventListener("pagehide", function () { prompterSend({ type: "bye" }); });
+    prompterSend({ type: "hello" });
+    return;
+  }
+
+  prompterChannel.onmessage = function (e) {
+    if (e.data.type === "pong" || e.data.type === "hello") prompterOpen = true;
+    if (e.data.type === "bye") prompterOpen = false;
+    if (e.data.type === "hello" && prompterFocus) prompterSetFocus(prompterFocus);
+    prompterUpdateHints();
+  };
+  prompterSend({ type: "ping" });
+  // Without an answer the prompter is closed: reveal the hints.
+  setTimeout(prompterUpdateHints, 300);
+
+  var focus = document.querySelector("[data-prompter-focus]");
+  if (focus) prompterSetFocus(focus.getAttribute("data-prompter-focus"));
+
+  // Lesson page: the opened record's student is in focus.
+  document.addEventListener("toggle", function (e) {
+    var d = e.target;
+    if (d.open && d.getAttribute && d.getAttribute("data-prompter-student")) {
+      prompterSetFocus(d.getAttribute("data-prompter-student"));
+    }
+  }, true);
+
+  // Swapped-in lesson records carry fresh hints.
+  document.addEventListener("htmx:afterSwap", prompterUpdateHints);
+});

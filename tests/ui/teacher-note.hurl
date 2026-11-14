@@ -1,10 +1,11 @@
 # Teacher Note Test
 # Verifies teacher notes for a student:
 #   1. Any teacher can add notes; notes are an append-only list with author.
-#   2. The student page shows all notes (with author + count), teachers only.
-#   3. The student never sees the notes on their own page.
-#   4. The lesson page shows only the last note text (no author) plus a count,
-#      teachers only.
+#   2. Notes are never inline, so slap can be screen-shared: the student page
+#      and the lesson page only carry a prompter hint with the note count.
+#   3. The prompter notes partial shows all notes (text, author), teachers
+#      only; adding a note returns to it.
+#   4. The student never sees the notes or the hints.
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -47,15 +48,16 @@ student_token: cookie "user_data"
 GET {{base_url}}/logout
 HTTP 303
 
-# Step 3: Teacher adds the first note
+# Step 3: Teacher adds two notes; each returns to the prompter partial
 POST {{base_url}}/user/{{student_id}}/note
 Cookie: user_data={{teacher_token}}
 [FormParams]
 note: {{note_one}}
 
 HTTP 303
+[Asserts]
+header "Location" == "/prompter/user/{{student_id}}"
 
-# Step 4: Teacher adds the second note
 POST {{base_url}}/user/{{student_id}}/note
 Cookie: user_data={{teacher_token}}
 [FormParams]
@@ -63,27 +65,57 @@ note: {{note_two}}
 
 HTTP 303
 
-# Step 5: Teacher sees all notes (with author + count) on the student page
+# Step 4: The student page shows a prompter hint, not the notes
 GET {{base_url}}/user/{{student_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
+body not contains "{{note_one}}"
+body not contains "{{note_two}}"
+body contains "data-prompter-focus=\"{{student_id}}\""
+body contains "[teacher notes (2): open prompter]"
+
+# Step 5: The prompter shows all notes with authors
+GET {{base_url}}/prompter
+Cookie: user_data={{teacher_token}}
+
+HTTP 200
+[Asserts]
+body contains "id=\"prompter\""
+
+GET {{base_url}}/prompter/user/{{student_id}}
+Cookie: user_data={{teacher_token}}
+
+HTTP 200
+[Asserts]
 body contains "teacher notes (2)"
+body contains "@{{student_username}}"
 body contains "{{note_one}}"
 body contains "{{note_two}}"
 body contains "@Test Teacher"
+body contains "hx-post=\"/user/{{student_id}}/note\""
 
-# Step 6: Student does NOT see the notes on their own page
+# Step 6: The student sees neither the notes nor the prompter
 GET {{base_url}}/user/{{student_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
 body not contains "{{note_one}}"
-body not contains "{{note_two}}"
+body not contains "open prompter"
 
-# Step 7: Teacher creates a lesson
+GET {{base_url}}/prompter
+Cookie: user_data={{student_token}}
+
+HTTP 403
+
+GET {{base_url}}/prompter/user/{{student_id}}
+Cookie: user_data={{student_token}}
+
+HTTP 403
+
+# Step 7: Teacher creates a lesson, student registers a task
 POST {{base_url}}/api/lessons
 Cookie: user_data={{teacher_token}}
 [Options]
@@ -97,7 +129,6 @@ HTTP 200
 [Captures]
 lesson_id: url regex "/lesson/([^/?#]+)"
 
-# Step 8: Student submits a task record
 POST {{base_url}}/user/{{student_id}}/task/{{task_id}}/journal
 Cookie: user_data={{student_token}}
 [FormParams]
@@ -105,7 +136,6 @@ content: Submission for teacher note test
 
 HTTP 303
 
-# Step 9: Student registers task to lesson
 POST {{base_url}}/api/lesson/{{lesson_id}}/register
 Cookie: user_data={{student_token}}
 [FormParams]
@@ -114,21 +144,39 @@ studentID: {{student_id}}
 
 HTTP 200
 
-# Step 10: Teacher sees all notes on the lesson page (no author names)
+# Step 8: The lesson page shows the hint and focus marker, not the notes
 GET {{base_url}}/lesson/{{lesson_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
-body contains "teacher notes (2)"
-body contains "{{note_two}}"
-body contains "{{note_one}}"
+body not contains "{{note_one}}"
+body not contains "{{note_two}}"
+body contains "data-prompter-student=\"{{student_id}}\""
+body contains "[teacher notes (2): open prompter]"
 
-# Step 11: Student does NOT see the notes on the lesson page
+GET {{base_url}}/lesson/{{lesson_id}}/records
+Cookie: user_data={{teacher_token}}
+
+HTTP 200
+[Asserts]
+body not contains "{{note_two}}"
+body contains "[teacher notes (2): open prompter]"
+
+# Step 9: The student sees neither on the lesson page
 GET {{base_url}}/lesson/{{lesson_id}}
 Cookie: user_data={{student_token}}
 
 HTTP 200
 [Asserts]
 body not contains "{{note_one}}"
-body not contains "{{note_two}}"
+body not contains "open prompter"
+body not contains "data-prompter-student"
+
+# Step 10: The teacher's own dashboard offers [open prompter]
+GET {{base_url}}/user/{{teacher_id}}
+Cookie: user_data={{teacher_token}}
+
+HTTP 200
+[Asserts]
+body contains "[open prompter]"

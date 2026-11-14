@@ -267,6 +267,8 @@ func main() {
 	r.HandleFunc("/users", handlers.UserListHandler).Methods("GET")
 	r.HandleFunc("/users/csv", handlers.UserListCSVHandler).Methods("GET")
 	r.HandleFunc("/teachers", handlers.TeacherListHandler).Methods("GET")
+	r.HandleFunc("/prompter", handlers.PrompterHandler).Methods("GET")
+	r.HandleFunc("/prompter/user/{userID}", handlers.PrompterNotesPartialHandler).Methods("GET")
 	r.HandleFunc("/tags", handlers.TagsIndexHandler).Methods("GET")
 	r.HandleFunc("/tags/{tag}", handlers.TagDetailHandler).Methods("GET")
 	r.HandleFunc("/user/{userID}", handlers.UserInfoHandler).Methods("GET")

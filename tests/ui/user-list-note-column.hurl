@@ -1,6 +1,7 @@
 # User List Note Column Test
-# Verifies that the /users table shows the latest teacher note for a student,
-# and that the note is NOT present in the CSV export.
+# Verifies that the /users table marks a student with notes by a count label
+# but never shows note text (it lives in the prompter, so the page can be
+# screen-shared), nor does the CSV export.
 #
 # Prerequisites: server running against a fresh DB with default config
 #   (teacher_ids: ["123"]).
@@ -56,14 +57,15 @@ note: {{note_latest}}
 
 HTTP 303
 
-# Step 5: /users table shows the latest note, not the older one
+# Step 5: /users table shows a note-count label, not the note content
 GET {{base_url}}/users
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
-body contains "{{note_latest}}"
+body not contains "{{note_latest}}"
 body not contains "{{note_old}}"
+body contains "notes: 2</span>"
 
 # Step 6: CSV export does NOT include any note content
 GET {{base_url}}/users/csv

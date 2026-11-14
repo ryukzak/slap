@@ -203,14 +203,19 @@ Note: changing or resetting a password signs the account out of every session st
 
 # Use Case: teacher notes for a student
 
-1. On a student's profile page (`/user/{id}`), a teacher sees a "teacher notes" section
-   listing every note about the student, each with its author and timestamp, plus a form
-   to add a new note.
-2. Notes are append-only and shared: any teacher can add a note, and all teachers see the
+1. Notes are never shown inline on slap pages, so a teacher can screen-share slap while
+   walking through a lesson. They live in the **prompter** (`/prompter`): a separate,
+   unshared browser window, opened with `[open prompter]` on the teacher's dashboard.
+2. The prompter follows the student currently in focus in the other slap windows of the
+   same browser (student profile, task page, or the record expanded on a lesson page) and
+   lists every note about that student, each with its author and timestamp, plus a form to
+   add a new note.
+3. While no prompter is open, the student profile and the lesson records of a student with
+   notes show a `[teacher notes (N): open prompter]` button: the note count only, no text.
+   The student list (`/users`) marks such students with a `notes: N` label.
+4. Notes are append-only and shared: any teacher can add a note, and all teachers see the
    full list.
-3. The notes are visible to teachers only: a student never sees them on their own profile.
-4. On a lesson page, each of the student's registered task records shows only the latest
-   note's text (without author) and the total note count, visible to teachers only.
+5. The notes, the hints, and the prompter are visible to teachers only.
 
 # Use Case: lesson preview for unauthenticated users
 

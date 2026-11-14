@@ -11,7 +11,10 @@
 <li class="border rounded {{ if eq $record.StudentID $.SessionUserID }}border-blue-500{{ else }}border-gray-800{{ end }}">
   <details class="group"
            data-status="{{$record.Type}}"
-           data-record-id="{{$record.StudentID}}:{{$record.TaskID}}">
+           data-record-id="{{$record.StudentID}}:{{$record.TaskID}}"
+           {{ if $.SessionIsTeacher }}
+           data-prompter-student="{{$record.StudentID}}"
+           {{ end }}>
     <summary class="cursor-pointer list-none flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-2 rounded hover:bg-gray-800">
       <div class="flex items-center space-x-3 min-w-0">
         <span class="text-xs text-gray-400 flex-shrink-0 w-6 text-right">#{{ add $index 1 }}</span>
@@ -39,18 +42,12 @@
   </summary>
   <div class="px-4 pb-4 pt-2">
     {{ if and $.SessionIsTeacher $record.Notes }}
-    <div class="mb-2 p-3 bg-gray-900 rounded border border-gray-700">
-      <div class="text-xs text-gray-500 mb-1">
-        // teacher notes ({{ len $record.Notes }})
-      </div>
-      {{ range $i, $note := $record.Notes }}
-      {{ if gt $i 0 }}
-      <hr class="border-gray-800 my-1" />
-      {{ end }}
-      <div class="text-xs markdown">
-        {{ markdown $note.Content }}
-      </div>
-      {{ end }}
+    <div class="prompter-hint hidden mb-2 text-xs">
+      <button class="text-yellow-400 hover:text-yellow-300"
+              type="button"
+              data-action="open-prompter">
+        [teacher notes ({{ len $record.Notes }}): open prompter]
+      </button>
     </div>
     {{ end }}
     {{ if and $.SessionIsTeacher $record.JournalRecords }}
