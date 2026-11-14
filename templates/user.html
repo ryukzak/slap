@@ -10,6 +10,14 @@
 <span class="text-gray-500 hidden sm:inline">·</span>
 <a class="text-blue-400 hover:text-blue-300" href="/teachers">[teachers]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
+{{ if eq .ID .SessionUserID }}
+<button class="text-blue-400 hover:text-blue-300 text-xs"
+        type="button"
+        data-action="open-prompter">
+  [teachers' room]
+</button>
+<span class="text-gray-500 hidden sm:inline">·</span>
+{{ end }}
 {{ end }}
 <a class="text-blue-400 hover:text-blue-300" href="/tags">[tags]</a>
 <span class="text-gray-500 hidden sm:inline">·</span>
