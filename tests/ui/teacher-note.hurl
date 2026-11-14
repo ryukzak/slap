@@ -156,12 +156,14 @@ studentID: {{student_id}}
 
 HTTP 200
 
-# Step 8: The lesson page shows the hint and focus marker, not the notes
+# Step 8: The lesson page shows the hint and focus marker, not the notes;
+# its nav has a [teachers' room] button
 GET {{base_url}}/lesson/{{lesson_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
+body contains "[teachers' room]"
 body not contains "{{note_one}}"
 body not contains "{{note_two}}"
 body contains "data-prompter-student=\"{{student_id}}\""
@@ -186,12 +188,13 @@ body not contains "open prompter"
 body not contains "teachers' room"
 body not contains "data-prompter-student"
 
-# Step 10: The teacher's own dashboard has no [open prompter]: the prompter
-# is opened from the teachers' room on a student's page
+# Step 10: The teacher's own dashboard has a [teachers' room] nav button that
+# opens the prompter, but no teachers' room section about the teacher
 GET {{base_url}}/user/{{teacher_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
+body contains "[teachers' room]"
+body not contains "// teachers' room"
 body not contains "[open prompter]"
-body not contains "teachers' room"
