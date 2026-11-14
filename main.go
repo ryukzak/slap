@@ -38,6 +38,10 @@ var version = "dev"
 
 const maxRequestBodyBytes = 64 * 1024 // 64 KB
 
+// minJWTSecretLen is the shortest SLAP_JWT_SECRET accepted: a shorter session
+// signing key could be guessed offline from any user's own token.
+const minJWTSecretLen = 32
+
 func limitRequestBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
@@ -158,8 +162,8 @@ func init() {
 	handlers.BaseTemplates = templates
 
 	jwtSecret = os.Getenv("SLAP_JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatal("SLAP_JWT_SECRET environment variable is required")
+	if len(jwtSecret) < minJWTSecretLen {
+		log.Fatalf("SLAP_JWT_SECRET must be at least %d characters (generate one with `openssl rand -hex 32`)", minJWTSecretLen)
 	}
 
 	handlers.SecureCookies = os.Getenv("SLAP_SECURE_COOKIES") == "true"
@@ -295,5 +299,8 @@ func main() {
 
 	// Start server
 	fmt.Printf("Server started at http://localhost:%s (version: %s)\n", *port, version)
-	log.Fatal(http.ListenAndServe(":"+*port, securityHeaders(limitRequestBody(r))))
+	// SameSite=Strict cookies still ride along on requests from sibling
+	// subdomains, so reject cross-origin browser writes outright.
+	csrf := http.NewCrossOriginProtection()
+	log.Fatal(http.ListenAndServe(":"+*port, securityHeaders(limitRequestBody(csrf.Handler(r)))))
 }

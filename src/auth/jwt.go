@@ -20,6 +20,9 @@ type UserClaims struct {
 	ID        storage.UserID `json:"id"`
 	IsStudent bool           `json:"is_student"`
 	IsTeacher bool           `json:"is_teacher"`
+	// TokenVersion must match the user's stored version; a password change or
+	// reset bumps that, ending every session issued before.
+	TokenVersion int `json:"token_version"`
 	jwt.RegisteredClaims
 }
 
@@ -40,7 +43,7 @@ func DefaultJWTConfig() *JWTConfig {
 }
 
 // GenerateToken creates a new JWT token for a user
-func (c *JWTConfig) GenerateToken(username, id string, isStudent, isTeacher bool) (string, error) {
+func (c *JWTConfig) GenerateToken(username, id string, isStudent, isTeacher bool, tokenVersion int) (string, error) {
 	if username == "" || id == "" {
 		return "", errors.New("username and ID are required")
 	}
@@ -48,10 +51,11 @@ func (c *JWTConfig) GenerateToken(username, id string, isStudent, isTeacher bool
 	// Create the JWT claims
 	expirationTime := time.Now().Add(c.TokenDuration)
 	claims := &UserClaims{
-		Username:  username,
-		ID:        id,
-		IsStudent: isStudent,
-		IsTeacher: isTeacher,
+		Username:     username,
+		ID:           id,
+		IsStudent:    isStudent,
+		IsTeacher:    isTeacher,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

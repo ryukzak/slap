@@ -187,3 +187,28 @@ func TestUserRoleFlags(t *testing.T) {
 		t.Errorf("Expected IsTeacher true after update, got %v", retrieved.IsTeacher)
 	}
 }
+
+func TestUpdatePasswordBumpsTokenVersion(t *testing.T) {
+	db, tempDir := setupTestDB(t)
+	defer cleanupTestDB(db, tempDir)
+
+	if err := db.SaveUser(&UserData{ID: "1", Username: "User", IsStudent: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	version, err := db.UpdatePassword("1", []byte("hash"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != 1 {
+		t.Errorf("UpdatePassword() version = %d, want 1", version)
+	}
+
+	user, err := db.GetUser("1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if user.TokenVersion != 1 {
+		t.Errorf("stored TokenVersion = %d, want 1", user.TokenVersion)
+	}
+}

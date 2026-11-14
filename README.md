@@ -36,7 +36,7 @@ make build
 Or directly:
 
 ```sh
-SLAP_JWT_SECRET=test go run main.go
+SLAP_JWT_SECRET=$(openssl rand -hex 32) go run main.go
 ```
 
 ## Configuration
@@ -87,7 +87,7 @@ tasks:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SLAP_JWT_SECRET` | yes | — | Secret key for JWT token signing |
+| `SLAP_JWT_SECRET` | yes | — | Secret key for signing session tokens; at least 32 characters, e.g. the output of `openssl rand -hex 32`. Changing it signs everyone out |
 | `SLAP_PORT` | no | `8080` | HTTP port (also `-port` flag) |
 | `SLAP_CONF` | no | `conf/config.yaml` | Config file path (also `-config` flag) |
 | `SLAP_DB` | no | `tmp/slap.db` | BoltDB database file path |

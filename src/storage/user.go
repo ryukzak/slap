@@ -32,6 +32,9 @@ type UserData struct {
 	Notes         []UserNote              `json:"notes,omitempty"`
 	ResetToken    string                  `json:"reset_token,omitempty"`
 	ResetTokenExp time.Time               `json:"reset_token_exp,omitempty"`
+	// TokenVersion is copied into every session token; UpdatePassword bumps
+	// it, ending every session issued before.
+	TokenVersion int `json:"token_version,omitempty"`
 }
 
 func (d *DB) SaveUser(userData *UserData) error {
@@ -165,8 +168,11 @@ func (d *DB) SetResetToken(userID, token string, exp time.Time) error {
 	})
 }
 
-func (d *DB) UpdatePassword(userID string, passwordHash []byte) error {
-	return d.db.Update(func(tx *bolt.Tx) error {
+// UpdatePassword sets a new password hash and bumps the token version, ending
+// every session issued before. Returns the new token version.
+func (d *DB) UpdatePassword(userID string, passwordHash []byte) (int, error) {
+	var version int
+	err := d.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(d.bucketName)
 		user, err := getValue[UserData](b, userID)
 		if err != nil {
@@ -175,8 +181,11 @@ func (d *DB) UpdatePassword(userID string, passwordHash []byte) error {
 		user.PasswordHash = passwordHash
 		user.ResetToken = ""
 		user.ResetTokenExp = time.Time{}
+		user.TokenVersion++
+		version = user.TokenVersion
 		return setValue(b, userID, *user)
 	})
+	return version, err
 }
 
 func (d *DB) UpdateIsTeacher(userID UserID, isTeacher bool) error {

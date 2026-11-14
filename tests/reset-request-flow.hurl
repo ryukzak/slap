@@ -95,6 +95,8 @@ HTTP 200
 [Asserts]
 body contains "// reset password"
 body contains "Token Student"
+body contains "(ID {{student_id}})"
+body contains "confirm in person"
 
 # Step 9: Teacher sets new password via token link
 POST {{base_url}}/user/{{student_id}}/reset?token={{reset_token}}

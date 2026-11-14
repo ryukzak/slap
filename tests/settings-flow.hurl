@@ -1,5 +1,6 @@
 # Settings Flow Test
-# Tests: change display name → verify on profile; change password → old fails, new works
+# Tests: change display name → verify on profile; change password → old fails,
+#        new works, sessions from before the change are signed out
 #
 # Prerequisites: server running against a fresh DB with default config.
 # Run: hurl --test \
@@ -70,6 +71,8 @@ new_password: {{new_password}}
 HTTP 200
 [Asserts]
 body contains "Password updated"
+[Captures]
+fresh_token: cookie "user_data"
 
 # Step 7: Old password no longer works
 POST {{base_url}}/signin
@@ -106,3 +109,20 @@ GET {{base_url}}/user/{{student_id}}/settings
 Cookie: user_data={{other_token}}
 
 HTTP 403
+
+# Step 10: The password change signed out the session from before it
+GET {{base_url}}/logout
+HTTP 303
+
+GET {{base_url}}/user/{{student_id}}
+Cookie: user_data={{student_token}}
+
+HTTP 401
+
+# Step 11: The session issued with the password change still works
+GET {{base_url}}/user/{{student_id}}
+Cookie: user_data={{fresh_token}}
+
+HTTP 200
+[Asserts]
+body contains "Renamed Student"

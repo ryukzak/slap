@@ -36,7 +36,7 @@ func TestGenerateToken(t *testing.T) {
 	config := NewJWTConfig([]byte("test_secret"), 1*time.Hour)
 
 	// Test successful token generation
-	token, err := config.GenerateToken("testuser", "123", true, false)
+	token, err := config.GenerateToken("testuser", "123", true, false, 0)
 	if err != nil {
 		t.Errorf("Failed to generate token: %v", err)
 	}
@@ -45,13 +45,13 @@ func TestGenerateToken(t *testing.T) {
 	}
 
 	// Test missing username
-	_, err = config.GenerateToken("", "123", true, false)
+	_, err = config.GenerateToken("", "123", true, false, 0)
 	if err == nil {
 		t.Error("Expected error for empty username, got nil")
 	}
 
 	// Test missing ID
-	_, err = config.GenerateToken("testuser", "", true, false)
+	_, err = config.GenerateToken("testuser", "", true, false, 0)
 	if err == nil {
 		t.Error("Expected error for empty ID, got nil")
 	}
@@ -61,12 +61,15 @@ func TestValidateToken(t *testing.T) {
 	config := NewJWTConfig([]byte("test_secret"), 1*time.Hour)
 
 	// Generate a valid token
-	tokenString, _ := config.GenerateToken("testuser", "123", true, false)
+	tokenString, _ := config.GenerateToken("testuser", "123", true, false, 2)
 
 	// Test successful validation
 	claims, err := config.ValidateToken(tokenString)
 	if err != nil {
 		t.Errorf("Failed to validate token: %v", err)
+	}
+	if claims.TokenVersion != 2 {
+		t.Errorf("Expected TokenVersion 2, got %d", claims.TokenVersion)
 	}
 	if claims.Username != "testuser" {
 		t.Errorf("Expected username 'testuser', got %s", claims.Username)
@@ -102,7 +105,7 @@ func TestValidateToken(t *testing.T) {
 
 	// Test expired token
 	expiredConfig := NewJWTConfig([]byte("test_secret"), -1*time.Hour) // Negative duration for expired token
-	expiredToken, _ := expiredConfig.GenerateToken("testuser", "123", true, false)
+	expiredToken, _ := expiredConfig.GenerateToken("testuser", "123", true, false, 0)
 	_, err = config.ValidateToken(expiredToken)
 	if err == nil {
 		t.Error("Expected error for expired token, got nil")
@@ -113,7 +116,7 @@ func TestExtractUserInfo(t *testing.T) {
 	config := NewJWTConfig([]byte("test_secret"), 1*time.Hour)
 
 	// Generate a valid token
-	tokenString, _ := config.GenerateToken("testuser", "123", false, true)
+	tokenString, _ := config.GenerateToken("testuser", "123", false, true, 0)
 
 	// Test successful extraction
 	username, id, err := config.ExtractUserInfo(tokenString)
@@ -139,7 +142,7 @@ func TestTokenExpiration(t *testing.T) {
 	config := NewJWTConfig([]byte("test_secret"), 1*time.Second)
 
 	// Generate token
-	token, _ := config.GenerateToken("testuser", "123", true, false)
+	token, _ := config.GenerateToken("testuser", "123", true, false, 0)
 
 	// Verify token is valid initially
 	_, err := config.ValidateToken(token)
@@ -161,7 +164,7 @@ func TestExtractUserInfoWithRoles(t *testing.T) {
 	config := NewJWTConfig([]byte("test_secret"), 1*time.Hour)
 
 	// Generate a valid token with both roles
-	tokenString, _ := config.GenerateToken("testuser", "123", true, true)
+	tokenString, _ := config.GenerateToken("testuser", "123", true, true, 0)
 
 	// Test successful extraction
 	userClaim, err := config.ExtractUserInfoWithRoles(tokenString)

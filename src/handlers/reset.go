@@ -132,7 +132,7 @@ func TeacherResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := DB.UpdatePassword(userID, passwordHash); err != nil {
+	if _, err := DB.UpdatePassword(userID, passwordHash); err != nil {
 		log.Printf("Error updating password for user %s: %v", userID, err)
 		renderPage(w, "templates/reset.html", resetPageData{Error: "Failed to update password", UserID: userID, Username: dbUser.Username})
 		return
@@ -221,10 +221,18 @@ func SettingsPasswordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := DB.UpdatePassword(userID, passwordHash); err != nil {
+	version, err := DB.UpdatePassword(userID, passwordHash)
+	if err != nil {
 		log.Printf("Error updating password for user %s: %v", userID, err)
 		renderPage(w, "templates/settings.html", settingsPageData{UserID: userID, Username: dbUser.Username, Error: "Failed to update password"})
 		return
+	}
+
+	// The change ended every session, this one included; keep the user signed
+	// in here with a fresh token.
+	tokenString, err := JwtAuth.GenerateToken(dbUser.Username, userID, true, AppConfig.IsTeacher(userID), version)
+	if err == nil {
+		setAuthCookie(w, tokenString)
 	}
 
 	log.Printf("action=change_password user=%s", userID)
@@ -269,7 +277,7 @@ func SettingsUsernameHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Refresh JWT with new username
 	isTeacher := AppConfig.IsTeacher(userID)
-	tokenString, err := JwtAuth.GenerateToken(username, userID, true, isTeacher)
+	tokenString, err := JwtAuth.GenerateToken(username, userID, true, isTeacher, dbUser.TokenVersion)
 	if err == nil {
 		setAuthCookie(w, tokenString)
 	}

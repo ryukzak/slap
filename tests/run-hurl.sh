@@ -29,7 +29,7 @@ rm -f "$TEST_DB"
 lsof -ti :"$PORT" | xargs kill -9 2>/dev/null || true
 
 # Start server with isolated test DB
-SLAP_DB="$TEST_DB" SLAP_JWT_SECRET="test-secret-for-ci-only" "$BINARY" -port "$PORT" &
+SLAP_DB="$TEST_DB" SLAP_JWT_SECRET="test-secret-for-ci-only-0123456789" "$BINARY" -port "$PORT" &
 SERVER_PID=$!
 echo "Server started (PID $SERVER_PID) on port $PORT"
 
@@ -84,6 +84,8 @@ run_test tests/lesson-cascade-delete.hurl \
 run_test tests/reset-request-flow.hurl \
     --variable "student_id=${TIMESTAMP}14" \
     --variable "teacher_id=$TEACHER_ID"
+
+run_test tests/csrf-protection.hurl
 
 run_test tests/score-rules.hurl \
     --variable "student_id=${TIMESTAMP}16"
