@@ -34,6 +34,7 @@ Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
+body contains "//&nbsp;dashboard"
 body contains "// add lesson"
 body contains "id=\"lesson-description\""
 body contains "name=\"date\""
@@ -87,3 +88,16 @@ body contains "// lessons"
 body contains "// your tasks"
 body not contains "// add lesson"
 body not contains "id=\"lesson-description\""
+
+# Step 7: Teacher viewing a student's page does NOT see the lessons sections;
+# the task list is "// tasks", below the teachers' room
+GET {{base_url}}/user/{{student_id}}
+Cookie: user_data={{teacher_token}}
+
+HTTP 200
+[Asserts]
+body not contains "// your tasks"
+body matches /\/\/ teachers' room[\s\S]*\/\/ tasks/
+body not contains "// lessons"
+body not contains "Dashboard test lesson"
+body not contains "[show past]"
