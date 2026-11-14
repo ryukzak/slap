@@ -99,13 +99,13 @@ Cookie: user_data={{student_a_token}}
 
 HTTP 403
 
-# Rule 7: Student can view their own profile
+# Rule 7: Student can view their own profile (their dashboard)
 GET {{base_url}}/user/{{student_a_id}}
 Cookie: user_data={{student_a_token}}
 
 HTTP 200
 [Asserts]
-body contains "Student A"
+body contains "//&nbsp;dashboard"
 
 # Rule 8: Teacher can view student A's profile
 GET {{base_url}}/user/{{student_a_id}}

@@ -1,7 +1,7 @@
 {{ define "title"}}User Profile{{ end }}
 {{ define "header"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
-<span class="whitespace-nowrap">//&nbsp;{{ if eq .ID .SessionUserID }}me:&nbsp;{{ else if .SessionIsTeacher }}student:&nbsp;{{ end }}{{.Username}}</span>
+<span class="whitespace-nowrap">//&nbsp;{{ if eq .ID .SessionUserID }}dashboard{{ else }}{{ if .SessionIsTeacher }}student:&nbsp;{{ end }}{{.Username}}{{ end }}</span>
 {{end}}
 {{define "footer_nav"}}
 <span class="text-gray-500 hidden sm:inline">·</span>
@@ -24,27 +24,34 @@
 <a class="text-blue-400 hover:text-blue-300" href="/logout">[logout]</a>
 {{ end }}
 {{ define "content"}}
+{{ if and .SessionIsTeacher .IsStudent (ne .ID .SessionUserID) }}
+<section class="mb-8" data-prompter-focus="{{.ID}}">
+  <div class="text-xs text-gray-500 mb-2">
+    // teachers' room
+  </div>
+<button class="{{ if .Notes }}text-yellow-400 hover:text-yellow-300{{ else }}text-blue-400 hover:text-blue-300{{ end }} text-xs"
+        type="button"
+        data-action="open-prompter">
+  [teacher notes ({{ len .Notes }}): open prompter]
+</button>
+</section>
+{{ end }}
+{{ if eq .ID .SessionUserID }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
     <span>// lessons</span>
-    <span class="flex items-center space-x-2">
-      {{ if and .IsTeacher (eq .ID .SessionUserID) }}
-      <button class="text-blue-400 hover:text-blue-300 text-xs"
-              type="button"
-              data-action="open-prompter">
-        [open prompter]
-      </button>
-      {{ end }}
-      {{ if .ShowPastLessons }}
-      <a class="text-blue-400 hover:text-blue-300" href="?">[ hide past]</a>
-    {{ else }}
-      <a class="text-blue-400 hover:text-blue-300" href="?showPast=true">[show past]</a>
-      {{ end }}
-    </span>
   </div>
   {{ template "lesson_list.html" .}}
+  <div class="text-xs mt-2 text-right">
+    {{ if .ShowPastLessons }}
+    <a class="text-blue-400 hover:text-blue-300" href="?">[hide past]</a>
+  {{ else }}
+    <a class="text-blue-400 hover:text-blue-300" href="?showPast=true">[show past]</a>
+    {{ end }}
+  </div>
 </section>
-{{ if .IsTeacher }}
+{{ end }}
+{{ if and .IsTeacher (eq .ID .SessionUserID) }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2">
     // add lesson
@@ -92,7 +99,7 @@
 {{ if .IsStudent }}
 <section class="mb-8">
   <div class="text-xs text-gray-500 mb-2 flex items-center justify-between">
-    <span>// your tasks</span>
+    <span>// {{ if eq .ID .SessionUserID }}your tasks{{ else }}tasks{{ end }}</span>
     <span class="text-gray-600">[score] status</span>
   </div>
   {{ with .TimelineStart }}
@@ -269,19 +276,6 @@
 </div>
 </section>
 {{ end }}
-{{ end }}
-{{ if and .SessionIsTeacher .IsStudent }}
-<section class="mb-8" data-prompter-focus="{{.ID}}">
-  {{ if .Notes }}
-  <div class="prompter-hint hidden mb-2 text-xs">
-    <button class="text-yellow-400 hover:text-yellow-300"
-            type="button"
-            data-action="open-prompter">
-      [teacher notes ({{ len .Notes }}): open prompter]
-    </button>
-  </div>
-  {{ end }}
-</section>
 {{ end }}
 {{ if and .SessionIsTeacher .IsTeacher }}
 <section class="mb-8" id="checked-tasks">

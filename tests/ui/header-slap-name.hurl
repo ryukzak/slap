@@ -19,7 +19,8 @@ variable: teacher_password=TeacherPass123!
 HTTP 200
 [Asserts]
 body contains "slap-name"
-body contains "{{slap_name}}"
+body contains "href=\"/\">{{slap_name}}</a>"
+body not contains ">SLAP</a>"
 
 # Step 2: Authenticated page keeps the name next to the page breadcrumb
 POST {{base_url}}/signin
@@ -37,7 +38,8 @@ Cookie: user_data={{teacher_token}}
 HTTP 200
 [Asserts]
 body contains "slap-name"
-body contains "{{slap_name}}"
+body contains "href=\"/\">{{slap_name}}</a>"
+body not contains ">SLAP</a>"
 
 GET {{base_url}}/logout
 HTTP 303

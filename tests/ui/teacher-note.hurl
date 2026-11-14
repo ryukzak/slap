@@ -48,6 +48,16 @@ student_token: cookie "user_data"
 GET {{base_url}}/logout
 HTTP 303
 
+# Step 2b: Without notes, the student page still has a teachers' room
+# section with a way to open the prompter
+GET {{base_url}}/user/{{student_id}}
+Cookie: user_data={{teacher_token}}
+
+HTTP 200
+[Asserts]
+body contains "// teachers' room"
+body contains "[teacher notes (0): open prompter]"
+
 # Step 3: Teacher adds two notes; each returns to the prompter partial
 POST {{base_url}}/user/{{student_id}}/note
 Cookie: user_data={{teacher_token}}
@@ -83,6 +93,7 @@ Cookie: user_data={{teacher_token}}
 HTTP 200
 [Asserts]
 body contains "id=\"prompter\""
+body contains "//&nbsp;teachers' room"
 
 GET {{base_url}}/prompter/user/{{student_id}}
 Cookie: user_data={{teacher_token}}
@@ -104,6 +115,7 @@ HTTP 200
 [Asserts]
 body not contains "{{note_one}}"
 body not contains "open prompter"
+body not contains "teachers' room"
 
 GET {{base_url}}/prompter
 Cookie: user_data={{student_token}}
@@ -171,12 +183,15 @@ HTTP 200
 [Asserts]
 body not contains "{{note_one}}"
 body not contains "open prompter"
+body not contains "teachers' room"
 body not contains "data-prompter-student"
 
-# Step 10: The teacher's own dashboard offers [open prompter]
+# Step 10: The teacher's own dashboard has no [open prompter]: the prompter
+# is opened from the teachers' room on a student's page
 GET {{base_url}}/user/{{teacher_id}}
 Cookie: user_data={{teacher_token}}
 
 HTTP 200
 [Asserts]
-body contains "[open prompter]"
+body not contains "[open prompter]"
+body not contains "teachers' room"

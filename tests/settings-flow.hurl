@@ -42,8 +42,8 @@ HTTP 200
 body contains "Name updated"
 body contains "Renamed Student"
 
-# Step 4: Profile shows new name
-GET {{base_url}}/user/{{student_id}}
+# Step 4: Settings page shows the new name after reload
+GET {{base_url}}/user/{{student_id}}/settings
 Cookie: user_data={{student_token}}
 
 HTTP 200
@@ -125,4 +125,4 @@ Cookie: user_data={{fresh_token}}
 
 HTTP 200
 [Asserts]
-body contains "Renamed Student"
+body contains "//&nbsp;dashboard"
