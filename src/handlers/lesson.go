@@ -645,6 +645,13 @@ func RenderLessonListHandler(w http.ResponseWriter, r *http.Request) {
 	var waitingMessage string
 	if registerMode {
 		taskID := r.URL.Query().Get("task_id")
+		checkable := []*storage.Lesson{}
+		for _, lesson := range availableLessons {
+			if AppConfig.CanCheck(lesson.TeacherID, taskID) {
+				checkable = append(checkable, lesson)
+			}
+		}
+		availableLessons = checkable
 		studentID := r.URL.Query().Get("student_id")
 		if taskID != "" && studentID != "" {
 			if task := AppConfig.GetTask(storage.TaskID(taskID)); task != nil {
@@ -896,6 +903,16 @@ func RegisterTaskRecordToLessonHandler(w http.ResponseWriter, r *http.Request) {
 
 	if studentID != user.ID {
 		http.Error(w, "Unauthorized: You can only register your own task records", http.StatusForbidden)
+		return
+	}
+
+	lesson, err := DB.GetLesson(storage.LessonID(lessonID))
+	if err != nil {
+		http.Error(w, "Lesson not found", http.StatusNotFound)
+		return
+	}
+	if !AppConfig.CanCheck(lesson.TeacherID, taskID) {
+		http.Error(w, "This lesson's teacher does not check this task", http.StatusForbidden)
 		return
 	}
 

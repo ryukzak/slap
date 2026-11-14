@@ -21,6 +21,7 @@
   <div class="text-xs text-gray-500 mb-2">
   {{ if .IsTeacher }}// feedback{{ else }}// submit{{ end }}
   </div>
+  {{ if .CanCheck }}
   <form class="space-y-2"
         action="/user/{{.StudentID}}/task/{{.ID}}/journal"
         method="post">
@@ -41,6 +42,11 @@
       </div>
     </div>
   </form>
+{{ else }}
+  <p class="text-gray-500 text-xs">
+    You are not allowed to check this task.
+  </p>
+  {{ end }}
 </section>
 <section class="mb-8">
   {{ if .Tags }}
